@@ -39,6 +39,27 @@ interface Transcript {
   filler_words_detected: number | null;
 }
 
+const FILLER_WORDS = ['um', 'uh', 'like', 'you know', 'basically', 'actually', 'so,', 'well,'];
+
+const removeFillerWords = (content: string): { cleaned: string; removedCount: number } => {
+  let cleaned = content;
+  let removedCount = 0;
+  
+  FILLER_WORDS.forEach(filler => {
+    const regex = new RegExp(`\\b${filler}\\b\\s*,?\\s*`, 'gi');
+    const matches = cleaned.match(regex);
+    if (matches) {
+      removedCount += matches.length;
+    }
+    cleaned = cleaned.replace(regex, '');
+  });
+  
+  // Clean up extra spaces and commas
+  cleaned = cleaned.replace(/\s+/g, ' ').replace(/\s*,\s*,/g, ',').trim();
+  
+  return { cleaned, removedCount };
+};
+
 // Component to highlight filler words in transcript
 const TranscriptContent = ({ content }: { content: string }) => {
   const fillerWords = ['um', 'uh', 'like', 'you know', 'basically', 'actually'];
@@ -84,6 +105,7 @@ const Refiner = () => {
   const [transcript, setTranscript] = useState<Transcript | null>(null);
   const [loading, setLoading] = useState(true);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isRemovingFillers, setIsRemovingFillers] = useState(false);
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -200,6 +222,51 @@ const Refiner = () => {
       setProject(prev => prev ? { ...prev, status: 'uploaded' } : null);
     } finally {
       setIsTranscribing(false);
+    }
+  };
+
+  const handleRemoveFillers = async () => {
+    if (!transcript?.content) return;
+    
+    setIsRemovingFillers(true);
+    
+    try {
+      const { cleaned, removedCount } = removeFillerWords(transcript.content);
+      
+      // Update transcript in database
+      const { error } = await supabase
+        .from('transcripts')
+        .update({ 
+          content: cleaned, 
+          filler_words_detected: 0,
+          word_count: cleaned.split(/\s+/).filter(w => w.length > 0).length
+        })
+        .eq('id', transcript.id);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setTranscript(prev => prev ? { 
+        ...prev, 
+        content: cleaned, 
+        filler_words_detected: 0,
+        word_count: cleaned.split(/\s+/).filter(w => w.length > 0).length
+      } : null);
+      
+      toast({
+        title: 'Fillers removed!',
+        description: `Cleaned ${removedCount} filler words from your transcript.`,
+      });
+      
+    } catch (error) {
+      console.error('Error removing fillers:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to remove filler words',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsRemovingFillers(false);
     }
   };
 
@@ -342,9 +409,24 @@ const Refiner = () => {
                   )}
                   
                   {transcript.filler_words_detected !== null && transcript.filler_words_detected > 0 && (
-                    <Button variant="outline" size="sm" className="text-accent border-accent/30">
-                      <Wand2 className="mr-2 h-3 w-3" />
-                      Remove {transcript.filler_words_detected} Fillers
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="text-accent border-accent/30"
+                      onClick={handleRemoveFillers}
+                      disabled={isRemovingFillers}
+                    >
+                      {isRemovingFillers ? (
+                        <>
+                          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                          Removing...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="mr-2 h-3 w-3" />
+                          Remove {transcript.filler_words_detected} Fillers
+                        </>
+                      )}
                     </Button>
                   )}
                 </div>
