@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import VideoThumbnail from '@/components/VideoThumbnail';
 import { 
   Wand2, 
   Volume2, 
@@ -274,46 +275,37 @@ const PostProduction = () => {
                     {/* Video Preview */}
                     <Card>
                       <CardContent className="p-0">
-                        {selectedProject?.source_file_url ? (
-                          <div className="relative aspect-video bg-black rounded-t-lg overflow-hidden">
-                            {selectedProject.source_file_type === 'audio' ? (
-                              <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                                <div className="text-center">
-                                  <Mic2 className="h-16 w-16 text-muted-foreground mx-auto mb-2" />
-                                  <p className="text-muted-foreground">Audio file</p>
-                                </div>
+                        <div className="relative aspect-video bg-black rounded-t-lg overflow-hidden">
+                          {selectedProject?.source_file_url ? (
+                            <VideoThumbnail
+                              sourceFileUrl={selectedProject.source_file_url}
+                              sourceFileType={selectedProject.source_file_type}
+                              className="w-full h-full"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-muted">
+                              <div className="text-center text-muted-foreground">
+                                <Video className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                <p>Select a project to preview</p>
                               </div>
-                            ) : (
-                              <video
-                                src={selectedProject.source_file_url}
-                                controls
-                                className="w-full h-full object-contain"
-                              />
-                            )}
-                            {/* Processing overlay */}
-                            {isProcessing && (
-                              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                                <div className="text-center">
-                                  <div className="relative">
-                                    <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-                                    <Sparkles className="h-6 w-6 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                                  </div>
-                                  <p className="text-white font-medium mt-4">AI Processing...</p>
-                                  <p className="text-white/70 text-sm mt-1">
-                                    {tasks.find(t => t.status === 'processing')?.name || 'Preparing'}
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="aspect-video bg-muted rounded-t-lg flex items-center justify-center">
-                            <div className="text-center text-muted-foreground">
-                              <Video className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                              <p>Select a project to preview</p>
                             </div>
-                          </div>
-                        )}
+                          )}
+                          {/* Processing overlay */}
+                          {isProcessing && (
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                              <div className="text-center">
+                                <div className="relative">
+                                  <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+                                  <Sparkles className="h-6 w-6 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                                </div>
+                                <p className="text-white font-medium mt-4">AI Processing...</p>
+                                <p className="text-white/70 text-sm mt-1">
+                                  {tasks.find(t => t.status === 'processing')?.name || 'Preparing'}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                         {selectedProject && (
                           <div className="p-4 border-t border-border">
                             <h3 className="font-semibold truncate">{selectedProject.title}</h3>
