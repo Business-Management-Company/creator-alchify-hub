@@ -196,12 +196,18 @@ const Refiner = () => {
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Media Preview */}
           <div className="bg-card/50 border border-border rounded-xl overflow-hidden">
-            <div className="aspect-video bg-muted flex items-center justify-center">
+            <div className="aspect-video bg-muted/50 flex items-center justify-center">
               {mediaUrl && project.source_file_type === 'video' ? (
                 <video 
                   src={mediaUrl} 
                   controls 
-                  className="w-full h-full object-contain"
+                  preload="metadata"
+                  className="w-full h-full object-contain bg-black"
+                  onLoadedMetadata={(e) => {
+                    // Seek to 0.1s to show first frame as thumbnail
+                    const video = e.currentTarget;
+                    video.currentTime = 0.1;
+                  }}
                 />
               ) : mediaUrl && project.source_file_type === 'audio' ? (
                 <div className="flex flex-col items-center gap-4 p-8">
