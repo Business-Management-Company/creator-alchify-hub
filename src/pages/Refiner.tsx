@@ -467,6 +467,7 @@ const Refiner = () => {
             <ClipGenerator 
               projectId={project.id} 
               transcriptContent={transcript.content}
+              mediaUrl={mediaUrl}
             />
             <CaptionEditor 
               transcriptContent={transcript.content}

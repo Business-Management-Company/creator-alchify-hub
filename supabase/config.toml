@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.generate-clips]
 verify_jwt = true
+
+[functions.render-clip]
+verify_jwt = true
