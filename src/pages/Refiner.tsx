@@ -4,13 +4,14 @@ import { Helmet } from 'react-helmet-async';
 import { 
   ArrowLeft, 
   Loader2,
-  Play,
-  Pause,
   Volume2,
   Wand2,
   FileText,
   Download,
-  AlertCircle
+  AlertCircle,
+  Sparkles,
+  Film,
+  Captions
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -375,90 +376,144 @@ const Refiner = () => {
             </div>
           </div>
           
-          {/* Transcript Panel */}
-          <div className="bg-card/50 border border-border rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                <h2 className="font-semibold text-foreground">Transcript</h2>
-              </div>
-              {transcript && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>{transcript.word_count || 0} words</span>
-                  {transcript.filler_words_detected !== null && transcript.filler_words_detected > 0 && (
-                    <Badge variant="secondary">{transcript.filler_words_detected} fillers</Badge>
+          {/* AI Tools Panel */}
+          <div className="space-y-4">
+            {/* Quick Actions Grid */}
+            <div className="grid grid-cols-1 gap-4">
+              {/* Generate Transcript Card */}
+              <div className="bg-card/50 border border-border rounded-xl p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <FileText className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">Transcript</h3>
+                    {transcript ? (
+                      <p className="text-sm text-muted-foreground">{transcript.word_count || 0} words</p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">AI-powered speech to text</p>
+                    )}
+                  </div>
+                  {transcript && transcript.filler_words_detected !== null && transcript.filler_words_detected > 0 && (
+                    <Badge variant="secondary" className="ml-auto">{transcript.filler_words_detected} fillers</Badge>
                   )}
-                </div>
-              )}
-            </div>
-            
-            {!transcript ? (
-              <div className="flex flex-col items-center justify-center h-64 text-center">
-                <div className="p-4 rounded-full bg-primary/10 mb-4">
-                  <Wand2 className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="font-medium text-foreground mb-2">No transcript yet</h3>
-                <p className="text-sm text-muted-foreground mb-4 max-w-sm">
-                  Generate an AI-powered transcript to start editing and refining your content.
-                </p>
-                <Button 
-                  variant="hero" 
-                  onClick={startTranscription}
-                  disabled={isTranscribing}
-                >
-                  {isTranscribing ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Transcribing...
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="mr-2 h-4 w-4" />
-                      Generate Transcript
-                    </>
-                  )}
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4 max-h-[500px] overflow-y-auto">
-                <div className="p-4 bg-background/50 rounded-lg border border-border">
-                  <TranscriptContent content={transcript.content || ''} />
                 </div>
                 
-                <div className="flex items-center justify-between">
-                  {transcript.avg_confidence && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-muted-foreground">Confidence:</span>
-                      <Badge variant={transcript.avg_confidence > 0.9 ? 'default' : 'secondary'}>
-                        {(transcript.avg_confidence * 100).toFixed(1)}%
-                      </Badge>
+                {!transcript ? (
+                  <Button 
+                    variant="hero" 
+                    className="w-full"
+                    onClick={startTranscription}
+                    disabled={isTranscribing}
+                  >
+                    {isTranscribing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Transcribing...
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="mr-2 h-4 w-4" />
+                        Generate Transcript
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="p-3 bg-background/50 rounded-lg border border-border max-h-32 overflow-y-auto">
+                      <p className="text-sm text-foreground line-clamp-4">{transcript.content}</p>
                     </div>
-                  )}
-                  
-                  {transcript.filler_words_detected !== null && transcript.filler_words_detected > 0 && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="text-accent border-accent/30"
-                      onClick={handleRemoveFillers}
-                      disabled={isRemovingFillers}
-                    >
-                      {isRemovingFillers ? (
-                        <>
-                          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                          Removing...
-                        </>
-                      ) : (
-                        <>
-                          <Wand2 className="mr-2 h-3 w-3" />
-                          Remove {transcript.filler_words_detected} Fillers
-                        </>
+                    <div className="flex items-center gap-2">
+                      {transcript.avg_confidence && (
+                        <Badge variant={transcript.avg_confidence > 0.9 ? 'default' : 'secondary'}>
+                          {(transcript.avg_confidence * 100).toFixed(1)}% confidence
+                        </Badge>
                       )}
-                    </Button>
-                  )}
-                </div>
+                      {transcript.filler_words_detected !== null && transcript.filler_words_detected > 0 && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="ml-auto text-accent border-accent/30"
+                          onClick={handleRemoveFillers}
+                          disabled={isRemovingFillers}
+                        >
+                          {isRemovingFillers ? (
+                            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                          ) : (
+                            <Wand2 className="mr-2 h-3 w-3" />
+                          )}
+                          Remove Fillers
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+              
+              {/* AI Post Production Card */}
+              <div className="bg-card/50 border border-border rounded-xl p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 rounded-lg bg-accent/10">
+                    <Sparkles className="h-5 w-5 text-accent" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">AI Post Production</h3>
+                    <p className="text-sm text-muted-foreground">Audio cleanup, filler removal, noise reduction</p>
+                  </div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => navigate('/post-production')}
+                  disabled={!transcript}
+                >
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  {transcript ? 'Open Post Production' : 'Generate Transcript First'}
+                </Button>
+              </div>
+              
+              {/* AI Clip Generator Card */}
+              <div className="bg-card/50 border border-border rounded-xl p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Film className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">AI Clip Generator</h3>
+                    <p className="text-sm text-muted-foreground">Create viral clips for TikTok, Reels, Shorts</p>
+                  </div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  disabled={!transcript}
+                >
+                  <Film className="mr-2 h-4 w-4" />
+                  {transcript ? 'Generate Clips' : 'Generate Transcript First'}
+                </Button>
+              </div>
+              
+              {/* Captions Card */}
+              <div className="bg-card/50 border border-border rounded-xl p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 rounded-lg bg-secondary/30">
+                    <Captions className="h-5 w-5 text-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">Captions & Subtitles</h3>
+                    <p className="text-sm text-muted-foreground">Export SRT, WebVTT, or burn-in captions</p>
+                  </div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  disabled={!transcript}
+                >
+                  <Captions className="mr-2 h-4 w-4" />
+                  {transcript ? 'Edit Captions' : 'Generate Transcript First'}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
         
