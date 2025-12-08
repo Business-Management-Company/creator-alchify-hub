@@ -174,8 +174,6 @@ function buildShotstackTimeline(request: ClipRequest) {
     },
     output: {
       format: 'mp4',
-      resolution: 'hd',
-      aspectRatio: request.platform === 'landscape' ? '16:9' : '9:16',
       size: {
         width: config.width,
         height: config.height,
