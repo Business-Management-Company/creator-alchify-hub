@@ -39,6 +39,41 @@ interface Transcript {
   filler_words_detected: number | null;
 }
 
+// Component to highlight filler words in transcript
+const TranscriptContent = ({ content }: { content: string }) => {
+  const fillerWords = ['um', 'uh', 'like', 'you know', 'basically', 'actually'];
+  
+  // Create regex pattern for filler words
+  const pattern = new RegExp(`\\b(${fillerWords.join('|')})\\b`, 'gi');
+  
+  // Split content and highlight filler words
+  const parts = content.split(pattern);
+  
+  return (
+    <p className="text-foreground whitespace-pre-wrap leading-relaxed">
+      {parts.map((part, index) => {
+        const isFillerWord = fillerWords.some(
+          filler => part.toLowerCase() === filler.toLowerCase()
+        );
+        
+        if (isFillerWord) {
+          return (
+            <span 
+              key={index} 
+              className="bg-accent/20 text-accent px-1 rounded cursor-pointer hover:bg-accent/30 transition-colors"
+              title="Filler word - click to remove"
+            >
+              {part}
+            </span>
+          );
+        }
+        
+        return <span key={index}>{part}</span>;
+      })}
+    </p>
+  );
+};
+
 const Refiner = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const { user, loading: authLoading } = useAuth();
@@ -123,28 +158,49 @@ const Refiner = () => {
     
     setIsTranscribing(true);
     
-    // Update project status
-    await supabase
-      .from('projects')
-      .update({ status: 'transcribing' })
-      .eq('id', project.id);
-    
-    setProject(prev => prev ? { ...prev, status: 'transcribing' } : null);
-    
-    toast({
-      title: 'Transcription started',
-      description: 'This may take a few minutes depending on the file length.',
-    });
-    
-    // TODO: Call transcription edge function
-    // For now, simulate completion after a delay
-    setTimeout(() => {
-      setIsTranscribing(false);
+    try {
+      // Update project status locally
+      setProject(prev => prev ? { ...prev, status: 'transcribing' } : null);
+      
       toast({
-        title: 'Coming soon',
-        description: 'AI transcription will be available in Phase 2.',
+        title: 'Transcription started',
+        description: 'AI is processing your content. This may take a moment.',
       });
-    }, 2000);
+      
+      // Call the transcription edge function
+      const { data, error } = await supabase.functions.invoke('transcribe-audio', {
+        body: { projectId: project.id }
+      });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+      
+      // Refresh the project and transcript data
+      await fetchProject();
+      
+      toast({
+        title: 'Transcription complete!',
+        description: `Found ${data.transcript?.wordCount || 0} words and ${data.transcript?.fillerCount || 0} filler words.`,
+      });
+      
+    } catch (error) {
+      console.error('Transcription error:', error);
+      toast({
+        title: 'Transcription failed',
+        description: error instanceof Error ? error.message : 'Something went wrong',
+        variant: 'destructive',
+      });
+      
+      // Reset project status
+      setProject(prev => prev ? { ...prev, status: 'uploaded' } : null);
+    } finally {
+      setIsTranscribing(false);
+    }
   };
 
   if (authLoading || loading) {
@@ -270,21 +326,28 @@ const Refiner = () => {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-4 max-h-[500px] overflow-y-auto">
                 <div className="p-4 bg-background/50 rounded-lg border border-border">
-                  <p className="text-foreground whitespace-pre-wrap">
-                    {transcript.content || 'Transcript content will appear here...'}
-                  </p>
+                  <TranscriptContent content={transcript.content || ''} />
                 </div>
                 
-                {transcript.avg_confidence && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">Confidence:</span>
-                    <Badge variant={transcript.avg_confidence > 0.9 ? 'default' : 'secondary'}>
-                      {(transcript.avg_confidence * 100).toFixed(1)}%
-                    </Badge>
-                  </div>
-                )}
+                <div className="flex items-center justify-between">
+                  {transcript.avg_confidence && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-muted-foreground">Confidence:</span>
+                      <Badge variant={transcript.avg_confidence > 0.9 ? 'default' : 'secondary'}>
+                        {(transcript.avg_confidence * 100).toFixed(1)}%
+                      </Badge>
+                    </div>
+                  )}
+                  
+                  {transcript.filler_words_detected !== null && transcript.filler_words_detected > 0 && (
+                    <Button variant="outline" size="sm" className="text-accent border-accent/30">
+                      <Wand2 className="mr-2 h-3 w-3" />
+                      Remove {transcript.filler_words_detected} Fillers
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
           </div>
