@@ -28,6 +28,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import { ClipGenerator } from '@/components/refiner/ClipGenerator';
 import { CaptionEditor } from '@/components/refiner/CaptionEditor';
 import VideoThumbnail from '@/components/VideoThumbnail';
+import { extractAudioFromVideo, needsAudioExtraction } from '@/lib/audio-extraction';
 
 interface Project {
   id: string;
@@ -37,6 +38,7 @@ interface Project {
   source_file_url: string | null;
   source_file_name: string | null;
   source_file_type: string | null;
+  source_file_size: number | null;
   created_at: string;
 }
 
@@ -214,6 +216,44 @@ const Refiner = () => {
       // Update project status locally
       setProject(prev => prev ? { ...prev, status: 'transcribing' } : null);
       
+      let audioData: string | undefined;
+      
+      // Check if we need to extract audio from video (file > 25MB)
+      const fileSize = project.source_file_size || 0;
+      if (needsAudioExtraction(fileSize)) {
+        toast({
+          title: 'Extracting audio...',
+          description: 'Your file is large, extracting audio for faster transcription.',
+        });
+        
+        // Get signed URL for the file
+        if (!project.source_file_url) {
+          throw new Error('No source file URL found');
+        }
+        
+        const { data: signedUrlData, error: urlError } = await supabase.storage
+          .from('media-uploads')
+          .createSignedUrl(project.source_file_url, 3600);
+        
+        if (urlError || !signedUrlData?.signedUrl) {
+          throw new Error('Failed to get file URL for audio extraction');
+        }
+        
+        // Extract audio from video
+        const { audioBlob } = await extractAudioFromVideo(signedUrlData.signedUrl);
+        
+        // Convert audio blob to base64
+        const arrayBuffer = await audioBlob.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        let binaryString = '';
+        for (let i = 0; i < uint8Array.length; i++) {
+          binaryString += String.fromCharCode(uint8Array[i]);
+        }
+        audioData = btoa(binaryString);
+        
+        console.log(`Extracted audio: ${audioBlob.size} bytes (${(audioBlob.size / 1024 / 1024).toFixed(2)} MB)`);
+      }
+      
       toast({
         title: 'Transcription started',
         description: 'AI is processing your content. This may take a moment.',
@@ -221,7 +261,10 @@ const Refiner = () => {
       
       // Call the transcription edge function
       const { data, error } = await supabase.functions.invoke('transcribe-audio', {
-        body: { projectId: project.id }
+        body: { 
+          projectId: project.id,
+          audioData: audioData // Pass extracted audio if available
+        }
       });
       
       if (error) {

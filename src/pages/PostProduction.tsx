@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import VideoThumbnail from '@/components/VideoThumbnail';
+import { extractAudioFromVideo, needsAudioExtraction } from '@/lib/audio-extraction';
 import { 
   Wand2, 
   Volume2, 
@@ -42,6 +43,7 @@ interface Project {
   status: string;
   source_file_url: string | null;
   source_file_type: string | null;
+  source_file_size: number | null;
   source_duration_seconds: number | null;
   created_at: string;
 }
@@ -168,26 +170,75 @@ const PostProduction = () => {
     
     try {
       // Step 1: Transcription (always runs)
-      updateTaskStatus('transcribe', 'processing', 10);
+      updateTaskStatus('transcribe', 'processing', 5);
+      
+      let audioData: string | undefined;
+      
+      // Check if we need to extract audio from video (file > 25MB)
+      const fileSize = selectedProject.source_file_size || 0;
+      if (needsAudioExtraction(fileSize)) {
+        toast({ 
+          title: 'Extracting audio...', 
+          description: 'Your file is large, extracting audio for transcription' 
+        });
+        updateTaskStatus('transcribe', 'processing', 10);
+        
+        // Get signed URL for the file
+        if (!selectedProject.source_file_url) {
+          throw new Error('No source file URL found');
+        }
+        
+        const { data: signedUrlData, error: urlError } = await supabase.storage
+          .from('media-uploads')
+          .createSignedUrl(selectedProject.source_file_url, 3600);
+        
+        if (urlError || !signedUrlData?.signedUrl) {
+          throw new Error('Failed to get file URL for audio extraction');
+        }
+        
+        updateTaskStatus('transcribe', 'processing', 20);
+        
+        // Extract audio from video
+        const { audioBlob } = await extractAudioFromVideo(
+          signedUrlData.signedUrl,
+          (progress) => {
+            updateTaskStatus('transcribe', 'processing', 20 + Math.floor(progress * 0.4));
+          }
+        );
+        
+        updateTaskStatus('transcribe', 'processing', 60);
+        
+        // Convert audio blob to base64
+        const arrayBuffer = await audioBlob.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        let binaryString = '';
+        for (let i = 0; i < uint8Array.length; i++) {
+          binaryString += String.fromCharCode(uint8Array[i]);
+        }
+        audioData = btoa(binaryString);
+        
+        console.log(`Extracted audio: ${audioBlob.size} bytes (${(audioBlob.size / 1024 / 1024).toFixed(2)} MB)`);
+      }
+      
+      updateTaskStatus('transcribe', 'processing', 70);
       
       const { data: transcriptData, error: transcriptError } = await supabase.functions.invoke('transcribe-audio', {
-        body: { projectId: selectedProject.id }
+        body: { 
+          projectId: selectedProject.id,
+          audioData: audioData // Pass extracted audio if available
+        }
       });
 
       // Handle errors - Supabase functions.invoke returns error in data for 4xx responses
-      // Check for error in the data object first (this is where 4xx responses put it)
       if (transcriptData?.error) {
         throw new Error(transcriptData.error);
       }
       
-      // Also check for invoke-level errors
       if (transcriptError) {
-        // Try to get more context from the error
         let errorMsg = transcriptError.message || 'Transcription failed';
         throw new Error(errorMsg);
       }
       
-      // Verify we got a successful response
       if (!transcriptData?.success) {
         throw new Error('Transcription failed - no response received');
       }
