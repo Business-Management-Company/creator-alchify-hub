@@ -34,6 +34,7 @@ serve(async (req) => {
   try {
     const body = await req.json();
     projectId = body.projectId;
+    const audioBase64 = body.audioData; // Optional: pre-extracted audio as base64
     
     if (!projectId) {
       throw new Error('Project ID is required');
@@ -61,56 +62,70 @@ serve(async (req) => {
       throw new Error(`Project not found: ${projectError?.message}`);
     }
 
-    // Check file size before processing
-    const fileSize = project.source_file_size || 0;
-    console.log(`File size: ${fileSize} bytes (${(fileSize / 1024 / 1024).toFixed(2)} MB)`);
-    
-    if (fileSize > MAX_FILE_SIZE) {
-      throw new Error(`File too large for transcription. Maximum size is 25MB. Your file is ${(fileSize / 1024 / 1024).toFixed(1)}MB. Please upload a smaller file or compress your audio/video.`);
+    let audioBlob: Blob;
+    let contentType = 'audio/wav';
+    let extension = 'wav';
+
+    // If pre-extracted audio is provided, use it
+    if (audioBase64) {
+      console.log('Using pre-extracted audio data');
+      const binaryString = atob(audioBase64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      audioBlob = new Blob([bytes], { type: 'audio/wav' });
+      console.log(`Pre-extracted audio size: ${audioBlob.size} bytes (${(audioBlob.size / 1024 / 1024).toFixed(2)} MB)`);
+    } else {
+      // Check file size before processing
+      const fileSize = project.source_file_size || 0;
+      console.log(`Original file size: ${fileSize} bytes (${(fileSize / 1024 / 1024).toFixed(2)} MB)`);
+      
+      if (fileSize > MAX_FILE_SIZE) {
+        throw new Error(`File too large (${(fileSize / 1024 / 1024).toFixed(1)}MB). Please use the audio extraction feature to reduce file size before transcription. Maximum: 25MB`);
+      }
+
+      // Get signed URL for the audio file
+      const { data: signedUrlData, error: urlError } = await supabase.storage
+        .from('media-uploads')
+        .createSignedUrl(project.source_file_url, 3600);
+
+      if (urlError || !signedUrlData?.signedUrl) {
+        throw new Error(`Failed to get file URL: ${urlError?.message}`);
+      }
+
+      console.log('Got signed URL for media file');
+
+      // Download the file
+      console.log('Downloading audio file...');
+      const audioResponse = await fetch(signedUrlData.signedUrl);
+      if (!audioResponse.ok) {
+        throw new Error(`Failed to download audio: ${audioResponse.status}`);
+      }
+      
+      // Get content type and determine extension
+      contentType = audioResponse.headers.get('content-type') || 'video/mp4';
+      extension = 'mp4';
+      if (contentType.includes('audio/')) {
+        extension = contentType.split('/')[1].split(';')[0];
+      } else if (contentType.includes('video/')) {
+        extension = contentType.split('/')[1].split(';')[0];
+      }
+      if (extension === 'webm') extension = 'webm';
+      
+      console.log(`Content type: ${contentType}, extension: ${extension}`);
+
+      const audioArrayBuffer = await audioResponse.arrayBuffer();
+      audioBlob = new Blob([audioArrayBuffer], { type: contentType });
+      
+      console.log(`Audio file ready: ${audioBlob.size} bytes`);
     }
-
-    // Get signed URL for the audio file
-    const { data: signedUrlData, error: urlError } = await supabase.storage
-      .from('media-uploads')
-      .createSignedUrl(project.source_file_url, 3600);
-
-    if (urlError || !signedUrlData?.signedUrl) {
-      throw new Error(`Failed to get file URL: ${urlError?.message}`);
-    }
-
-    console.log('Got signed URL for media file');
 
     // Update project status to transcribing
     await supabase
       .from('projects')
       .update({ status: 'transcribing' })
       .eq('id', projectId);
-
-    // Stream the audio file in chunks to avoid memory issues
-    console.log('Downloading audio file...');
-    const audioResponse = await fetch(signedUrlData.signedUrl);
-    if (!audioResponse.ok) {
-      throw new Error(`Failed to download audio: ${audioResponse.status}`);
-    }
-    
-    // Get content type and determine extension
-    const contentType = audioResponse.headers.get('content-type') || 'video/mp4';
-    let extension = 'mp4';
-    if (contentType.includes('audio/')) {
-      extension = contentType.split('/')[1].split(';')[0];
-    } else if (contentType.includes('video/')) {
-      extension = contentType.split('/')[1].split(';')[0];
-    }
-    // Handle webm
-    if (extension === 'webm') extension = 'webm';
-    
-    console.log(`Content type: ${contentType}, extension: ${extension}`);
-
-    // Read the response as array buffer (more memory efficient than blob for smaller files)
-    const audioArrayBuffer = await audioResponse.arrayBuffer();
-    const audioBlob = new Blob([audioArrayBuffer], { type: contentType });
-    
-    console.log(`Audio file ready: ${audioBlob.size} bytes`);
 
     // Prepare form data for OpenAI Whisper
     const formData = new FormData();
