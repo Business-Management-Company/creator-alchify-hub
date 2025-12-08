@@ -11,7 +11,7 @@ interface AppLayoutProps {
 const AppLayout = ({ children, defaultSidebarOpen = true }: AppLayoutProps) => {
   return (
     <SidebarProvider defaultOpen={defaultSidebarOpen}>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="app-theme min-h-screen flex w-full bg-background">
         <AppSidebar />
         <div className="flex-1 flex flex-col">
           <AppHeader />

@@ -152,6 +152,110 @@ All colors MUST be HSL.
     --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.35), 0 10px 10px -5px hsl(0 0% 0% / 0.2);
     --shadow-2xl: 0 25px 50px -12px hsl(0 0% 0% / 0.5);
   }
+
+  /* App theme - Clean, neutral, professional for studio/dashboard */
+  .app-theme {
+    --background: 0 0% 99%;
+    --foreground: 220 15% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 15%;
+
+    --primary: 220 90% 56%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 15% 25%;
+
+    --muted: 220 10% 96%;
+    --muted-foreground: 220 10% 45%;
+
+    --accent: 200 95% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 220 90% 56%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(220 90% 56%), hsl(200 95% 45%));
+    --gradient-secondary: linear-gradient(135deg, hsl(200 85% 50%), hsl(220 90% 56%));
+    --gradient-hero: linear-gradient(180deg, hsl(0 0% 99%) 0%, hsl(220 20% 97%) 100%);
+
+    --glow-primary: 0 0 30px hsl(220 90% 56% / 0.15);
+    --glow-secondary: 0 0 30px hsl(200 85% 50% / 0.12);
+    --glow-accent: 0 0 25px hsl(200 95% 45% / 0.15);
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 15% 20%;
+    --sidebar-primary: 220 90% 56%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 220 15% 25%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 220 90% 56%;
+    --sidebar: 0 0% 100%;
+
+    --chart-1: 220 90% 56%;
+    --chart-2: 200 95% 45%;
+    --chart-3: 175 80% 40%;
+    --chart-4: 260 70% 55%;
+    --chart-5: 280 75% 60%;
+  }
+
+  /* App theme - Dark mode */
+  .dark .app-theme {
+    --background: 222 25% 8%;
+    --foreground: 210 20% 95%;
+
+    --card: 222 30% 12%;
+    --card-foreground: 210 20% 95%;
+
+    --popover: 222 30% 14%;
+    --popover-foreground: 210 20% 95%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 25% 8%;
+
+    --secondary: 222 20% 18%;
+    --secondary-foreground: 210 20% 95%;
+
+    --muted: 222 18% 22%;
+    --muted-foreground: 215 15% 55%;
+
+    --accent: 199 89% 48%;
+    --accent-foreground: 222 25% 8%;
+
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 85% 97%;
+
+    --border: 222 20% 20%;
+    --input: 222 20% 20%;
+    --ring: 217 91% 60%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(199 89% 48%));
+    --gradient-secondary: linear-gradient(135deg, hsl(199 85% 55%), hsl(217 91% 60%));
+    --gradient-hero: linear-gradient(180deg, hsl(222 25% 8%) 0%, hsl(222 30% 12%) 100%);
+
+    --glow-primary: 0 0 50px hsl(217 91% 60% / 0.3);
+    --glow-secondary: 0 0 50px hsl(199 85% 55% / 0.25);
+    --glow-accent: 0 0 35px hsl(199 89% 48% / 0.3);
+
+    --sidebar-background: 222 30% 10%;
+    --sidebar-foreground: 210 20% 95%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 222 25% 8%;
+    --sidebar-accent: 222 20% 18%;
+    --sidebar-accent-foreground: 210 20% 95%;
+    --sidebar-border: 222 20% 20%;
+    --sidebar-ring: 217 91% 60%;
+    --sidebar: 222 30% 12%;
+  }
 }
 
 @layer base {
