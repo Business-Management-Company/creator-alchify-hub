@@ -10,7 +10,10 @@ import {
   Sparkles,
   Video,
   Clapperboard,
-  Shield
+  Shield,
+  Users,
+  FileText,
+  TrendingUp
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -40,6 +43,9 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Video,
   Clapperboard,
   Shield,
+  Users,
+  FileText,
+  TrendingUp,
 };
 
 const navItems = [
@@ -60,6 +66,9 @@ const secondaryItems = [
 
 const adminItems = [
   { id: 'admin', label: 'Admin Dashboard', icon: 'Shield', path: '/admin' },
+  { id: 'admin-users', label: 'Manage Users', icon: 'Users', path: '/admin/users' },
+  { id: 'admin-content', label: 'Content', icon: 'FileText', path: '/admin/content' },
+  { id: 'admin-analytics', label: 'Analytics', icon: 'TrendingUp', path: '/admin/analytics' },
 ];
 
 const AppSidebar = () => {
