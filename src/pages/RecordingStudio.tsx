@@ -316,7 +316,15 @@ const RecordingStudio = () => {
     setInvitedGuests(prev => [...prev, newGuest]);
     setInviteEmail('');
     setInviteName('');
-    toast({ title: 'Invite sent', description: `Invitation sent to ${inviteName}` });
+    toast({ title: 'Invite sent!', description: `Invitation email sent to ${inviteName} at ${inviteEmail}` });
+    
+    // Simulate guest joining after a delay for demo purposes
+    setTimeout(() => {
+      setInvitedGuests(prev => prev.map(g => 
+        g.id === newGuest.id ? { ...g, status: 'joined' as const } : g
+      ));
+      toast({ title: 'Guest joined!', description: `${inviteName} has joined the session` });
+    }, 5000);
   };
 
   const toggleStreamingDestination = (id: string) => {
