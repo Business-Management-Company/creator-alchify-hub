@@ -11,6 +11,8 @@ import Dashboard from "./pages/Dashboard";
 import Upload from "./pages/Upload";
 import Projects from "./pages/Projects";
 import Refiner from "./pages/Refiner";
+import RecordingStudio from "./pages/RecordingStudio";
+import PostProduction from "./pages/PostProduction";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +33,8 @@ const App = () => (
               <Route path="/projects" element={<Projects />} />
               <Route path="/refiner" element={<Refiner />} />
               <Route path="/refiner/:projectId" element={<Refiner />} />
+              <Route path="/studio" element={<RecordingStudio />} />
+              <Route path="/post-production" element={<PostProduction />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
