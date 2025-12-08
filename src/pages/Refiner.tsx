@@ -120,6 +120,7 @@ const Refiner = () => {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isRemovingFillers, setIsRemovingFillers] = useState(false);
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<'clips' | 'captions' | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -643,12 +644,19 @@ const Refiner = () => {
                   </div>
                 </div>
                 <Button 
-                  variant="outline" 
+                  variant={activeSection === 'clips' ? 'hero' : 'outline'} 
                   className="w-full"
                   disabled={!transcript}
+                  onClick={() => {
+                    setActiveSection(activeSection === 'clips' ? null : 'clips');
+                    // Scroll to clips section
+                    setTimeout(() => {
+                      document.getElementById('clips-section')?.scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                  }}
                 >
                   <Film className="mr-2 h-4 w-4" />
-                  {transcript ? 'Generate Clips' : 'Generate Transcript First'}
+                  {transcript ? (activeSection === 'clips' ? 'Close Clips' : 'Generate Clips') : 'Generate Transcript First'}
                 </Button>
               </div>
               
@@ -664,27 +672,39 @@ const Refiner = () => {
                   </div>
                 </div>
                 <Button 
-                  variant="outline" 
+                  variant={activeSection === 'captions' ? 'hero' : 'outline'}
                   className="w-full"
                   disabled={!transcript}
+                  onClick={() => {
+                    setActiveSection(activeSection === 'captions' ? null : 'captions');
+                    // Scroll to captions section
+                    setTimeout(() => {
+                      document.getElementById('captions-section')?.scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                  }}
                 >
                   <Captions className="mr-2 h-4 w-4" />
-                  {transcript ? 'Edit Captions' : 'Generate Transcript First'}
+                  {transcript ? (activeSection === 'captions' ? 'Close Captions' : 'Edit Captions') : 'Generate Transcript First'}
                 </Button>
               </div>
             </div>
           </div>
         </div>
         
-        {/* Tools Section - Show when transcript exists */}
-        {transcript && (
-          <div className="grid lg:grid-cols-2 gap-6">
+        {/* Tools Section - Show when transcript exists and section is active */}
+        {transcript && activeSection === 'clips' && (
+          <div id="clips-section" className="mt-6">
             <ClipGenerator 
               projectId={project.id} 
               transcriptContent={transcript.content}
               transcriptSegments={transcript.segments as any[] | null}
               mediaUrl={mediaUrl}
             />
+          </div>
+        )}
+        
+        {transcript && activeSection === 'captions' && (
+          <div id="captions-section" className="mt-6">
             <CaptionEditor 
               transcriptContent={transcript.content}
             />
