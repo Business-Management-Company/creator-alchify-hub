@@ -5,11 +5,12 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 
 interface AppLayoutProps {
   children: ReactNode;
+  defaultSidebarOpen?: boolean;
 }
 
-const AppLayout = ({ children }: AppLayoutProps) => {
+const AppLayout = ({ children, defaultSidebarOpen = true }: AppLayoutProps) => {
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={defaultSidebarOpen}>
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
         <div className="flex-1 flex flex-col">

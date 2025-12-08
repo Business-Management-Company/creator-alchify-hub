@@ -348,14 +348,14 @@ const RecordingStudio = () => {
   }
 
   return (
-    <>
+    <div className="dark">
       <Helmet>
         <title>Recording Studio - Alchify</title>
         <meta name="description" content="Professional recording studio with webcam, screen capture, virtual backgrounds, and teleprompter" />
       </Helmet>
 
-      <AppLayout>
-        <div className="p-6 space-y-6">
+      <AppLayout defaultSidebarOpen={false}>
+        <div className="p-6 space-y-6 bg-background min-h-screen">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
@@ -813,7 +813,7 @@ const RecordingStudio = () => {
           </div>
         </div>
       </AppLayout>
-    </>
+    </div>
   );
 };
 
