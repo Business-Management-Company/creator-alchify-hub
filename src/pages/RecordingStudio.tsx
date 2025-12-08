@@ -28,11 +28,47 @@ import {
   Image,
   Camera,
   ScreenShare,
-  User
+  User,
+  UserPlus,
+  Link,
+  Mail,
+  Radio,
+  Save,
+  Copy,
+  Check,
+  Facebook,
+  Linkedin,
+  Youtube,
+  Users
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 type RecordingMode = 'webcam' | 'screen' | 'screen-webcam';
 type LayoutType = 'fullscreen' | 'pip-bottom-right' | 'pip-bottom-left' | 'pip-top-right' | 'pip-top-left' | 'split';
+type SessionMode = 'record' | 'stream-record';
+
+interface StreamingDestination {
+  id: string;
+  name: string;
+  icon: React.ComponentType<{ className?: string }>;
+  enabled: boolean;
+  rtmpUrl?: string;
+}
+
+interface InvitedGuest {
+  id: string;
+  email: string;
+  name: string;
+  status: 'pending' | 'joined';
+}
 
 const LAYOUTS: { id: LayoutType; label: string; description: string }[] = [
   { id: 'fullscreen', label: 'Fullscreen', description: 'Single source fills the frame' },
@@ -58,6 +94,7 @@ const RecordingStudio = () => {
   const { toast } = useToast();
   
   const [recordingMode, setRecordingMode] = useState<RecordingMode>('webcam');
+  const [sessionMode, setSessionMode] = useState<SessionMode>('record');
   const [layout, setLayout] = useState<LayoutType>('fullscreen');
   const [virtualBackground, setVirtualBackground] = useState('none');
   const [isRecording, setIsRecording] = useState(false);
@@ -70,6 +107,21 @@ const RecordingStudio = () => {
   const [teleprompterSpeed, setTeleprompterSpeed] = useState(2);
   const [webcamStream, setWebcamStream] = useState<MediaStream | null>(null);
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
+  
+  // Guest invite state
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteName, setInviteName] = useState('');
+  const [invitedGuests, setInvitedGuests] = useState<InvitedGuest[]>([]);
+  const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
+  
+  // Streaming destinations state
+  const [streamingDestinations, setStreamingDestinations] = useState<StreamingDestination[]>([
+    { id: 'youtube', name: 'YouTube', icon: Youtube, enabled: false, rtmpUrl: '' },
+    { id: 'facebook', name: 'Facebook', icon: Facebook, enabled: false, rtmpUrl: '' },
+    { id: 'linkedin', name: 'LinkedIn', icon: Linkedin, enabled: false, rtmpUrl: '' },
+    { id: 'rtmp', name: 'Custom RTMP', icon: Radio, enabled: false, rtmpUrl: '' },
+  ]);
   
   const webcamRef = useRef<HTMLVideoElement>(null);
   const screenRef = useRef<HTMLVideoElement>(null);
@@ -236,6 +288,49 @@ const RecordingStudio = () => {
     }
   };
 
+  const generateInviteLink = () => {
+    // Generate a unique session invite link
+    const sessionId = crypto.randomUUID().slice(0, 8);
+    return `${window.location.origin}/studio/join/${sessionId}`;
+  };
+
+  const copyInviteLink = () => {
+    const link = generateInviteLink();
+    navigator.clipboard.writeText(link);
+    setInviteLinkCopied(true);
+    setTimeout(() => setInviteLinkCopied(false), 2000);
+    toast({ title: 'Link copied', description: 'Invite link copied to clipboard' });
+  };
+
+  const sendEmailInvite = () => {
+    if (!inviteEmail || !inviteName) {
+      toast({ title: 'Missing info', description: 'Please enter guest name and email', variant: 'destructive' });
+      return;
+    }
+    const newGuest: InvitedGuest = {
+      id: crypto.randomUUID(),
+      email: inviteEmail,
+      name: inviteName,
+      status: 'pending',
+    };
+    setInvitedGuests(prev => [...prev, newGuest]);
+    setInviteEmail('');
+    setInviteName('');
+    toast({ title: 'Invite sent', description: `Invitation sent to ${inviteName}` });
+  };
+
+  const toggleStreamingDestination = (id: string) => {
+    setStreamingDestinations(prev => prev.map(dest =>
+      dest.id === id ? { ...dest, enabled: !dest.enabled } : dest
+    ));
+  };
+
+  const updateRtmpUrl = (id: string, url: string) => {
+    setStreamingDestinations(prev => prev.map(dest =>
+      dest.id === id ? { ...dest, rtmpUrl: url } : dest
+    ));
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -259,13 +354,181 @@ const RecordingStudio = () => {
               <h1 className="text-3xl font-bold">Recording Studio</h1>
               <p className="text-muted-foreground mt-1">Create professional recordings with ease</p>
             </div>
-            {isRecording && (
-              <Badge variant="destructive" className="animate-pulse flex items-center gap-2">
-                <Circle className="h-3 w-3 fill-current" />
-                REC {formatTime(recordingTime)}
-              </Badge>
-            )}
+            <div className="flex items-center gap-3">
+              {invitedGuests.length > 0 && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  {invitedGuests.length} guest{invitedGuests.length > 1 ? 's' : ''}
+                </Badge>
+              )}
+              {isRecording && (
+                <Badge variant="destructive" className="animate-pulse flex items-center gap-2">
+                  <Circle className="h-3 w-3 fill-current" />
+                  {sessionMode === 'stream-record' && 'LIVE • '}
+                  REC {formatTime(recordingTime)}
+                </Badge>
+              )}
+              <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Invite Guest
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Invite Guest to Session</DialogTitle>
+                    <DialogDescription>
+                      Share a link or send an email invitation
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-4">
+                    {/* Share Link */}
+                    <div className="space-y-2">
+                      <Label>Shareable Link</Label>
+                      <div className="flex gap-2">
+                        <Input 
+                          value={generateInviteLink()} 
+                          readOnly 
+                          className="text-sm"
+                        />
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          onClick={copyInviteLink}
+                        >
+                          {inviteLinkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">or send email</span>
+                      </div>
+                    </div>
+                    
+                    {/* Email Invite */}
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="guest-name">Guest Name</Label>
+                        <Input 
+                          id="guest-name"
+                          placeholder="Enter name"
+                          value={inviteName}
+                          onChange={e => setInviteName(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="guest-email">Guest Email</Label>
+                        <Input 
+                          id="guest-email"
+                          type="email"
+                          placeholder="Enter email"
+                          value={inviteEmail}
+                          onChange={e => setInviteEmail(e.target.value)}
+                        />
+                      </div>
+                      <Button className="w-full" onClick={sendEmailInvite}>
+                        <Mail className="h-4 w-4 mr-2" />
+                        Send Invitation
+                      </Button>
+                    </div>
+                    
+                    {/* Invited Guests List */}
+                    {invitedGuests.length > 0 && (
+                      <div className="space-y-2 pt-2">
+                        <Label>Invited Guests</Label>
+                        <div className="space-y-2">
+                          {invitedGuests.map(guest => (
+                            <div key={guest.id} className="flex items-center justify-between p-2 rounded-lg bg-muted">
+                              <div>
+                                <div className="font-medium text-sm">{guest.name}</div>
+                                <div className="text-xs text-muted-foreground">{guest.email}</div>
+                              </div>
+                              <Badge variant={guest.status === 'joined' ? 'default' : 'secondary'}>
+                                {guest.status}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
+
+          {/* Session Mode Selection */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-4">
+                  <Label className="text-sm font-medium">Session Mode:</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={sessionMode === 'record' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSessionMode('record')}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Record Only
+                    </Button>
+                    <Button
+                      variant={sessionMode === 'stream-record' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSessionMode('stream-record')}
+                    >
+                      <Radio className="h-4 w-4 mr-2" />
+                      Stream + Record
+                    </Button>
+                  </div>
+                </div>
+                
+                {sessionMode === 'stream-record' && (
+                  <div className="flex items-center gap-3 ml-auto">
+                    <Label className="text-sm">Stream to:</Label>
+                    {streamingDestinations.map(dest => {
+                      const Icon = dest.icon;
+                      return (
+                        <Button
+                          key={dest.id}
+                          variant={dest.enabled ? 'default' : 'outline'}
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => toggleStreamingDestination(dest.id)}
+                          title={dest.name}
+                        >
+                          <Icon className="h-4 w-4" />
+                        </Button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              
+              {/* RTMP URLs for enabled streaming destinations */}
+              {sessionMode === 'stream-record' && streamingDestinations.some(d => d.enabled) && (
+                <div className="mt-4 space-y-2">
+                  {streamingDestinations.filter(d => d.enabled).map(dest => (
+                    <div key={dest.id} className="flex items-center gap-2">
+                      <Label className="w-24 text-sm">{dest.name}:</Label>
+                      <Input
+                        placeholder={`Enter ${dest.id === 'rtmp' ? 'RTMP URL' : 'Stream Key'}`}
+                        value={dest.rtmpUrl}
+                        onChange={e => updateRtmpUrl(dest.id, e.target.value)}
+                        className="flex-1"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
             {/* Main Preview Area */}
@@ -396,8 +659,17 @@ const RecordingStudio = () => {
                           onClick={startRecording}
                           disabled={!webcamStream && !screenStream}
                         >
-                          <Circle className="h-4 w-4 mr-2 fill-current" />
-                          Start Recording
+                          {sessionMode === 'stream-record' ? (
+                            <>
+                              <Radio className="h-4 w-4 mr-2" />
+                              Go Live
+                            </>
+                          ) : (
+                            <>
+                              <Circle className="h-4 w-4 mr-2 fill-current" />
+                              Start Recording
+                            </>
+                          )}
                         </Button>
                       ) : (
                         <>
