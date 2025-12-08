@@ -13,6 +13,10 @@ import Projects from "./pages/Projects";
 import Refiner from "./pages/Refiner";
 import RecordingStudio from "./pages/RecordingStudio";
 import PostProduction from "./pages/PostProduction";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminContent from "./pages/admin/AdminContent";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +39,11 @@ const App = () => (
               <Route path="/refiner/:projectId" element={<Refiner />} />
               <Route path="/studio" element={<RecordingStudio />} />
               <Route path="/post-production" element={<PostProduction />} />
+              {/* Admin Routes */}
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/users" element={<AdminUsers />} />
+              <Route path="/admin/content" element={<AdminContent />} />
+              <Route path="/admin/analytics" element={<AdminAnalytics />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -9,7 +9,8 @@ import {
   Settings,
   Sparkles,
   Video,
-  Clapperboard
+  Clapperboard,
+  Shield
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -17,6 +18,7 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -24,6 +26,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { useAdminCheck } from '@/hooks/useAdminCheck';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard,
@@ -36,6 +39,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Settings,
   Video,
   Clapperboard,
+  Shield,
 };
 
 const navItems = [
@@ -54,14 +58,22 @@ const secondaryItems = [
   { id: 'settings', label: 'Settings', icon: 'Settings', path: '/settings' },
 ];
 
+const adminItems = [
+  { id: 'admin', label: 'Admin Dashboard', icon: 'Shield', path: '/admin' },
+];
+
 const AppSidebar = () => {
   const location = useLocation();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
+  const { isAdmin } = useAdminCheck();
 
   const isActive = (path: string) => {
     if (path === '/refiner') {
       return location.pathname.startsWith('/refiner');
+    }
+    if (path === '/admin') {
+      return location.pathname.startsWith('/admin');
     }
     return location.pathname === path;
   };
@@ -129,6 +141,40 @@ const AppSidebar = () => {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        
+        {/* Admin Section - Only visible to admins */}
+        {isAdmin && (
+          <>
+            <div className="my-4 mx-2 h-px bg-border" />
+            
+            <SidebarGroup>
+              {!collapsed && (
+                <SidebarGroupLabel className="text-xs text-primary/70">Admin</SidebarGroupLabel>
+              )}
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {adminItems.map((item) => {
+                    const Icon = iconMap[item.icon];
+                    return (
+                      <SidebarMenuItem key={item.id}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive(item.path)}
+                          tooltip={item.label}
+                        >
+                          <Link to={item.path}>
+                            {Icon && <Icon className="h-4 w-4 text-primary" />}
+                            <span>{item.label}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
       </SidebarContent>
       
       <SidebarFooter className="p-4">
