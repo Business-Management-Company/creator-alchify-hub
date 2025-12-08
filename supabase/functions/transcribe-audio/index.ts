@@ -29,8 +29,11 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let projectId: string | null = null;
+  
   try {
-    const { projectId } = await req.json();
+    const body = await req.json();
+    projectId = body.projectId;
     
     if (!projectId) {
       throw new Error('Project ID is required');
@@ -246,9 +249,8 @@ serve(async (req) => {
     console.error("Transcription error:", error);
     
     // Try to update project status back to uploaded
-    try {
-      const { projectId } = await req.clone().json();
-      if (projectId) {
+    if (projectId) {
+      try {
         const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
         const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
         const supabase = createClient(supabaseUrl, supabaseKey);
@@ -256,15 +258,17 @@ serve(async (req) => {
           .from('projects')
           .update({ status: 'uploaded' })
           .eq('id', projectId);
+      } catch (e) {
+        console.error("Failed to reset project status:", e);
       }
-    } catch (e) {
-      console.error("Failed to reset project status:", e);
     }
 
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: errorMessage }),
       { 
-        status: 500, 
+        status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
