@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/layout/AppLayout';
 import { ClipGenerator } from '@/components/refiner/ClipGenerator';
+import { CaptionEditor } from '@/components/refiner/CaptionEditor';
 
 interface Project {
   id: string;
@@ -460,12 +461,17 @@ const Refiner = () => {
           </div>
         </div>
         
-        {/* Clip Generator - Show when transcript exists */}
+        {/* Tools Section - Show when transcript exists */}
         {transcript && (
-          <ClipGenerator 
-            projectId={project.id} 
-            transcriptContent={transcript.content}
-          />
+          <div className="grid lg:grid-cols-2 gap-6">
+            <ClipGenerator 
+              projectId={project.id} 
+              transcriptContent={transcript.content}
+            />
+            <CaptionEditor 
+              transcriptContent={transcript.content}
+            />
+          </div>
         )}
       </AppLayout>
     </>
