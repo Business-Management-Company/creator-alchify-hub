@@ -87,6 +87,7 @@ const PostProduction = () => {
   ]);
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isProcessingComplete, setIsProcessingComplete] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -155,6 +156,7 @@ const PostProduction = () => {
     }
 
     setIsProcessing(false);
+    setIsProcessingComplete(true);
     toast({ 
       title: 'Processing complete!', 
       description: 'Your content has been refined and is ready for export' 
@@ -163,6 +165,7 @@ const PostProduction = () => {
 
   const resetTasks = () => {
     setTasks(prev => prev.map(t => ({ ...t, status: 'idle', progress: 0 })));
+    setIsProcessingComplete(false);
   };
 
   const formatDuration = (seconds: number | null) => {
@@ -267,54 +270,144 @@ const PostProduction = () => {
                 </TabsList>
 
                 <TabsContent value="overview" className="mt-4 space-y-4">
-                  {/* Processing Pipeline */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Processing Pipeline</CardTitle>
-                      <CardDescription>
-                        AI-powered content refinement
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {tasks.map((task) => {
-                        const Icon = task.icon;
-                        return (
-                          <div key={task.id} className="flex items-center gap-4">
-                            <div className={`p-2 rounded-lg ${
-                              task.status === 'completed' ? 'bg-green-500/20 text-green-500' :
-                              task.status === 'processing' ? 'bg-primary/20 text-primary' :
-                              'bg-muted text-muted-foreground'
-                            }`}>
-                              {task.status === 'completed' ? (
-                                <Check className="h-5 w-5" />
-                              ) : task.status === 'processing' ? (
-                                <Loader2 className="h-5 w-5 animate-spin" />
-                              ) : (
-                                <Icon className="h-5 w-5" />
-                              )}
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between">
-                                <div className="font-medium">{task.name}</div>
-                                {task.status === 'processing' && (
-                                  <span className="text-xs text-muted-foreground">{task.progress}%</span>
-                                )}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* Video Preview */}
+                    <Card>
+                      <CardContent className="p-0">
+                        {selectedProject?.source_file_url ? (
+                          <div className="relative aspect-video bg-black rounded-t-lg overflow-hidden">
+                            {selectedProject.source_file_type === 'audio' ? (
+                              <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                                <div className="text-center">
+                                  <Mic2 className="h-16 w-16 text-muted-foreground mx-auto mb-2" />
+                                  <p className="text-muted-foreground">Audio file</p>
+                                </div>
                               </div>
-                              <div className="text-sm text-muted-foreground">{task.description}</div>
-                              {task.status === 'processing' && (
-                                <Progress value={task.progress} className="mt-2 h-1" />
-                              )}
+                            ) : (
+                              <video
+                                src={selectedProject.source_file_url}
+                                controls
+                                className="w-full h-full object-contain"
+                              />
+                            )}
+                            {/* Processing overlay */}
+                            {isProcessing && (
+                              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                <div className="text-center">
+                                  <div className="relative">
+                                    <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+                                    <Sparkles className="h-6 w-6 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                                  </div>
+                                  <p className="text-white font-medium mt-4">AI Processing...</p>
+                                  <p className="text-white/70 text-sm mt-1">
+                                    {tasks.find(t => t.status === 'processing')?.name || 'Preparing'}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="aspect-video bg-muted rounded-t-lg flex items-center justify-center">
+                            <div className="text-center text-muted-foreground">
+                              <Video className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                              <p>Select a project to preview</p>
                             </div>
                           </div>
-                        );
-                      })}
-                    </CardContent>
-                  </Card>
+                        )}
+                        {selectedProject && (
+                          <div className="p-4 border-t border-border">
+                            <h3 className="font-semibold truncate">{selectedProject.title}</h3>
+                            <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {formatDuration(selectedProject.source_duration_seconds)}
+                              </span>
+                              <Badge variant="secondary" className="text-xs">
+                                {selectedProject.source_file_type || 'video'}
+                              </Badge>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
 
-                  {/* Quick Actions */}
-                  <div className="flex gap-4">
+                    {/* Processing Pipeline */}
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg">Processing Pipeline</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {tasks.map((task) => {
+                          const Icon = task.icon;
+                          return (
+                            <div key={task.id} className="flex items-center gap-3">
+                              <div className={`p-1.5 rounded-lg ${
+                                task.status === 'completed' ? 'bg-green-500/20 text-green-500' :
+                                task.status === 'processing' ? 'bg-primary/20 text-primary' :
+                                'bg-muted text-muted-foreground'
+                              }`}>
+                                {task.status === 'completed' ? (
+                                  <Check className="h-4 w-4" />
+                                ) : task.status === 'processing' ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Icon className="h-4 w-4" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <div className="font-medium text-sm">{task.name}</div>
+                                  {task.status === 'processing' && (
+                                    <span className="text-xs text-muted-foreground">{task.progress}%</span>
+                                  )}
+                                </div>
+                                {task.status === 'processing' && (
+                                  <Progress value={task.progress} className="mt-1 h-1" />
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Actions based on state */}
+                  {isProcessingComplete ? (
+                    <Card className="border-green-500/30 bg-green-500/5">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="p-2 rounded-full bg-green-500/20">
+                            <Check className="h-5 w-5 text-green-500" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-green-500">Processing Complete!</h3>
+                            <p className="text-sm text-muted-foreground">Your content is refined and ready</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <Button onClick={() => selectedProject && navigate(`/refiner/${selectedProject.id}`)}>
+                            <Play className="h-4 w-4 mr-2" />
+                            Open Editor
+                          </Button>
+                          <Button variant="outline">
+                            <Share2 className="h-4 w-4 mr-2" />
+                            Share to Social
+                          </Button>
+                          <Button variant="outline">
+                            <FolderOpen className="h-4 w-4 mr-2" />
+                            Save to Library
+                          </Button>
+                          <Button variant="secondary">
+                            <Wand2 className="h-4 w-4 mr-2" />
+                            Export
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : (
                     <Button 
-                      className="flex-1" 
+                      className="w-full" 
                       size="lg"
                       onClick={startProcessing}
                       disabled={!selectedProject || isProcessing}
@@ -331,11 +424,7 @@ const PostProduction = () => {
                         </>
                       )}
                     </Button>
-                    <Button variant="outline" size="lg" onClick={() => selectedProject && navigate(`/refiner/${selectedProject.id}`)}>
-                      <Play className="h-5 w-5 mr-2" />
-                      Open in Editor
-                    </Button>
-                  </div>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="audio" className="mt-4">
