@@ -212,7 +212,8 @@ const Refiner = () => {
         action_details: {
           word_count: data.transcript?.wordCount,
           filler_count: data.transcript?.fillerCount,
-          model: 'google/gemini-2.5-flash'
+          has_word_timing: data.transcript?.hasWordTiming,
+          model: 'openai/whisper-1'
         }
       });
       
@@ -467,6 +468,7 @@ const Refiner = () => {
             <ClipGenerator 
               projectId={project.id} 
               transcriptContent={transcript.content}
+              transcriptSegments={transcript.segments as any[] | null}
               mediaUrl={mediaUrl}
             />
             <CaptionEditor 
