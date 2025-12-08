@@ -174,8 +174,12 @@ const PostProduction = () => {
         body: { projectId: selectedProject.id }
       });
 
-      if (transcriptError) throw new Error(transcriptError.message || 'Transcription failed');
-      if (transcriptData?.error) throw new Error(transcriptData.error);
+      if (transcriptError) {
+        throw new Error(transcriptError.message || 'Transcription failed');
+      }
+      if (transcriptData?.error) {
+        throw new Error(transcriptData.error);
+      }
       
       updateTaskStatus('transcribe', 'completed', 100);
       
@@ -259,9 +263,15 @@ const PostProduction = () => {
     } catch (error) {
       console.error('Processing error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Processing failed';
+      
+      // Check if it's a file size error and provide helpful guidance
+      const isFileSizeError = errorMessage.toLowerCase().includes('too large') || errorMessage.toLowerCase().includes('25mb');
+      
       toast({ 
-        title: 'Processing Error', 
-        description: errorMessage, 
+        title: isFileSizeError ? 'File Too Large' : 'Processing Error', 
+        description: isFileSizeError 
+          ? 'Your file exceeds the 25MB limit for transcription. Please compress your video or extract audio only.'
+          : errorMessage, 
         variant: 'destructive' 
       });
       
