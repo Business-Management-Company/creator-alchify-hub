@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/layout/AppLayout';
+import { UsageIndicator } from '@/components/UsageIndicator';
 
 interface Project {
   id: string;
@@ -229,24 +230,30 @@ const Dashboard = () => {
           </div>
         </div>
         
-        {/* Revive Content Section */}
-        <div className="bg-card/30 border border-border rounded-2xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-accent/10">
-              <Sparkles className="h-5 w-5 text-accent" />
+        {/* Usage & Revive Section */}
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Usage Indicator */}
+          <UsageIndicator />
+          
+          {/* Revive Content Section */}
+          <div className="bg-card/30 border border-border rounded-2xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-lg bg-accent/10">
+                <Sparkles className="h-5 w-5 text-accent" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">Revive Your Content</h3>
+                <p className="text-sm text-muted-foreground">
+                  Suggestions based on your content library
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-foreground">Revive Your Content</h3>
-              <p className="text-sm text-muted-foreground">
-                Suggestions based on your content library
+            
+            <div className="flex items-center justify-center h-32 border border-dashed border-border rounded-xl">
+              <p className="text-muted-foreground text-sm">
+                Upload content to get personalized suggestions
               </p>
             </div>
-          </div>
-          
-          <div className="flex items-center justify-center h-32 border border-dashed border-border rounded-xl">
-            <p className="text-muted-foreground text-sm">
-              Upload content to get personalized suggestions
-            </p>
           </div>
         </div>
       </AppLayout>

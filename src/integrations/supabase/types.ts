@@ -49,6 +49,77 @@ export type Database = {
           },
         ]
       }
+      pricing_features: {
+        Row: {
+          display_order: number
+          feature: string
+          id: string
+          plan_id: string | null
+        }
+        Insert: {
+          display_order?: number
+          feature: string
+          id?: string
+          plan_id?: string | null
+        }
+        Update: {
+          display_order?: number
+          feature?: string
+          id?: string
+          plan_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pricing_features_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pricing_plans: {
+        Row: {
+          created_at: string | null
+          display_order: number
+          id: string
+          is_popular: boolean | null
+          livestream_hours: string
+          name: string
+          podcasts: string
+          price: number
+          recording_hours: string
+          storage_gb: string
+          team_members: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number
+          id: string
+          is_popular?: boolean | null
+          livestream_hours: string
+          name: string
+          podcasts: string
+          price?: number
+          recording_hours: string
+          storage_gb: string
+          team_members?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number
+          id?: string
+          is_popular?: boolean | null
+          livestream_hours?: string
+          name?: string
+          podcasts?: string
+          price?: number
+          recording_hours?: string
+          storage_gb?: string
+          team_members?: number | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -221,6 +292,83 @@ export type Database = {
           created_at?: string | null
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          created_at: string | null
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          plan_id: string
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan_id?: string
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan_id?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_usage: {
+        Row: {
+          created_at: string | null
+          id: string
+          livestream_hours_used: number | null
+          month_year: string
+          podcasts_count: number | null
+          recording_hours_used: number | null
+          storage_used_gb: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          livestream_hours_used?: number | null
+          month_year: string
+          podcasts_count?: number | null
+          recording_hours_used?: number | null
+          storage_used_gb?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          livestream_hours_used?: number | null
+          month_year?: string
+          podcasts_count?: number | null
+          recording_hours_used?: number | null
+          storage_used_gb?: number | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
