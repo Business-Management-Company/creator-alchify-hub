@@ -15,7 +15,8 @@ import {
   FileText,
   TrendingUp,
   CreditCard,
-  Server
+  Server,
+  Library
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -50,11 +51,13 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   TrendingUp,
   CreditCard,
   Server,
+  Library,
 };
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: 'LayoutDashboard', path: '/dashboard' },
   { id: 'upload', label: 'Upload', icon: 'Upload', path: '/upload' },
+  { id: 'library', label: 'Media Library', icon: 'Library', path: '/library' },
   { id: 'projects', label: 'Projects', icon: 'FolderOpen', path: '/projects' },
   { id: 'studio', label: 'Recording Studio', icon: 'Video', path: '/studio' },
   { id: 'post-production', label: 'Post Production', icon: 'Clapperboard', path: '/post-production' },
