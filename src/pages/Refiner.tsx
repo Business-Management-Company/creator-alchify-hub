@@ -11,16 +11,23 @@ import {
   AlertCircle,
   Sparkles,
   Film,
-  Captions
+  Captions,
+  FolderOpen,
+  Plus,
+  Video,
+  Music,
+  Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/layout/AppLayout';
 import { ClipGenerator } from '@/components/refiner/ClipGenerator';
 import { CaptionEditor } from '@/components/refiner/CaptionEditor';
+import VideoThumbnail from '@/components/VideoThumbnail';
 
 interface Project {
   id: string;
@@ -105,6 +112,7 @@ const Refiner = () => {
   const { toast } = useToast();
   
   const [project, setProject] = useState<Project | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [transcript, setTranscript] = useState<Transcript | null>(null);
   const [loading, setLoading] = useState(true);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -120,8 +128,27 @@ const Refiner = () => {
   useEffect(() => {
     if (user && projectId) {
       fetchProject();
+    } else if (user && !projectId) {
+      fetchProjects();
     }
   }, [user, projectId]);
+
+  const fetchProjects = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setProjects(data || []);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchProject = async () => {
     try {
@@ -303,6 +330,95 @@ const Refiner = () => {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
+    );
+  }
+
+  // No projectId - show project selection landing page
+  if (!projectId) {
+    return (
+      <>
+        <Helmet>
+          <title>Refiner Studio | Alchify</title>
+          <meta name="description" content="AI-powered content refinement studio for transcription, filler removal, and clip generation." />
+        </Helmet>
+        
+        <AppLayout>
+          <div className="max-w-4xl mx-auto">
+            {/* Header */}
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
+                <Wand2 className="h-8 w-8 text-primary" />
+                Refiner Studio
+              </h1>
+              <p className="text-muted-foreground mt-2">
+                Select a project to start refining with AI-powered tools
+              </p>
+            </div>
+            
+            {/* Project Selection */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FolderOpen className="h-5 w-5" />
+                  Your Projects
+                </CardTitle>
+                <CardDescription>
+                  Choose a project to open in the Refiner Studio
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {projects.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
+                      <FolderOpen className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                    <h3 className="font-medium text-foreground mb-2">No projects yet</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Upload content to get started with AI refinement
+                    </p>
+                    <Button variant="hero" onClick={() => navigate('/upload')}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Upload Content
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {projects.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => navigate(`/refiner/${p.id}`)}
+                        className="flex items-start gap-4 p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-left group"
+                      >
+                        <div className="w-24 h-16 rounded-md overflow-hidden bg-muted flex-shrink-0">
+                          <VideoThumbnail 
+                            sourceFileUrl={p.source_file_url}
+                            sourceFileType={p.source_file_type}
+                            className="w-full h-full"
+                            showControls={false}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                            {p.title}
+                          </h4>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="secondary" className="text-xs">
+                              {p.source_file_type || 'video'}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(p.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </AppLayout>
+      </>
     );
   }
 
