@@ -44,6 +44,95 @@ export type Database = {
         }
         Relationships: []
       }
+      projects: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          source_duration_seconds: number | null
+          source_file_name: string | null
+          source_file_size: number | null
+          source_file_type: string | null
+          source_file_url: string | null
+          status: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          source_duration_seconds?: number | null
+          source_file_name?: string | null
+          source_file_size?: number | null
+          source_file_type?: string | null
+          source_file_url?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          source_duration_seconds?: number | null
+          source_file_name?: string | null
+          source_file_size?: number | null
+          source_file_type?: string | null
+          source_file_url?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transcripts: {
+        Row: {
+          avg_confidence: number | null
+          content: string | null
+          created_at: string
+          filler_words_detected: number | null
+          id: string
+          project_id: string
+          segments: Json | null
+          updated_at: string
+          word_count: number | null
+        }
+        Insert: {
+          avg_confidence?: number | null
+          content?: string | null
+          created_at?: string
+          filler_words_detected?: number | null
+          id?: string
+          project_id: string
+          segments?: Json | null
+          updated_at?: string
+          word_count?: number | null
+        }
+        Update: {
+          avg_confidence?: number | null
+          content?: string | null
+          created_at?: string
+          filler_words_detected?: number | null
+          id?: string
+          project_id?: string
+          segments?: Json | null
+          updated_at?: string
+          word_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transcripts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
