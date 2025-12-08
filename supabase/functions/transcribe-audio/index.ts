@@ -6,6 +6,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface WordSegment {
+  word: string;
+  start: number;
+  end: number;
+}
+
+interface TranscriptSegment {
+  timestamp: string;
+  text: string;
+  start: number;
+  end: number;
+  words: WordSegment[];
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -13,15 +27,15 @@ serve(async (req) => {
   }
 
   try {
-    const { projectId, audioUrl } = await req.json();
+    const { projectId } = await req.json();
     
     if (!projectId) {
       throw new Error('Project ID is required');
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) {
+      throw new Error("OPENAI_API_KEY is not configured");
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -58,60 +72,90 @@ serve(async (req) => {
       .update({ status: 'transcribing' })
       .eq('id', projectId);
 
-    // Use Lovable AI to transcribe (simulating with text extraction for now)
-    // In production, you'd use a dedicated speech-to-text API like Deepgram or AssemblyAI
-    // For MVP, we'll use AI to generate a demo transcript
+    // Download the audio file
+    console.log('Downloading audio file...');
+    const audioResponse = await fetch(signedUrlData.signedUrl);
+    if (!audioResponse.ok) {
+      throw new Error(`Failed to download audio: ${audioResponse.status}`);
+    }
     
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
+    const audioBlob = await audioResponse.blob();
+    console.log(`Audio file downloaded: ${audioBlob.size} bytes, type: ${audioBlob.type}`);
+
+    // Prepare form data for OpenAI Whisper
+    const formData = new FormData();
+    
+    // Determine file extension from type
+    let extension = 'mp4';
+    if (audioBlob.type.includes('audio/')) {
+      extension = audioBlob.type.split('/')[1].split(';')[0];
+    } else if (audioBlob.type.includes('video/')) {
+      extension = audioBlob.type.split('/')[1].split(';')[0];
+    }
+    
+    formData.append('file', audioBlob, `audio.${extension}`);
+    formData.append('model', 'whisper-1');
+    formData.append('response_format', 'verbose_json');
+    formData.append('timestamp_granularities[]', 'word');
+    formData.append('timestamp_granularities[]', 'segment');
+
+    console.log('Sending to OpenAI Whisper for transcription with word-level timestamps...');
+
+    // Call OpenAI Whisper API with word-level timestamps
+    const whisperResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
       },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: `You are a transcription AI assistant for Alchify. Generate a realistic sample transcript for a ${project.source_file_type} file titled "${project.title}". 
-            
-            Create a natural-sounding transcript with:
-            - Timestamps in the format [MM:SS]
-            - Natural speech patterns including some filler words like "um", "uh", "you know", "like", "basically"
-            - About 200-400 words
-            - Make it sound like genuine spoken content
-            
-            Format: Start each segment with a timestamp, then the spoken text.
-            Example:
-            [00:00] So, um, welcome everyone to today's discussion...`
-          },
-          {
-            role: "user",
-            content: `Generate a transcript for a ${project.source_file_type} titled "${project.title}". Make it engaging and realistic.`
-          }
-        ],
-      }),
+      body: formData,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      
-      if (response.status === 429) {
-        throw new Error("Rate limit exceeded. Please try again later.");
-      }
-      if (response.status === 402) {
-        throw new Error("AI credits exhausted. Please add credits to continue.");
-      }
-      throw new Error(`AI transcription failed: ${response.status}`);
+    if (!whisperResponse.ok) {
+      const errorText = await whisperResponse.text();
+      console.error("Whisper API error:", whisperResponse.status, errorText);
+      throw new Error(`Whisper transcription failed: ${whisperResponse.status} - ${errorText}`);
     }
 
-    const aiResponse = await response.json();
-    const transcriptContent = aiResponse.choices?.[0]?.message?.content || '';
+    const whisperResult = await whisperResponse.json();
+    console.log('Whisper transcription complete');
+    console.log(`Total duration: ${whisperResult.duration}s`);
+    console.log(`Segments: ${whisperResult.segments?.length || 0}`);
+    console.log(`Words: ${whisperResult.words?.length || 0}`);
 
-    console.log('Generated transcript content');
+    // Process the transcript with word-level timing
+    const words: WordSegment[] = (whisperResult.words || []).map((w: any) => ({
+      word: w.word,
+      start: w.start,
+      end: w.end,
+    }));
 
-    // Parse the transcript to extract segments and count filler words
+    // Create segments from Whisper segments with associated words
+    const segments: TranscriptSegment[] = (whisperResult.segments || []).map((seg: any) => {
+      // Get words that fall within this segment's time range
+      const segmentWords = words.filter(
+        (w) => w.start >= seg.start && w.end <= seg.end + 0.5
+      );
+      
+      const minutes = Math.floor(seg.start / 60);
+      const seconds = Math.floor(seg.start % 60);
+      const timestamp = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+      return {
+        timestamp,
+        text: seg.text.trim(),
+        start: seg.start,
+        end: seg.end,
+        words: segmentWords,
+      };
+    });
+
+    // Build the formatted transcript content with timestamps
+    let transcriptContent = '';
+    for (const segment of segments) {
+      transcriptContent += `[${segment.timestamp}] ${segment.text}\n`;
+    }
+
+    // Count filler words
     const fillerWords = ['um', 'uh', 'like', 'you know', 'basically', 'actually', 'so,', 'well,'];
     let fillerCount = 0;
     
@@ -124,30 +168,24 @@ serve(async (req) => {
     });
 
     // Count words
-    const wordCount = transcriptContent.split(/\s+/).filter((w: string) => w.length > 0).length;
+    const wordCount = words.length;
 
-    // Parse segments from timestamps
-    const segmentRegex = /\[(\d{2}:\d{2})\]\s*([^\[]+)/g;
-    const segments: { timestamp: string; text: string; start: number }[] = [];
-    let match;
+    // Calculate average confidence if available
+    const avgConfidence = whisperResult.segments?.length > 0
+      ? whisperResult.segments.reduce((acc: number, seg: any) => acc + (seg.avg_logprob || -0.5), 0) / whisperResult.segments.length
+      : -0.5;
+    
+    // Convert log prob to confidence (rough approximation)
+    const confidenceScore = Math.min(0.99, Math.max(0.5, 1 + avgConfidence * 0.5));
 
-    while ((match = segmentRegex.exec(transcriptContent)) !== null) {
-      const [minutes, seconds] = match[1].split(':').map(Number);
-      segments.push({
-        timestamp: match[1],
-        text: match[2].trim(),
-        start: minutes * 60 + seconds,
-      });
-    }
-
-    // Save transcript to database
+    // Save transcript to database with word-level data
     const { data: transcript, error: transcriptError } = await supabase
       .from('transcripts')
       .insert({
         project_id: projectId,
         content: transcriptContent,
-        segments: segments,
-        avg_confidence: 0.95, // Simulated confidence
+        segments: segments, // Now includes word-level timing
+        avg_confidence: confidenceScore,
         word_count: wordCount,
         filler_words_detected: fillerCount,
       })
@@ -164,7 +202,12 @@ serve(async (req) => {
       .update({ status: 'editing' })
       .eq('id', projectId);
 
-    console.log('Transcription complete:', { wordCount, fillerCount, segments: segments.length });
+    console.log('Transcription complete:', { 
+      wordCount, 
+      fillerCount, 
+      segments: segments.length,
+      hasWordTiming: words.length > 0
+    });
 
     return new Response(
       JSON.stringify({
@@ -175,6 +218,7 @@ serve(async (req) => {
           wordCount,
           fillerCount,
           segmentCount: segments.length,
+          hasWordTiming: true,
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -182,6 +226,23 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("Transcription error:", error);
+    
+    // Try to update project status to failed
+    try {
+      const { projectId } = await req.clone().json();
+      if (projectId) {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        await supabase
+          .from('projects')
+          .update({ status: 'uploaded' })
+          .eq('id', projectId);
+      }
+    } catch (e) {
+      console.error("Failed to reset project status:", e);
+    }
+
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { 

@@ -54,6 +54,7 @@ interface CaptionStyle {
 interface ClipGeneratorProps {
   projectId: string;
   transcriptContent: string | null;
+  transcriptSegments?: any[] | null; // Segments with word-level timing
   mediaUrl?: string | null;
   onClipGenerated?: () => void;
 }
@@ -82,13 +83,73 @@ function timeToSeconds(time: string): number {
 }
 
 // Parse transcript to get caption segments for a specific time range
+// Now uses word-level timing from Whisper for accurate sync
 function extractCaptionsForClip(
   transcriptContent: string, 
   startTime: number, 
-  endTime: number
+  endTime: number,
+  segments?: any[] // Segments with word-level timing from database
 ): { start: number; end: number; text: string }[] {
+  // If we have segments with word-level timing, use those for precise captions
+  if (segments && segments.length > 0 && segments[0]?.words?.length > 0) {
+    console.log('Using word-level timing for captions');
+    const captions: { start: number; end: number; text: string }[] = [];
+    
+    // Group words into ~3-5 word phrases for readable captions
+    let currentCaption = {
+      start: 0,
+      end: 0,
+      words: [] as string[],
+    };
+    
+    for (const segment of segments) {
+      if (!segment.words) continue;
+      
+      for (const word of segment.words) {
+        // Skip words outside our clip range
+        if (word.end < startTime || word.start > endTime) continue;
+        
+        // Start a new caption group
+        if (currentCaption.words.length === 0) {
+          currentCaption.start = word.start;
+        }
+        
+        currentCaption.words.push(word.word);
+        currentCaption.end = word.end;
+        
+        // Create a new caption every 4-6 words or on natural breaks
+        const text = word.word.trim();
+        const isEndOfSentence = text.endsWith('.') || text.endsWith('?') || text.endsWith('!');
+        const isLongEnough = currentCaption.words.length >= 4;
+        const isTooLong = currentCaption.words.length >= 7;
+        
+        if ((isEndOfSentence && isLongEnough) || isTooLong) {
+          captions.push({
+            start: currentCaption.start,
+            end: currentCaption.end,
+            text: currentCaption.words.join('').trim(),
+          });
+          currentCaption = { start: 0, end: 0, words: [] };
+        }
+      }
+    }
+    
+    // Don't forget the last caption
+    if (currentCaption.words.length > 0) {
+      captions.push({
+        start: currentCaption.start,
+        end: currentCaption.end,
+        text: currentCaption.words.join('').trim(),
+      });
+    }
+    
+    return captions;
+  }
+  
+  // Fallback to timestamp-based extraction for older transcripts
+  console.log('Falling back to timestamp-based caption extraction');
   const regex = /\[(\d{2}:\d{2})\]\s*([^\[]+)/g;
-  const segments: { start: number; end: number; text: string }[] = [];
+  const captionSegments: { start: number; end: number; text: string }[] = [];
   let match;
   const allMatches: { time: number; text: string }[] = [];
 
@@ -108,7 +169,7 @@ function extractCaptionsForClip(
 
     // Only include segments that overlap with clip range
     if (segmentEnd >= startTime && segmentStart <= endTime) {
-      segments.push({
+      captionSegments.push({
         start: Math.max(segmentStart, startTime),
         end: Math.min(segmentEnd, endTime),
         text: current.text,
@@ -116,10 +177,10 @@ function extractCaptionsForClip(
     }
   }
 
-  return segments;
+  return captionSegments;
 }
 
-export function ClipGenerator({ projectId, transcriptContent, mediaUrl, onClipGenerated }: ClipGeneratorProps) {
+export function ClipGenerator({ projectId, transcriptContent, transcriptSegments, mediaUrl, onClipGenerated }: ClipGeneratorProps) {
   const [clips, setClips] = useState<Clip[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [renderingClips, setRenderingClips] = useState<Set<number>>(new Set());
@@ -201,9 +262,9 @@ export function ClipGenerator({ projectId, transcriptContent, mediaUrl, onClipGe
       const startTime = timeToSeconds(clip.startTime);
       const endTime = timeToSeconds(clip.endTime);
 
-      // Extract captions for this clip's time range
+      // Extract captions for this clip's time range using word-level timing if available
       const captions = transcriptContent 
-        ? extractCaptionsForClip(transcriptContent, startTime, endTime)
+        ? extractCaptionsForClip(transcriptContent, startTime, endTime, transcriptSegments || undefined)
         : [];
 
       const { data, error } = await supabase.functions.invoke('render-clip', {
