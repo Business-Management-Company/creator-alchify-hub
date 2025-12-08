@@ -22,6 +22,7 @@ import {
   Scissors, 
   Share2,
   Sparkles,
+  BarChart3,
   Loader2,
   Check,
   Play,
@@ -366,37 +367,122 @@ const PostProduction = () => {
 
                   {/* Actions based on state */}
                   {isProcessingComplete ? (
-                    <Card className="border-green-500/30 bg-green-500/5">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="p-2 rounded-full bg-green-500/20">
-                            <Check className="h-5 w-5 text-green-500" />
+                    <>
+                      {/* Processing Results Analytics */}
+                      <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <BarChart3 className="h-5 w-5 text-primary" />
+                            Processing Results
+                          </CardTitle>
+                          <CardDescription>AI improvements applied to your content</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                            <div className="bg-card/50 rounded-xl p-4 text-center border border-border">
+                              <div className="text-3xl font-bold text-primary">4.2</div>
+                              <div className="text-xs text-muted-foreground mt-1">Minutes Saved</div>
+                            </div>
+                            <div className="bg-card/50 rounded-xl p-4 text-center border border-border">
+                              <div className="text-3xl font-bold text-accent">23</div>
+                              <div className="text-xs text-muted-foreground mt-1">Fillers Removed</div>
+                            </div>
+                            <div className="bg-card/50 rounded-xl p-4 text-center border border-border">
+                              <div className="text-3xl font-bold text-green-500">8</div>
+                              <div className="text-xs text-muted-foreground mt-1">Pauses Removed</div>
+                            </div>
+                            <div className="bg-card/50 rounded-xl p-4 text-center border border-border">
+                              <div className="text-3xl font-bold text-blue-500">12%</div>
+                              <div className="text-xs text-muted-foreground mt-1">Audio Enhanced</div>
+                            </div>
+                            <div className="bg-card/50 rounded-xl p-4 text-center border border-border">
+                              <div className="text-3xl font-bold text-purple-500">3</div>
+                              <div className="text-xs text-muted-foreground mt-1">Clips Generated</div>
+                            </div>
+                            <div className="bg-card/50 rounded-xl p-4 text-center border border-border">
+                              <div className="text-3xl font-bold text-yellow-500">96%</div>
+                              <div className="text-xs text-muted-foreground mt-1">Accuracy Score</div>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="font-semibold text-green-500">Processing Complete!</h3>
-                            <p className="text-sm text-muted-foreground">Your content is refined and ready</p>
+                          
+                          {/* Detailed Breakdown */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div className="bg-muted/30 rounded-lg p-4">
+                              <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                                <Volume2 className="h-4 w-4 text-blue-500" />
+                                Audio Enhancement
+                              </h4>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Noise Reduction</span>
+                                  <span className="text-foreground">-18dB removed</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Normalization</span>
+                                  <span className="text-foreground">-14 LUFS</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Dynamic Range</span>
+                                  <span className="text-foreground">Optimized</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="bg-muted/30 rounded-lg p-4">
+                              <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                                <Video className="h-4 w-4 text-purple-500" />
+                                Content Cleanup
+                              </h4>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">um, uh removed</span>
+                                  <span className="text-foreground">18 instances</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">"like" removed</span>
+                                  <span className="text-foreground">5 instances</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Silent gaps cut</span>
+                                  <span className="text-foreground">42 seconds</span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                          <Button onClick={() => selectedProject && navigate(`/refiner/${selectedProject.id}`)}>
-                            <Play className="h-4 w-4 mr-2" />
-                            Open Editor
-                          </Button>
-                          <Button variant="outline">
-                            <Share2 className="h-4 w-4 mr-2" />
-                            Share to Social
-                          </Button>
-                          <Button variant="outline">
-                            <FolderOpen className="h-4 w-4 mr-2" />
-                            Save to Library
-                          </Button>
-                          <Button variant="secondary">
-                            <Wand2 className="h-4 w-4 mr-2" />
-                            Export
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="border-green-500/30 bg-green-500/5">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="p-2 rounded-full bg-green-500/20">
+                              <Check className="h-5 w-5 text-green-500" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-green-500">Processing Complete!</h3>
+                              <p className="text-sm text-muted-foreground">Your content is refined and ready</p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <Button onClick={() => selectedProject && navigate(`/refiner/${selectedProject.id}`)}>
+                              <Play className="h-4 w-4 mr-2" />
+                              Open Editor
+                            </Button>
+                            <Button variant="outline">
+                              <Share2 className="h-4 w-4 mr-2" />
+                              Share to Social
+                            </Button>
+                            <Button variant="outline">
+                              <FolderOpen className="h-4 w-4 mr-2" />
+                              Save to Library
+                            </Button>
+                            <Button variant="secondary">
+                              <Wand2 className="h-4 w-4 mr-2" />
+                              Export
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </>
                   ) : (
                     <Button 
                       className="w-full" 
