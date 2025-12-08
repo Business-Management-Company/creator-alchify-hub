@@ -1,8 +1,19 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Play, Sparkles, Zap } from "lucide-react";
+import { Calendar, Sparkles, Zap, Mic, Users, DollarSign, TrendingUp } from "lucide-react";
 import heroImage from "@/assets/hero-bg.png";
+import DemoScheduleDialog from "./DemoScheduleDialog";
 
 const HeroSection = () => {
+  const [demoDialogOpen, setDemoDialogOpen] = useState(false);
+
+  const creatorEconomyStats = [
+    { value: "3M+", label: "Active Podcasts Worldwide", icon: Mic, color: "text-orange-500" },
+    { value: "50M+", label: "Creators Earning Online", icon: Users, color: "text-cyan-500" },
+    { value: "$250B+", label: "Creator Economy Market Size", icon: DollarSign, color: "text-emerald-500" },
+    { value: "93%", label: "Consumers Trust Creators Over Ads", icon: TrendingUp, color: "text-pink-500" },
+  ];
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
       {/* Background */}
@@ -46,22 +57,29 @@ const HeroSection = () => {
               <Zap className="h-5 w-5" />
               Start Creating Free
             </Button>
-            <Button variant="hero-outline" size="xl" className="gap-3">
-              <Play className="h-5 w-5" />
-              Watch Demo
+            <Button variant="hero-outline" size="xl" className="gap-3" onClick={() => setDemoDialogOpen(true)}>
+              <Calendar className="h-5 w-5" />
+              Schedule a Demo
             </Button>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto">
-            {[
-              { value: "50K+", label: "Creators" },
-              { value: "10M+", label: "Clips Made" },
-              { value: "95%", label: "Time Saved" },
-              { value: "4.9★", label: "Rating" },
-            ].map((stat) => (
-              <div key={stat.label} className="text-center">
-                <div className="text-2xl sm:text-3xl font-bold gradient-text mb-1">
+          {/* Creator Economy Stats */}
+          <div className="mb-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 border border-primary/30 mb-6">
+              <span className="text-sm font-medium text-primary">The Opportunity</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-8">
+              The Creator Economy is <span className="gradient-text">Booming</span>
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+            {creatorEconomyStats.map((stat) => (
+              <div key={stat.label} className="bg-card/50 backdrop-blur-sm border border-border rounded-xl p-6 text-left">
+                <div className={`w-12 h-12 rounded-xl ${stat.color} bg-current/10 flex items-center justify-center mb-4`}>
+                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                </div>
+                <div className={`text-2xl sm:text-3xl font-bold text-foreground mb-1`}>
                   {stat.value}
                 </div>
                 <div className="text-sm text-muted-foreground">{stat.label}</div>
@@ -77,6 +95,8 @@ const HeroSection = () => {
           <div className="w-1.5 h-3 bg-primary rounded-full animate-pulse" />
         </div>
       </div>
+
+      <DemoScheduleDialog open={demoDialogOpen} onOpenChange={setDemoDialogOpen} />
     </section>
   );
 };
