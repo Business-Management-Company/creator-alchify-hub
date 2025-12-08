@@ -174,8 +174,20 @@ const PostProduction = () => {
         body: { projectId: selectedProject.id }
       });
 
+      // Handle edge function errors - check both error object and response body
       if (transcriptError) {
-        throw new Error(transcriptError.message || 'Transcription failed');
+        // Try to parse the error context for the actual message
+        let errorMsg = 'Transcription failed';
+        if (transcriptError.context?.body) {
+          try {
+            const bodyText = await transcriptError.context.body.text?.() || transcriptError.context.body;
+            const parsed = typeof bodyText === 'string' ? JSON.parse(bodyText) : bodyText;
+            errorMsg = parsed.error || errorMsg;
+          } catch {
+            // If parsing fails, use the default message
+          }
+        }
+        throw new Error(errorMsg);
       }
       if (transcriptData?.error) {
         throw new Error(transcriptData.error);
