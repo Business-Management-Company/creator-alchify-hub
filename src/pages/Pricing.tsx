@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Zap, HardDrive, Mic, Video, Radio, Users, Crown, Building2 } from 'lucide-react';
+import { Check, Zap, HardDrive, Mic, Video, Radio, Users, Crown, Building2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -71,6 +71,16 @@ export default function Pricing() {
   return (
     <div className="min-h-screen bg-background py-12 px-4">
       <div className="max-w-7xl mx-auto">
+        {/* Back Button */}
+        <Button 
+          variant="ghost" 
+          onClick={() => navigate(-1)} 
+          className="mb-6 -ml-2"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">
