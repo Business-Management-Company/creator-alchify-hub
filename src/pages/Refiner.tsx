@@ -202,6 +202,18 @@ const Refiner = () => {
         throw new Error(data.error);
       }
       
+      // Log AI action for authenticity tracking
+      await supabase.from('ai_action_log').insert({
+        project_id: project.id,
+        user_id: user?.id,
+        action_type: 'transcribe',
+        action_details: {
+          word_count: data.transcript?.wordCount,
+          filler_count: data.transcript?.fillerCount,
+          model: 'google/gemini-2.5-flash'
+        }
+      });
+      
       // Refresh the project and transcript data
       await fetchProject();
       
@@ -244,6 +256,18 @@ const Refiner = () => {
         .eq('id', transcript.id);
       
       if (error) throw error;
+      
+      // Log AI action for authenticity tracking
+      await supabase.from('ai_action_log').insert({
+        project_id: project?.id,
+        user_id: user?.id,
+        action_type: 'remove_fillers',
+        action_details: {
+          fillers_removed: removedCount,
+          original_word_count: transcript.word_count,
+          new_word_count: cleaned.split(/\s+/).filter(w => w.length > 0).length
+        }
+      });
       
       // Update local state
       setTranscript(prev => prev ? { 
