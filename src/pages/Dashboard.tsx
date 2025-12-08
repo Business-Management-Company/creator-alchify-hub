@@ -140,11 +140,11 @@ const Dashboard = () => {
               <p className="text-muted-foreground mb-6 max-w-md">
                 Drop your raw video or audio files here. We'll transcribe, clean up, and help you create polished clips for any platform.
               </p>
-              <Button variant="hero" className="group-hover:glow-primary transition-shadow">
+              <div className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium h-10 px-4 py-2 bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90 group-hover:glow-primary transition-shadow pointer-events-none">
                 <Plus className="mr-2 h-4 w-4" />
                 Upload Now
                 <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+              </div>
             </div>
           </Link>
           
