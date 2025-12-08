@@ -1,9 +1,12 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Sparkles } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const { user } = useAuth();
 
   const navLinks = [
     { name: "Features", href: "#features" },
@@ -17,13 +20,13 @@ const Navbar = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <a href="/" className="flex items-center gap-2 group">
+          <Link to="/" className="flex items-center gap-2 group">
             <div className="relative">
               <Sparkles className="h-8 w-8 text-primary animate-pulse-glow" />
               <div className="absolute inset-0 bg-primary/30 blur-xl rounded-full" />
             </div>
             <span className="text-xl font-bold gradient-text">Alchify</span>
-          </a>
+          </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
@@ -40,12 +43,20 @@ const Navbar = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" size="sm">
-              Log In
-            </Button>
-            <Button variant="hero" size="sm">
-              Start Creating
-            </Button>
+            {user ? (
+              <Button variant="hero" size="sm" asChild>
+                <Link to="/dashboard">Dashboard</Link>
+              </Button>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/auth">Log In</Link>
+                </Button>
+                <Button variant="hero" size="sm" asChild>
+                  <Link to="/auth">Start Creating</Link>
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -72,12 +83,20 @@ const Navbar = () => {
                 </a>
               ))}
               <div className="flex flex-col gap-2 pt-4 border-t border-border">
-                <Button variant="ghost" className="w-full justify-start">
-                  Log In
-                </Button>
-                <Button variant="hero" className="w-full">
-                  Start Creating
-                </Button>
+                {user ? (
+                  <Button variant="hero" className="w-full" asChild>
+                    <Link to="/dashboard" onClick={() => setIsOpen(false)}>Dashboard</Link>
+                  </Button>
+                ) : (
+                  <>
+                    <Button variant="ghost" className="w-full justify-start" asChild>
+                      <Link to="/auth" onClick={() => setIsOpen(false)}>Log In</Link>
+                    </Button>
+                    <Button variant="hero" className="w-full" asChild>
+                      <Link to="/auth" onClick={() => setIsOpen(false)}>Start Creating</Link>
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
