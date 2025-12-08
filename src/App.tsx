@@ -14,6 +14,7 @@ import Refiner from "./pages/Refiner";
 import RecordingStudio from "./pages/RecordingStudio";
 import PostProduction from "./pages/PostProduction";
 import Integrations from "./pages/Integrations";
+import Settings from "./pages/Settings";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminContent from "./pages/admin/AdminContent";
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/studio" element={<RecordingStudio />} />
               <Route path="/post-production" element={<PostProduction />} />
               <Route path="/integrations" element={<Integrations />} />
+              <Route path="/settings" element={<Settings />} />
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/users" element={<AdminUsers />} />
