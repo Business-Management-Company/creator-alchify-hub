@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -24,7 +25,10 @@ import {
   Shield,
   Loader2,
   Check,
-  AlertTriangle
+  AlertTriangle,
+  Sun,
+  Moon,
+  Monitor
 } from 'lucide-react';
 
 interface Profile {
@@ -39,6 +43,7 @@ const Settings = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -580,17 +585,55 @@ const Settings = () => {
                     Customize how Alchify looks for you
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label className="text-base">Theme</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Currently using dark mode
-                      </p>
+                <CardContent className="space-y-6">
+                  <div>
+                    <Label className="text-base mb-4 block">Theme</Label>
+                    <div className="grid grid-cols-3 gap-3">
+                      <button
+                        onClick={() => setTheme('light')}
+                        className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
+                          theme === 'light' 
+                            ? 'border-primary bg-primary/5' 
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                      >
+                        <div className="p-3 rounded-full bg-muted">
+                          <Sun className="h-5 w-5 text-yellow-500" />
+                        </div>
+                        <span className="font-medium text-sm">Light</span>
+                        <span className="text-xs text-muted-foreground">Bright & clean</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => setTheme('dark')}
+                        className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
+                          theme === 'dark' 
+                            ? 'border-primary bg-primary/5' 
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                      >
+                        <div className="p-3 rounded-full bg-muted">
+                          <Moon className="h-5 w-5 text-primary" />
+                        </div>
+                        <span className="font-medium text-sm">Dark</span>
+                        <span className="text-xs text-muted-foreground">Easy on eyes</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => setTheme('system')}
+                        className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
+                          theme === 'system' 
+                            ? 'border-primary bg-primary/5' 
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                      >
+                        <div className="p-3 rounded-full bg-muted">
+                          <Monitor className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <span className="font-medium text-sm">System</span>
+                        <span className="text-xs text-muted-foreground">Auto detect</span>
+                      </button>
                     </div>
-                    <Button variant="outline" size="sm" disabled>
-                      Dark
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
