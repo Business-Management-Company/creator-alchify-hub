@@ -1,26 +1,30 @@
-import { Star, Quote } from "lucide-react";
+import { Clock, Ban, Accessibility, Shield, LayoutDashboard } from "lucide-react";
 
-const testimonials = [
+const painPoints = [
   {
-    name: "Alex Rivera",
-    handle: "@alexcreates",
-    avatar: "AR",
-    content: "Alchify cut my editing time by 80%. The AI clips feature alone has doubled my engagement on TikTok.",
-    role: "YouTuber • 2.5M Subscribers",
+    icon: Clock,
+    pain: "Losing hours to repetitive edits",
+    solution: "Refiner automates filler cuts, caption sync, and resizing automatically.",
   },
   {
-    name: "Sarah Chen",
-    handle: "@sarahstreams",
-    avatar: "SC",
-    content: "Finally, a tool that understands content creators. The one-click streaming to multiple platforms is a game-changer.",
-    role: "Twitch Partner • 500K Followers",
+    icon: Ban,
+    pain: "Getting shadow-banned for wrong formatting",
+    solution: "Auto-optimize for platform rules. No more sizing or caption errors.",
   },
   {
-    name: "Marcus Thompson",
-    handle: "@marcuspods",
-    avatar: "MT",
-    content: "The audio enhancement AI is unreal. My podcast sounds professionally produced without any extra work.",
-    role: "Podcaster • Top 100 Charts",
+    icon: Accessibility,
+    pain: "Lack of accessibility tools",
+    solution: "ADA-compliant captions, alt text, and translations auto-generated.",
+  },
+  {
+    icon: Shield,
+    pain: "IP theft and content scraping",
+    solution: "Embedded metadata and watermarks prove content origin.",
+  },
+  {
+    icon: LayoutDashboard,
+    pain: "Overwhelmed by tool sprawl",
+    solution: "One dashboard connects everything. No more juggling 10 apps.",
   },
 ];
 
@@ -28,68 +32,58 @@ const CreatorsSection = () => {
   return (
     <section id="creators" className="py-24 relative overflow-hidden">
       {/* Background glow */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-3xl" />
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-accent/5 rounded-full blur-3xl" />
 
       <div className="container mx-auto px-4 relative z-10">
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <span className="text-primary font-semibold text-sm uppercase tracking-wider">Creator Stories</span>
+          <span className="text-primary font-semibold text-sm uppercase tracking-wider">Built for Creators</span>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mt-4 mb-6">
-            Loved by{" "}
-            <span className="gradient-text">50,000+ Creators</span>
+            We Fix What{" "}
+            <span className="gradient-text">Creators Hate</span>
           </h2>
           <p className="text-muted-foreground text-lg">
-            Join the community of creators who have transformed their workflow with Alchify.
+            We talked to hundreds of creators. Here's what they struggle with — and how Alchify solves it.
           </p>
         </div>
 
-        {/* Testimonials Grid */}
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          {testimonials.map((testimonial) => (
+        {/* Pain Points Grid */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          {painPoints.map((item, index) => (
             <div
-              key={testimonial.handle}
-              className="p-6 rounded-2xl bg-card border border-border hover:border-primary/30 transition-all duration-300 group"
+              key={index}
+              className="group relative p-6 rounded-2xl bg-card border border-border hover:border-primary/50 transition-all duration-300"
             >
-              {/* Quote icon */}
-              <Quote className="h-8 w-8 text-primary/30 mb-4" />
+              {/* Icon */}
+              <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center mb-4">
+                <item.icon className="h-6 w-6 text-destructive" />
+              </div>
 
-              {/* Content */}
-              <p className="text-foreground mb-6 leading-relaxed">
-                "{testimonial.content}"
+              {/* Pain */}
+              <p className="text-sm text-destructive/80 font-medium mb-2">
+                😤 {item.pain}
               </p>
 
-              {/* Stars */}
-              <div className="flex gap-1 mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-4 w-4 fill-primary text-primary" />
-                ))}
-              </div>
+              {/* Solution */}
+              <p className="text-foreground font-medium">
+                ✨ {item.solution}
+              </p>
 
-              {/* Author */}
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-semibold">
-                  {testimonial.avatar}
-                </div>
-                <div>
-                  <div className="font-semibold text-foreground">{testimonial.name}</div>
-                  <div className="text-sm text-muted-foreground">{testimonial.role}</div>
-                </div>
-              </div>
+              {/* Hover glow */}
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10" />
             </div>
           ))}
         </div>
 
-        {/* Logos Section */}
-        <div className="mt-20 text-center">
-          <p className="text-muted-foreground mb-8">Trusted by creators from</p>
-          <div className="flex flex-wrap items-center justify-center gap-8 opacity-50">
-            {["YouTube", "Twitch", "TikTok", "Instagram", "X / Twitter", "Spotify"].map((platform) => (
-              <span key={platform} className="text-xl font-semibold text-foreground">
-                {platform}
-              </span>
-            ))}
-          </div>
+        {/* Quote */}
+        <div className="mt-16 max-w-3xl mx-auto text-center">
+          <blockquote className="text-2xl font-serif italic text-muted-foreground">
+            "People don't buy products, they buy how you make them feel."
+          </blockquote>
+          <p className="mt-4 text-primary font-medium">
+            That's why Alchify respects creators first.
+          </p>
         </div>
       </div>
     </section>
