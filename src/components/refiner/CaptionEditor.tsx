@@ -51,22 +51,28 @@ interface CaptionEditorProps {
 
 // Parse transcript with timestamps into segments
 function parseTranscriptToSegments(content: string): CaptionSegment[] {
-  const segments: CaptionSegment[] = [];
+  if (!content) return [];
+  
   const regex = /\[(\d{2}:\d{2})\]\s*([^\[]+)/g;
+  const allMatches: { time: string; text: string }[] = [];
   let match;
-  let index = 0;
 
+  // First, collect all matches
   while ((match = regex.exec(content)) !== null) {
-    const startTime = match[1];
-    const text = match[2].trim();
+    allMatches.push({
+      time: match[1],
+      text: match[2].trim()
+    });
+  }
+
+  // Then create segments with proper end times
+  return allMatches.map((item, index) => {
+    const startTime = item.time;
+    let endTime: string;
     
-    // Estimate end time (next segment start or +10 seconds)
-    const nextMatch = regex.exec(content);
-    let endTime = startTime;
-    
-    if (nextMatch) {
-      endTime = nextMatch[1];
-      regex.lastIndex = regex.lastIndex - nextMatch[0].length;
+    if (index < allMatches.length - 1) {
+      // Use next segment's start time as end time
+      endTime = allMatches[index + 1].time;
     } else {
       // Add 10 seconds for the last segment
       const [mins, secs] = startTime.split(':').map(Number);
@@ -74,16 +80,13 @@ function parseTranscriptToSegments(content: string): CaptionSegment[] {
       endTime = `${String(Math.floor(totalSecs / 60)).padStart(2, '0')}:${String(totalSecs % 60).padStart(2, '0')}`;
     }
 
-    segments.push({
+    return {
       id: `seg-${index}`,
       startTime,
       endTime,
-      text
-    });
-    index++;
-  }
-
-  return segments;
+      text: item.text
+    };
+  });
 }
 
 // Convert time string to seconds
