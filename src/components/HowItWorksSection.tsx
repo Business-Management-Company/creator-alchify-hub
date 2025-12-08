@@ -56,7 +56,7 @@ const HowItWorksSection = () => {
 
               <div className="relative text-center p-6">
                 {/* Step number */}
-                <div className="text-6xl font-bold text-muted/30 mb-4">
+                <div className="text-6xl font-bold text-foreground/20 mb-4">
                   {step.number}
                 </div>
 
