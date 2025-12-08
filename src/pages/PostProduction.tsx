@@ -174,23 +174,22 @@ const PostProduction = () => {
         body: { projectId: selectedProject.id }
       });
 
-      // Handle edge function errors - check both error object and response body
-      if (transcriptError) {
-        // Try to parse the error context for the actual message
-        let errorMsg = 'Transcription failed';
-        if (transcriptError.context?.body) {
-          try {
-            const bodyText = await transcriptError.context.body.text?.() || transcriptError.context.body;
-            const parsed = typeof bodyText === 'string' ? JSON.parse(bodyText) : bodyText;
-            errorMsg = parsed.error || errorMsg;
-          } catch {
-            // If parsing fails, use the default message
-          }
-        }
-        throw new Error(errorMsg);
-      }
+      // Handle errors - Supabase functions.invoke returns error in data for 4xx responses
+      // Check for error in the data object first (this is where 4xx responses put it)
       if (transcriptData?.error) {
         throw new Error(transcriptData.error);
+      }
+      
+      // Also check for invoke-level errors
+      if (transcriptError) {
+        // Try to get more context from the error
+        let errorMsg = transcriptError.message || 'Transcription failed';
+        throw new Error(errorMsg);
+      }
+      
+      // Verify we got a successful response
+      if (!transcriptData?.success) {
+        throw new Error('Transcription failed - no response received');
       }
       
       updateTaskStatus('transcribe', 'completed', 100);
