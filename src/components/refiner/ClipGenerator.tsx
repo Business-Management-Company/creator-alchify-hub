@@ -1,8 +1,31 @@
-import { useState, useEffect } from 'react';
-import { Scissors, Loader2, Sparkles, Download, Clock, TrendingUp, Video, CheckCircle, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+import { 
+  Scissors, 
+  Loader2, 
+  Sparkles, 
+  Download, 
+  Clock, 
+  TrendingUp, 
+  Video, 
+  CheckCircle, 
+  AlertCircle,
+  Type,
+  Settings2
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -16,6 +39,15 @@ interface Clip {
   renderId?: string;
   renderStatus?: 'idle' | 'rendering' | 'done' | 'failed';
   renderUrl?: string;
+}
+
+interface CaptionStyle {
+  font: string;
+  color: string;
+  backgroundColor: string;
+  position: 'top' | 'center' | 'bottom';
+  size: 'small' | 'medium' | 'large';
+  animation: 'fade' | 'slide' | 'pop' | 'karaoke';
 }
 
 interface ClipGeneratorProps {
@@ -32,6 +64,14 @@ const platformColors: Record<string, string> = {
   linkedin: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
 };
 
+const CAPTION_COLORS = [
+  { value: '#FFFFFF', label: 'White' },
+  { value: '#FFFF00', label: 'Yellow' },
+  { value: '#00FF00', label: 'Green' },
+  { value: '#FF69B4', label: 'Pink' },
+  { value: '#00FFFF', label: 'Cyan' },
+];
+
 function timeToSeconds(time: string): number {
   const parts = time.split(':').map(Number);
   if (parts.length === 2) {
@@ -40,10 +80,56 @@ function timeToSeconds(time: string): number {
   return parts[0] * 3600 + parts[1] * 60 + parts[2];
 }
 
+// Parse transcript to get caption segments for a specific time range
+function extractCaptionsForClip(
+  transcriptContent: string, 
+  startTime: number, 
+  endTime: number
+): { start: number; end: number; text: string }[] {
+  const regex = /\[(\d{2}:\d{2})\]\s*([^\[]+)/g;
+  const segments: { start: number; end: number; text: string }[] = [];
+  let match;
+  const allMatches: { time: number; text: string }[] = [];
+
+  while ((match = regex.exec(transcriptContent)) !== null) {
+    const time = timeToSeconds(match[1]);
+    const text = match[2].trim();
+    allMatches.push({ time, text });
+  }
+
+  // Create segments with proper start/end times
+  for (let i = 0; i < allMatches.length; i++) {
+    const current = allMatches[i];
+    const next = allMatches[i + 1];
+    
+    const segmentStart = current.time;
+    const segmentEnd = next ? next.time : current.time + 5;
+
+    // Only include segments that overlap with clip range
+    if (segmentEnd >= startTime && segmentStart <= endTime) {
+      segments.push({
+        start: Math.max(segmentStart, startTime),
+        end: Math.min(segmentEnd, endTime),
+        text: current.text,
+      });
+    }
+  }
+
+  return segments;
+}
+
 export function ClipGenerator({ projectId, transcriptContent, mediaUrl, onClipGenerated }: ClipGeneratorProps) {
   const [clips, setClips] = useState<Clip[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [renderingClips, setRenderingClips] = useState<Set<number>>(new Set());
+  const [captionStyle, setCaptionStyle] = useState<CaptionStyle>({
+    font: 'Montserrat ExtraBold',
+    color: '#FFFFFF',
+    backgroundColor: '#000000CC',
+    position: 'bottom',
+    size: 'medium',
+    animation: 'pop',
+  });
   const { toast } = useToast();
 
   const generateClips = async () => {
@@ -105,37 +191,44 @@ export function ClipGenerator({ projectId, transcriptContent, mediaUrl, onClipGe
 
     setRenderingClips(prev => new Set(prev).add(index));
     
-    // Update clip status
     setClips(prev => prev.map((c, i) => 
       i === index ? { ...c, renderStatus: 'rendering' as const } : c
     ));
 
     try {
+      const startTime = timeToSeconds(clip.startTime);
+      const endTime = timeToSeconds(clip.endTime);
+
+      // Extract captions for this clip's time range
+      const captions = transcriptContent 
+        ? extractCaptionsForClip(transcriptContent, startTime, endTime)
+        : [];
+
       const { data, error } = await supabase.functions.invoke('render-clip', {
         body: {
           action: 'render',
           videoUrl: mediaUrl,
-          startTime: timeToSeconds(clip.startTime),
-          endTime: timeToSeconds(clip.endTime),
+          startTime,
+          endTime,
           title: clip.title,
           platform: platform as 'tiktok' | 'reels' | 'shorts',
+          captions,
+          captionStyle,
         }
       });
 
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
 
-      // Update clip with render ID
       setClips(prev => prev.map((c, i) => 
         i === index ? { ...c, renderId: data.renderId } : c
       ));
 
       toast({
         title: 'Render started!',
-        description: `Your ${platform} clip is being created. This may take a minute.`,
+        description: `Your ${platform} clip with animated captions is being created.`,
       });
 
-      // Poll for status
       pollRenderStatus(index, data.renderId);
 
     } catch (error) {
@@ -158,7 +251,7 @@ export function ClipGenerator({ projectId, transcriptContent, mediaUrl, onClipGe
   };
 
   const pollRenderStatus = async (index: number, renderId: string) => {
-    const maxAttempts = 60; // 5 minutes max
+    const maxAttempts = 60;
     let attempts = 0;
 
     const checkStatus = async () => {
@@ -177,7 +270,7 @@ export function ClipGenerator({ projectId, transcriptContent, mediaUrl, onClipGe
           ));
           toast({
             title: 'Clip ready!',
-            description: 'Your video clip has been rendered and is ready to download.',
+            description: 'Your video clip with captions is ready to download.',
           });
           return;
         }
@@ -194,7 +287,6 @@ export function ClipGenerator({ projectId, transcriptContent, mediaUrl, onClipGe
           return;
         }
 
-        // Still rendering, poll again
         attempts++;
         if (attempts < maxAttempts) {
           setTimeout(checkStatus, 5000);
@@ -240,7 +332,7 @@ export function ClipGenerator({ projectId, transcriptContent, mediaUrl, onClipGe
           </div>
           <h3 className="font-medium text-foreground mb-2">Generate Viral Clips</h3>
           <p className="text-sm text-muted-foreground mb-4 max-w-sm">
-            AI will analyze your transcript and suggest the most engaging moments for social media clips.
+            AI analyzes your transcript and creates clips with animated captions for TikTok, Reels & Shorts.
           </p>
           <Button
             variant="hero"
@@ -272,16 +364,115 @@ export function ClipGenerator({ projectId, transcriptContent, mediaUrl, onClipGe
           <h2 className="font-semibold text-foreground">AI Clips</h2>
           <Badge variant="secondary">{clips.length} clips</Badge>
         </div>
-        <Button variant="outline" size="sm" onClick={generateClips} disabled={isGenerating}>
-          {isGenerating ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <>
-              <Sparkles className="mr-2 h-3 w-3" />
-              Regenerate
-            </>
-          )}
-        </Button>
+        
+        <div className="flex items-center gap-2">
+          {/* Caption Style Settings */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Type className="mr-1 h-3 w-3" />
+                Caption Style
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground">Animation</label>
+                  <Select 
+                    value={captionStyle.animation} 
+                    onValueChange={(v: CaptionStyle['animation']) => 
+                      setCaptionStyle(s => ({ ...s, animation: v }))
+                    }
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pop">Pop (Zoom In)</SelectItem>
+                      <SelectItem value="fade">Fade</SelectItem>
+                      <SelectItem value="slide">Slide Up</SelectItem>
+                      <SelectItem value="karaoke">Karaoke</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-foreground">Color</label>
+                  <Select 
+                    value={captionStyle.color} 
+                    onValueChange={(v) => setCaptionStyle(s => ({ ...s, color: v }))}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CAPTION_COLORS.map(c => (
+                        <SelectItem key={c.value} value={c.value}>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-4 h-4 rounded-full border border-border" 
+                              style={{ backgroundColor: c.value }} 
+                            />
+                            {c.label}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-foreground">Size</label>
+                  <Select 
+                    value={captionStyle.size} 
+                    onValueChange={(v: CaptionStyle['size']) => 
+                      setCaptionStyle(s => ({ ...s, size: v }))
+                    }
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="small">Small</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="large">Large</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-foreground">Position</label>
+                  <Select 
+                    value={captionStyle.position} 
+                    onValueChange={(v: CaptionStyle['position']) => 
+                      setCaptionStyle(s => ({ ...s, position: v }))
+                    }
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="top">Top</SelectItem>
+                      <SelectItem value="center">Center</SelectItem>
+                      <SelectItem value="bottom">Bottom</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <Button variant="outline" size="sm" onClick={generateClips} disabled={isGenerating}>
+            {isGenerating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Sparkles className="mr-2 h-3 w-3" />
+                Regenerate
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-3 max-h-[400px] overflow-y-auto">
