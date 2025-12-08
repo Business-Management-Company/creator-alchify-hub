@@ -390,15 +390,17 @@ const Library = () => {
                 >
                   <CardContent className="p-0">
                     {/* Thumbnail */}
-                    <div className="aspect-video bg-muted/50 flex items-center justify-center relative">
-                      <TypeIcon className="h-12 w-12 text-muted-foreground/50" />
+                    <div className="aspect-video bg-gradient-to-br from-muted/80 to-muted flex items-center justify-center relative">
+                      <div className="p-4 rounded-full bg-background/20">
+                        <TypeIcon className="h-10 w-10 text-foreground/40" />
+                      </div>
                       {item.source_duration_seconds && (
-                        <div className="absolute bottom-2 right-2 bg-background/80 backdrop-blur-sm text-xs px-2 py-1 rounded">
+                        <div className="absolute bottom-2 right-2 bg-background/90 backdrop-blur-sm text-xs px-2 py-1 rounded font-medium">
                           {formatDuration(item.source_duration_seconds)}
                         </div>
                       )}
                       <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <Button size="sm" variant="secondary" onClick={(e) => {
+                        <Button size="sm" variant="default" onClick={(e) => {
                           e.stopPropagation();
                           handleQuickAction('open', item);
                         }}>

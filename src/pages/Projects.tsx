@@ -194,72 +194,78 @@ const Projects = () => {
             </Button>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {projects.map((project) => (
               <div
                 key={project.id}
-                className="bg-card/50 border border-border rounded-xl p-5 hover:border-primary/30 transition-colors group"
+                className="bg-card border border-border rounded-xl overflow-hidden hover:border-primary/40 transition-all duration-200 group"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      {project.source_file_type === 'video' ? (
-                        <Video className="h-5 w-5 text-primary" />
-                      ) : (
-                        <Music className="h-5 w-5 text-primary" />
-                      )}
-                    </div>
+                {/* Thumbnail area */}
+                <div className="aspect-video bg-muted/30 flex items-center justify-center relative">
+                  {project.source_file_type === 'video' ? (
+                    <Video className="h-16 w-16 text-muted-foreground/40" />
+                  ) : (
+                    <Music className="h-16 w-16 text-muted-foreground/40" />
+                  )}
+                  <div className="absolute top-3 right-3">
+                    <Badge variant={statusConfig[project.status]?.variant || 'secondary'}>
+                      {statusConfig[project.status]?.label || project.status}
+                    </Badge>
+                  </div>
+                </div>
+                
+                {/* Content */}
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-3 mb-4">
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-foreground truncate">{project.title}</h3>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        <span>{formatDate(project.created_at)}</span>
+                      <h3 className="font-semibold text-foreground text-lg leading-tight line-clamp-2 mb-2">
+                        {project.title}
+                      </h3>
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5" />
+                          <span>{formatDate(project.created_at)}</span>
+                        </div>
+                        <span className="text-muted-foreground/50">•</span>
+                        <span>{formatFileSize(project.source_file_size)}</span>
                       </div>
                     </div>
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="flex-shrink-0">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => navigate(`/refiner/${project.id}`)}>
+                          <Wand2 className="mr-2 h-4 w-4" />
+                          Open in Refiner
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Download className="mr-2 h-4 w-4" />
+                          Export
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => setDeleteProject(project)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                   
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => navigate(`/refiner/${project.id}`)}>
-                        <Wand2 className="mr-2 h-4 w-4" />
-                        Open in Refiner
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Download className="mr-2 h-4 w-4" />
-                        Export
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        className="text-destructive focus:text-destructive"
-                        onClick={() => setDeleteProject(project)}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <Button
+                    variant="default"
+                    className="w-full"
+                    onClick={() => navigate(`/refiner/${project.id}`)}
+                  >
+                    <FolderOpen className="mr-2 h-4 w-4" />
+                    Open Project
+                  </Button>
                 </div>
-                
-                <div className="flex items-center justify-between">
-                  <Badge variant={statusConfig[project.status]?.variant || 'secondary'}>
-                    {statusConfig[project.status]?.label || project.status}
-                  </Badge>
-                  <span className="text-sm text-muted-foreground">
-                    {formatFileSize(project.source_file_size)}
-                  </span>
-                </div>
-                
-                <Button
-                  variant="ghost"
-                  className="w-full mt-4 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => navigate(`/refiner/${project.id}`)}
-                >
-                  Open Project
-                </Button>
               </div>
             ))}
           </div>

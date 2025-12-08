@@ -14,6 +14,7 @@ import Refiner from "./pages/Refiner";
 import RecordingStudio from "./pages/RecordingStudio";
 import PostProduction from "./pages/PostProduction";
 import Library from "./pages/Library";
+import Analytics from "./pages/Analytics";
 import Integrations from "./pages/Integrations";
 import Settings from "./pages/Settings";
 import Pricing from "./pages/Pricing";
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/studio" element={<RecordingStudio />} />
               <Route path="/post-production" element={<PostProduction />} />
               <Route path="/library" element={<Library />} />
+              <Route path="/analytics" element={<Analytics />} />
               <Route path="/integrations" element={<Integrations />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/pricing" element={<Pricing />} />
