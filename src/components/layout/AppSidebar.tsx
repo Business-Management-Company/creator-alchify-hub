@@ -14,7 +14,8 @@ import {
   Users,
   FileText,
   TrendingUp,
-  CreditCard
+  CreditCard,
+  Server
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -48,6 +49,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   FileText,
   TrendingUp,
   CreditCard,
+  Server,
 };
 
 const navItems = [
@@ -72,6 +74,7 @@ const adminItems = [
   { id: 'admin-users', label: 'Manage Users', icon: 'Users', path: '/admin/users' },
   { id: 'admin-content', label: 'Content', icon: 'FileText', path: '/admin/content' },
   { id: 'admin-analytics', label: 'Analytics', icon: 'TrendingUp', path: '/admin/analytics' },
+  { id: 'admin-tech', label: 'Tech Stack', icon: 'Server', path: '/admin/tech-stack' },
 ];
 
 const AppSidebar = () => {
