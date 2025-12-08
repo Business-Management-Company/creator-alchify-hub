@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/layout/AppLayout';
+import { ClipGenerator } from '@/components/refiner/ClipGenerator';
 
 interface Project {
   id: string;
@@ -458,6 +459,14 @@ const Refiner = () => {
             )}
           </div>
         </div>
+        
+        {/* Clip Generator - Show when transcript exists */}
+        {transcript && (
+          <ClipGenerator 
+            projectId={project.id} 
+            transcriptContent={transcript.content}
+          />
+        )}
       </AppLayout>
     </>
   );
