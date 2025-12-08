@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { Scissors, Loader2, Sparkles, Download, Clock, TrendingUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Scissors, Loader2, Sparkles, Download, Clock, TrendingUp, Video, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -12,11 +13,15 @@ interface Clip {
   hook: string;
   platforms: string[];
   score: number;
+  renderId?: string;
+  renderStatus?: 'idle' | 'rendering' | 'done' | 'failed';
+  renderUrl?: string;
 }
 
 interface ClipGeneratorProps {
   projectId: string;
   transcriptContent: string | null;
+  mediaUrl?: string | null;
   onClipGenerated?: () => void;
 }
 
@@ -27,9 +32,18 @@ const platformColors: Record<string, string> = {
   linkedin: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
 };
 
-export function ClipGenerator({ projectId, transcriptContent, onClipGenerated }: ClipGeneratorProps) {
+function timeToSeconds(time: string): number {
+  const parts = time.split(':').map(Number);
+  if (parts.length === 2) {
+    return parts[0] * 60 + parts[1];
+  }
+  return parts[0] * 3600 + parts[1] * 60 + parts[2];
+}
+
+export function ClipGenerator({ projectId, transcriptContent, mediaUrl, onClipGenerated }: ClipGeneratorProps) {
   const [clips, setClips] = useState<Clip[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [renderingClips, setRenderingClips] = useState<Set<number>>(new Set());
   const { toast } = useToast();
 
   const generateClips = async () => {
@@ -52,7 +66,12 @@ export function ClipGenerator({ projectId, transcriptContent, onClipGenerated }:
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
 
-      setClips(data.clips || []);
+      const clipsWithStatus = (data.clips || []).map((clip: Clip) => ({
+        ...clip,
+        renderStatus: 'idle' as const,
+      }));
+      
+      setClips(clipsWithStatus);
 
       toast({
         title: 'Clips generated!',
@@ -72,10 +91,139 @@ export function ClipGenerator({ projectId, transcriptContent, onClipGenerated }:
     }
   };
 
+  const renderClip = async (index: number, platform: string) => {
+    const clip = clips[index];
+    
+    if (!mediaUrl) {
+      toast({
+        title: 'No media',
+        description: 'Media file is required to render clips.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setRenderingClips(prev => new Set(prev).add(index));
+    
+    // Update clip status
+    setClips(prev => prev.map((c, i) => 
+      i === index ? { ...c, renderStatus: 'rendering' as const } : c
+    ));
+
+    try {
+      const { data, error } = await supabase.functions.invoke('render-clip', {
+        body: {
+          action: 'render',
+          videoUrl: mediaUrl,
+          startTime: timeToSeconds(clip.startTime),
+          endTime: timeToSeconds(clip.endTime),
+          title: clip.title,
+          platform: platform as 'tiktok' | 'reels' | 'shorts',
+        }
+      });
+
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+
+      // Update clip with render ID
+      setClips(prev => prev.map((c, i) => 
+        i === index ? { ...c, renderId: data.renderId } : c
+      ));
+
+      toast({
+        title: 'Render started!',
+        description: `Your ${platform} clip is being created. This may take a minute.`,
+      });
+
+      // Poll for status
+      pollRenderStatus(index, data.renderId);
+
+    } catch (error) {
+      console.error('Render error:', error);
+      setClips(prev => prev.map((c, i) => 
+        i === index ? { ...c, renderStatus: 'failed' as const } : c
+      ));
+      toast({
+        title: 'Render failed',
+        description: error instanceof Error ? error.message : 'Something went wrong',
+        variant: 'destructive',
+      });
+    } finally {
+      setRenderingClips(prev => {
+        const next = new Set(prev);
+        next.delete(index);
+        return next;
+      });
+    }
+  };
+
+  const pollRenderStatus = async (index: number, renderId: string) => {
+    const maxAttempts = 60; // 5 minutes max
+    let attempts = 0;
+
+    const checkStatus = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('render-clip', {
+          body: { action: 'status', renderId }
+        });
+
+        if (error || data?.error) {
+          throw new Error(error?.message || data?.error);
+        }
+
+        if (data.status === 'done' && data.url) {
+          setClips(prev => prev.map((c, i) => 
+            i === index ? { ...c, renderStatus: 'done' as const, renderUrl: data.url } : c
+          ));
+          toast({
+            title: 'Clip ready!',
+            description: 'Your video clip has been rendered and is ready to download.',
+          });
+          return;
+        }
+
+        if (data.status === 'failed') {
+          setClips(prev => prev.map((c, i) => 
+            i === index ? { ...c, renderStatus: 'failed' as const } : c
+          ));
+          toast({
+            title: 'Render failed',
+            description: 'The video render failed. Please try again.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        // Still rendering, poll again
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(checkStatus, 5000);
+        }
+      } catch (error) {
+        console.error('Status check error:', error);
+      }
+    };
+
+    setTimeout(checkStatus, 5000);
+  };
+
   const getScoreColor = (score: number) => {
     if (score >= 8) return 'text-green-400';
     if (score >= 6) return 'text-yellow-400';
     return 'text-muted-foreground';
+  };
+
+  const getStatusIcon = (status?: Clip['renderStatus']) => {
+    switch (status) {
+      case 'rendering':
+        return <Loader2 className="h-4 w-4 animate-spin text-primary" />;
+      case 'done':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'failed':
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
+      default:
+        return null;
+    }
   };
 
   if (clips.length === 0) {
@@ -143,7 +291,10 @@ export function ClipGenerator({ projectId, transcriptContent, onClipGenerated }:
             className="p-4 bg-background/50 rounded-lg border border-border hover:border-primary/30 transition-colors"
           >
             <div className="flex items-start justify-between mb-2">
-              <h4 className="font-medium text-foreground">{clip.title}</h4>
+              <div className="flex items-center gap-2">
+                <h4 className="font-medium text-foreground">{clip.title}</h4>
+                {getStatusIcon(clip.renderStatus)}
+              </div>
               <div className={`flex items-center gap-1 ${getScoreColor(clip.score)}`}>
                 <TrendingUp className="h-3 w-3" />
                 <span className="text-sm font-medium">{clip.score}/10</span>
@@ -170,10 +321,34 @@ export function ClipGenerator({ projectId, transcriptContent, onClipGenerated }:
                 </div>
               </div>
 
-              <Button variant="ghost" size="sm" className="text-primary">
-                <Download className="mr-1 h-3 w-3" />
-                Export
-              </Button>
+              <div className="flex items-center gap-2">
+                {clip.renderStatus === 'done' && clip.renderUrl ? (
+                  <Button 
+                    variant="default" 
+                    size="sm"
+                    onClick={() => window.open(clip.renderUrl, '_blank')}
+                  >
+                    <Download className="mr-1 h-3 w-3" />
+                    Download
+                  </Button>
+                ) : clip.renderStatus === 'rendering' ? (
+                  <Button variant="ghost" size="sm" disabled>
+                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                    Rendering...
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-primary"
+                    onClick={() => renderClip(index, clip.platforms[0] || 'tiktok')}
+                    disabled={!mediaUrl || renderingClips.has(index)}
+                  >
+                    <Video className="mr-1 h-3 w-3" />
+                    Create Clip
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         ))}
