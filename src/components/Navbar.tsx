@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Sparkles } from "lucide-react";
+import { Menu, X, Flame } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Navbar = () => {
@@ -11,7 +11,9 @@ const Navbar = () => {
   const navLinks = [
     { name: "Features", href: "#features" },
     { name: "How It Works", href: "#how-it-works" },
-    { name: "Creators", href: "#creators" },
+    { name: "For Creators", href: "#creators" },
+    { name: "About", href: "/about", isRoute: true },
+    { name: "Transparency", href: "/transparency", isRoute: true },
     { name: "Pricing", href: "/pricing", isRoute: true },
   ];
 
@@ -22,7 +24,7 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
             <div className="relative">
-              <Sparkles className="h-8 w-8 text-primary animate-pulse-glow" />
+              <Flame className="h-8 w-8 text-primary animate-pulse-glow" />
               <div className="absolute inset-0 bg-primary/30 blur-xl rounded-full" />
             </div>
             <span className="text-xl font-bold gradient-text">Alchify</span>
@@ -62,7 +64,7 @@ const Navbar = () => {
                   <Link to="/auth">Log In</Link>
                 </Button>
                 <Button variant="hero" size="sm" asChild>
-                  <Link to="/auth">Start Creating</Link>
+                  <Link to="/auth">Start Refining</Link>
                 </Button>
               </>
             )}
@@ -113,7 +115,7 @@ const Navbar = () => {
                       <Link to="/auth" onClick={() => setIsOpen(false)}>Log In</Link>
                     </Button>
                     <Button variant="hero" className="w-full" asChild>
-                      <Link to="/auth" onClick={() => setIsOpen(false)}>Start Creating</Link>
+                      <Link to="/auth" onClick={() => setIsOpen(false)}>Start Refining</Link>
                     </Button>
                   </>
                 )}

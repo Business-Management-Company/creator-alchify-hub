@@ -1,40 +1,40 @@
-import { Video, Wand2, Scissors, Share2, Mic, Sparkles } from "lucide-react";
+import { Wand2, Scissors, Captions, Volume2, FileText, Share2 } from "lucide-react";
 
 const features = [
   {
-    icon: Video,
-    title: "Record & Stream",
-    description: "Professional-grade recording studio with multi-platform streaming. Go live everywhere at once.",
+    icon: Wand2,
+    title: "Refiner AI",
+    description: "Auto transcription, filler-word removal, and intelligent editing that learns your brand's voice.",
     gradient: "from-primary to-accent",
   },
   {
-    icon: Wand2,
-    title: "AI Post-Production",
-    description: "Let AI enhance your audio, color grade your videos, and remove backgrounds automatically.",
-    gradient: "from-secondary to-primary",
+    icon: Scissors,
+    title: "Smart Reformatting",
+    description: "One upload, every format. Automatically optimize for TikTok, Shorts, Reels, and podcasts.",
+    gradient: "from-accent to-primary",
   },
   {
-    icon: Scissors,
-    title: "Smart Clip Generation",
-    description: "AI identifies viral moments and creates perfectly timed clips ready for social media.",
-    gradient: "from-accent to-secondary",
+    icon: Captions,
+    title: "Caption & Subtitle Sync",
+    description: "Perfectly timed captions with confidence scoring. Know exactly what's solid vs. uncertain.",
+    gradient: "from-primary to-accent",
+  },
+  {
+    icon: Volume2,
+    title: "Audio Cleanup",
+    description: "Crystal clear audio with AI noise removal and dynamic normalization. No more background buzz.",
+    gradient: "from-accent to-primary",
+  },
+  {
+    icon: FileText,
+    title: "Script-Based Editing",
+    description: "Edit your video by editing text. Cut words from the transcript and the video follows.",
+    gradient: "from-primary to-accent",
   },
   {
     icon: Share2,
     title: "One-Click Distribution",
-    description: "Publish to all platforms simultaneously with optimized formats for each network.",
-    gradient: "from-primary to-secondary",
-  },
-  {
-    icon: Mic,
-    title: "Audio Enhancement",
-    description: "Crystal clear audio with AI noise removal, voice enhancement, and dynamic normalization.",
-    gradient: "from-secondary to-accent",
-  },
-  {
-    icon: Sparkles,
-    title: "Caption & Subtitle AI",
-    description: "Auto-generate accurate captions in 100+ languages with perfect timing and styling.",
+    description: "Publish everywhere with platform-compliant formatting. No more shadow bans for sizing errors.",
     gradient: "from-accent to-primary",
   },
 ];
@@ -48,13 +48,13 @@ const FeaturesSection = () => {
       <div className="container mx-auto px-4 relative z-10">
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <span className="text-primary font-semibold text-sm uppercase tracking-wider">Features</span>
+          <span className="text-primary font-semibold text-sm uppercase tracking-wider">Refiner AI</span>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mt-4 mb-6">
-            Everything You Need to{" "}
-            <span className="gradient-text">Create Magic</span>
+            Turn Raw Content into{" "}
+            <span className="gradient-text">Polished Gold</span>
           </h2>
           <p className="text-muted-foreground text-lg">
-            From recording to viral distribution, Alchify handles every step of your content creation journey.
+            Everything you hate about post-production — automated. Alchify handles the repetitive tasks so you can focus on creating.
           </p>
         </div>
 

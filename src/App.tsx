@@ -18,6 +18,8 @@ import Analytics from "./pages/Analytics";
 import Integrations from "./pages/Integrations";
 import Settings from "./pages/Settings";
 import Pricing from "./pages/Pricing";
+import About from "./pages/About";
+import Transparency from "./pages/Transparency";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminContent from "./pages/admin/AdminContent";
@@ -50,6 +52,8 @@ const App = () => (
               <Route path="/integrations" element={<Integrations />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/pricing" element={<Pricing />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/transparency" element={<Transparency />} />
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/users" element={<AdminUsers />} />
