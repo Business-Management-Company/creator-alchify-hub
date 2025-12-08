@@ -10,7 +10,8 @@ import {
   CheckCircle, 
   AlertCircle,
   Type,
-  Settings2
+  Play,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -122,6 +123,7 @@ export function ClipGenerator({ projectId, transcriptContent, mediaUrl, onClipGe
   const [clips, setClips] = useState<Clip[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [renderingClips, setRenderingClips] = useState<Set<number>>(new Set());
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [captionStyle, setCaptionStyle] = useState<CaptionStyle>({
     font: 'Montserrat ExtraBold',
     color: '#FFFFFF',
@@ -358,6 +360,32 @@ export function ClipGenerator({ projectId, transcriptContent, mediaUrl, onClipGe
 
   return (
     <div className="bg-card/50 border border-border rounded-xl p-6">
+      {/* Video Preview Modal */}
+      {previewUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="relative bg-card rounded-xl p-4 max-w-md w-full mx-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-2 z-10"
+              onClick={() => setPreviewUrl(null)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            <h3 className="font-semibold text-foreground mb-3">Clip Preview</h3>
+            <video
+              src={previewUrl}
+              controls
+              autoPlay
+              className="w-full rounded-lg aspect-[9/16] max-h-[70vh] object-contain bg-black"
+            />
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              Note: Shotstack watermark appears on free tier renders
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Scissors className="h-5 w-5 text-primary" />
@@ -514,14 +542,24 @@ export function ClipGenerator({ projectId, transcriptContent, mediaUrl, onClipGe
 
               <div className="flex items-center gap-2">
                 {clip.renderStatus === 'done' && clip.renderUrl ? (
-                  <Button 
-                    variant="default" 
-                    size="sm"
-                    onClick={() => window.open(clip.renderUrl, '_blank')}
-                  >
-                    <Download className="mr-1 h-3 w-3" />
-                    Download
-                  </Button>
+                  <>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setPreviewUrl(clip.renderUrl!)}
+                    >
+                      <Play className="mr-1 h-3 w-3" />
+                      Preview
+                    </Button>
+                    <Button 
+                      variant="default" 
+                      size="sm"
+                      onClick={() => window.open(clip.renderUrl, '_blank')}
+                    >
+                      <Download className="mr-1 h-3 w-3" />
+                      Download
+                    </Button>
+                  </>
                 ) : clip.renderStatus === 'rendering' ? (
                   <Button variant="ghost" size="sm" disabled>
                     <Loader2 className="mr-1 h-3 w-3 animate-spin" />
