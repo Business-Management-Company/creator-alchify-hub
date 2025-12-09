@@ -496,6 +496,14 @@ const Refiner = () => {
           </Card>
         )}
 
+        {/* Not Yet Processed - Show CTA */}
+        {project && !isProcessingComplete && (
+          <NotProcessedCTA 
+            projectId={project.id} 
+            onProcessingComplete={() => fetchProject()}
+          />
+        )}
+
         {/* Processing Complete & Actions */}
         {project && isProcessingComplete && (
           <Card className="mt-6 border-green-500/30 bg-green-500/5">
@@ -632,6 +640,89 @@ const Refiner = () => {
         )}
       </AppLayout>
     </>
+  );
+};
+
+// Not Processed CTA Component
+const NotProcessedCTA = ({ 
+  projectId, 
+  onProcessingComplete 
+}: { 
+  projectId: string; 
+  onProcessingComplete: () => void;
+}) => {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { toast } = useToast();
+
+  const handleStartProcessing = async () => {
+    setIsProcessing(true);
+    try {
+      toast({
+        title: 'Alchifying your content...',
+        description: 'AI is transcribing and enhancing your content.',
+      });
+
+      const { data, error } = await supabase.functions.invoke('transcribe-audio', {
+        body: { projectId }
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast({
+        title: 'Content Alchified! ✨',
+        description: `Transcribed ${data.transcript?.wordCount || 0} words successfully.`,
+      });
+
+      onProcessingComplete();
+    } catch (error) {
+      console.error('Processing error:', error);
+      toast({
+        title: 'Processing failed',
+        description: error instanceof Error ? error.message : 'Something went wrong',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <Card className="mt-6 border-primary/30 bg-primary/5">
+      <CardContent className="py-6">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3 text-center sm:text-left">
+            <div className="p-3 rounded-full bg-primary/10">
+              <Sparkles className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-foreground">Ready to Alchify</h4>
+              <p className="text-sm text-muted-foreground">
+                Start AI processing to transcribe, clean, and enhance your content
+              </p>
+            </div>
+          </div>
+          <Button 
+            variant="hero" 
+            size="lg"
+            onClick={handleStartProcessing}
+            disabled={isProcessing}
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <Sparkles className="mr-2 h-5 w-5" />
+                Start Alchifying
+              </>
+            )}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
