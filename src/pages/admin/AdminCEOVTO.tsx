@@ -130,6 +130,15 @@ const AdminCEOVTO = () => {
     return null;
   }
 
+  // Calculate current quarter dynamically
+  const getCurrentQuarter = () => {
+    const now = new Date();
+    const month = now.getMonth(); // 0-11
+    const year = now.getFullYear();
+    const quarter = Math.floor(month / 3) + 1;
+    return `Q${quarter} ${year}`;
+  };
+
   return (
     <AppLayout>
       <div className="space-y-8 max-w-6xl mx-auto pb-12">
@@ -137,8 +146,7 @@ const AdminCEOVTO = () => {
         <div className="text-center space-y-2">
           <Badge variant="outline" className="mb-2">EOS Vision/Traction Organizer</Badge>
           <h1 className="text-4xl font-bold">Alchify CEO VTO</h1>
-          <p className="text-muted-foreground text-lg">Vision/Traction Organizer</p>
-          <p className="text-sm text-muted-foreground">Q4 2025 Strategic Planning</p>
+          <p className="text-sm text-muted-foreground">{getCurrentQuarter()} Strategic Planning</p>
         </div>
 
         {/* SECTION 2: Vision Components */}
