@@ -355,13 +355,9 @@ const RecordingStudio = () => {
       </Helmet>
 
       <AppLayout defaultSidebarOpen={false}>
-        <div className="p-6 space-y-6 bg-background min-h-screen">
-          {/* Header */}
+        <div className="p-4 space-y-4 bg-background min-h-screen">
+          {/* Compact Header */}
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold">Recording Studio</h1>
-              <p className="text-muted-foreground mt-1">Create professional recordings with ease</p>
-            </div>
             <div className="flex items-center gap-3">
               {invitedGuests.length > 0 && (
                 <Badge variant="secondary" className="flex items-center gap-1">

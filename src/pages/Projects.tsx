@@ -201,11 +201,11 @@ const Projects = () => {
                 className="bg-card border border-border rounded-xl overflow-hidden hover:border-primary/40 transition-all duration-200 group"
               >
                 {/* Thumbnail area */}
-                <div className="aspect-video bg-muted/30 flex items-center justify-center relative">
+                <div className="aspect-[16/9] h-32 bg-muted/30 flex items-center justify-center relative">
                   {project.source_file_type === 'video' ? (
-                    <Video className="h-16 w-16 text-muted-foreground/40" />
+                    <Video className="h-10 w-10 text-muted-foreground/40" />
                   ) : (
-                    <Music className="h-16 w-16 text-muted-foreground/40" />
+                    <Music className="h-10 w-10 text-muted-foreground/40" />
                   )}
                   <div className="absolute top-3 right-3">
                     <Badge variant={statusConfig[project.status]?.variant || 'secondary'}>
