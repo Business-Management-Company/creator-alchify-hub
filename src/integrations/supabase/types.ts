@@ -49,6 +49,66 @@ export type Database = {
           },
         ]
       }
+      brief_subscriptions: {
+        Row: {
+          audience: Database["public"]["Enums"]["brief_audience"]
+          created_at: string
+          id: string
+          is_active: boolean | null
+          user_id: string
+        }
+        Insert: {
+          audience: Database["public"]["Enums"]["brief_audience"]
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          user_id: string
+        }
+        Update: {
+          audience?: Database["public"]["Enums"]["brief_audience"]
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      competitor_sources: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          last_scraped_at: string | null
+          name: string
+          scrape_selectors: Json | null
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          last_scraped_at?: string | null
+          name: string
+          scrape_selectors?: Json | null
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          last_scraped_at?: string | null
+          name?: string
+          scrape_selectors?: Json | null
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       contacts: {
         Row: {
           company: string | null
@@ -85,6 +145,48 @@ export type Database = {
           title?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      daily_briefs: {
+        Row: {
+          action_items: Json | null
+          audience: Database["public"]["Enums"]["brief_audience"]
+          brief_date: string
+          competitor_updates: Json | null
+          created_at: string
+          id: string
+          insights: Json
+          market_signals: Json | null
+          raw_data: Json | null
+          summary: string
+          title: string
+        }
+        Insert: {
+          action_items?: Json | null
+          audience: Database["public"]["Enums"]["brief_audience"]
+          brief_date?: string
+          competitor_updates?: Json | null
+          created_at?: string
+          id?: string
+          insights?: Json
+          market_signals?: Json | null
+          raw_data?: Json | null
+          summary: string
+          title: string
+        }
+        Update: {
+          action_items?: Json | null
+          audience?: Database["public"]["Enums"]["brief_audience"]
+          brief_date?: string
+          competitor_updates?: Json | null
+          created_at?: string
+          id?: string
+          insights?: Json
+          market_signals?: Json | null
+          raw_data?: Json | null
+          summary?: string
+          title?: string
         }
         Relationships: []
       }
@@ -439,6 +541,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user" | "super_admin"
+      brief_audience: "ceo" | "board" | "investor" | "creator"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -567,6 +670,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user", "super_admin"],
+      brief_audience: ["ceo", "board", "investor", "creator"],
     },
   },
 } as const
