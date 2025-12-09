@@ -655,87 +655,106 @@ const Refiner = () => {
 
         {/* Tab Content - Clips - Use hidden instead of conditional render to preserve state */}
         <div className={`mt-3 space-y-4 ${activeTab === 'clips' ? '' : 'hidden'}`}>
-          {/* Generating Clips View - Phone Mockups */}
+          {/* Generating Clips View - Visual Thumbnails */}
           {isGeneratingClips && (
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary animate-pulse" />
-                  Generating Clips...
-                </CardTitle>
-                <CardDescription>
-                  AI is analyzing your content and creating {selectedFormat || '9:16'} clips
-                </CardDescription>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+                      Generating Clips...
+                    </CardTitle>
+                    <CardDescription>
+                      AI is finding viral moments in your content
+                    </CardDescription>
+                  </div>
+                  <Badge variant="secondary">{selectedFormat || '9:16'} format</Badge>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="flex justify-center gap-4 py-6">
+                {/* Horizontal scrollable clip thumbnails */}
+                <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2">
                   {[
-                    { title: 'Opening Hook', score: 96 },
-                    { title: 'Key Insight', score: 92 },
-                    { title: 'Best Quote', score: 89 },
-                    { title: 'Call to Action', score: 85 },
-                    { title: 'Viral Moment', score: 94 },
+                    { title: 'Opening Hook', score: 96, time: '00:15 - 00:42' },
+                    { title: 'Key Insight', score: 92, time: '01:23 - 01:58' },
+                    { title: 'Best Quote', score: 89, time: '02:45 - 03:15' },
+                    { title: 'Call to Action', score: 85, time: '04:10 - 04:45' },
+                    { title: 'Viral Moment', score: 94, time: '05:30 - 06:00' },
                   ].map((clip, index) => (
-                    <div key={index} className="flex flex-col items-center gap-2">
-                      {/* Phone Mockup */}
-                      <div 
-                        className={`relative bg-card border-4 border-foreground/20 rounded-[2rem] overflow-hidden shadow-xl ${
-                          selectedFormat === '1:1' ? 'w-28 h-28' :
-                          selectedFormat === '16:9' ? 'w-36 h-20' :
-                          'w-20 h-36'
-                        }`}
-                      >
-                        {/* Screen content */}
-                        <div className="absolute inset-2 bg-muted rounded-xl overflow-hidden">
-                          {generatingClipProgress[index] < 100 ? (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                              <div className="relative w-10 h-10">
-                                <svg className="w-10 h-10 transform -rotate-90">
-                                  <circle
-                                    cx="20"
-                                    cy="20"
-                                    r="16"
-                                    stroke="currentColor"
-                                    strokeWidth="3"
-                                    fill="transparent"
-                                    className="text-muted-foreground/20"
-                                  />
-                                  <circle
-                                    cx="20"
-                                    cy="20"
-                                    r="16"
-                                    stroke="currentColor"
-                                    strokeWidth="3"
-                                    fill="transparent"
-                                    strokeDasharray={100}
-                                    strokeDashoffset={100 - generatingClipProgress[index]}
-                                    className="text-primary transition-all duration-200"
-                                  />
-                                </svg>
-                                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium">
-                                  {Math.round(generatingClipProgress[index])}%
-                                </span>
+                    <div 
+                      key={index} 
+                      className={`flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all ${
+                        generatingClipProgress[index] >= 100 
+                          ? 'border-green-500/50 shadow-lg shadow-green-500/20' 
+                          : 'border-border'
+                      } ${
+                        selectedFormat === '1:1' ? 'w-48 aspect-square' :
+                        selectedFormat === '16:9' ? 'w-64 aspect-video' :
+                        'w-40 aspect-[9/16]'
+                      }`}
+                    >
+                      {/* Thumbnail area */}
+                      <div className="relative w-full h-full bg-gradient-to-br from-muted to-muted/50">
+                        {generatingClipProgress[index] < 100 ? (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            {/* Scanning animation */}
+                            <div className="absolute inset-0 overflow-hidden">
+                              <div 
+                                className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent animate-[scan_1.5s_ease-in-out_infinite]"
+                                style={{ top: `${(generatingClipProgress[index] % 100)}%` }}
+                              />
+                            </div>
+                            <div className="relative w-16 h-16">
+                              <svg className="w-16 h-16 transform -rotate-90">
+                                <circle
+                                  cx="32"
+                                  cy="32"
+                                  r="28"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                  fill="transparent"
+                                  className="text-muted-foreground/20"
+                                />
+                                <circle
+                                  cx="32"
+                                  cy="32"
+                                  r="28"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                  fill="transparent"
+                                  strokeDasharray={176}
+                                  strokeDashoffset={176 - (generatingClipProgress[index] / 100) * 176}
+                                  className="text-primary transition-all duration-200"
+                                />
+                              </svg>
+                              <span className="absolute inset-0 flex items-center justify-center text-lg font-bold">
+                                {Math.round(generatingClipProgress[index])}%
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2">Processing...</p>
+                          </div>
+                        ) : (
+                          <div className="absolute inset-0 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-sm flex flex-col animate-fade-in">
+                            {/* Time badge */}
+                            <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded">
+                              {clip.time}
+                            </div>
+                            
+                            {/* Score badge */}
+                            <div className="absolute top-2 left-2 bg-green-500 text-white text-sm font-bold px-2 py-0.5 rounded">
+                              {clip.score}
+                            </div>
+                            
+                            {/* Caption overlay simulation */}
+                            <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
+                              <div className="flex items-center gap-1 mb-1">
+                                <CheckCircle className="h-4 w-4 text-green-400" />
+                                <span className="text-green-400 text-xs font-medium">Ready</span>
                               </div>
+                              <p className="text-white text-sm font-medium line-clamp-2">{clip.title}</p>
                             </div>
-                          ) : (
-                            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5 flex flex-col items-center justify-center animate-fade-in">
-                              <CheckCircle className="h-8 w-8 text-green-500 mb-1" />
-                              <span className="text-xs font-bold text-green-600">{clip.score}</span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Notch (for vertical formats) */}
-                        {selectedFormat !== '16:9' && selectedFormat !== '1:1' && (
-                          <div className="absolute top-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-foreground/20 rounded-full" />
-                        )}
-                      </div>
-                      
-                      {/* Label */}
-                      <div className="text-center">
-                        <p className="text-xs font-medium text-foreground truncate w-20">{clip.title}</p>
-                        {generatingClipProgress[index] >= 100 && (
-                          <p className="text-xs text-muted-foreground">Score: {clip.score}</p>
+                          </div>
                         )}
                       </div>
                     </div>
