@@ -22,7 +22,7 @@ const Index = () => {
         <Navbar />
         <main>
           <HeroSection />
-          <WelcomeVideoSection videoPath="alchify-welcome.mp4" />
+          <WelcomeVideoSection videoPath="Alchify_Welcome_Video.mp4" />
           <FeaturesSection />
           <HowItWorksSection />
           <CreatorsSection />
