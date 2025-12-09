@@ -24,6 +24,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminContent from "./pages/admin/AdminContent";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminTechStack from "./pages/admin/AdminTechStack";
+import AdminCEOVTO from "./pages/admin/AdminCEOVTO";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +59,7 @@ const App = () => (
               <Route path="/admin/content" element={<AdminContent />} />
               <Route path="/admin/analytics" element={<AdminAnalytics />} />
               <Route path="/admin/tech-stack" element={<AdminTechStack />} />
+              <Route path="/admin/ceo-vto" element={<AdminCEOVTO />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
