@@ -23,6 +23,8 @@ export function WelcomeVideoSection({ videoPath = 'alchify-welcome.mp4' }: Welco
       .from('welcome-videos')
       .getPublicUrl(videoPath);
     
+    console.log('Video URL generated:', data?.publicUrl);
+    
     if (data?.publicUrl) {
       setVideoUrl(data.publicUrl);
     }
@@ -35,6 +37,7 @@ export function WelcomeVideoSection({ videoPath = 'alchify-welcome.mp4' }: Welco
     }
     
     if (videoRef.current) {
+      setIsPlaying(true);
       videoRef.current.play().catch((err) => {
         console.error('Video play error:', err);
         setVideoError(true);
@@ -94,8 +97,8 @@ export function WelcomeVideoSection({ videoPath = 'alchify-welcome.mp4' }: Welco
                 onEnded={handleVideoEnd}
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
-                onCanPlay={() => setVideoLoaded(true)}
-                onError={() => setVideoError(true)}
+                onCanPlay={() => { console.log('Video can play'); setVideoLoaded(true); }}
+                onError={(e) => { console.error('Video error event:', e); setVideoError(true); }}
               />
             )}
 
