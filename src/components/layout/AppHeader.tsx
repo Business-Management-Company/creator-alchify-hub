@@ -1,6 +1,8 @@
-import { Settings, LogOut, User } from 'lucide-react';
+import { useState } from 'react';
+import { Settings, LogOut, User, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +19,7 @@ const AppHeader = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleSignOut = async () => {
     await signOut();
@@ -27,29 +30,62 @@ const AppHeader = () => {
     navigate('/');
   };
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      toast({
+        title: 'Search',
+        description: `Searching for "${searchQuery}"...`,
+      });
+      // Future: implement actual search
+    }
+  };
+
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'User';
   const initials = displayName.slice(0, 2).toUpperCase();
 
   return (
-    <header className="h-10 border-b border-border bg-card/50 backdrop-blur-sm flex items-center justify-between px-4">
-      <SidebarTrigger className="-ml-1" />
+    <header className="sticky top-0 z-50 h-14 border-b border-border bg-card/95 backdrop-blur-sm flex items-center justify-between px-4 gap-4">
+      <div className="flex items-center gap-4">
+        <SidebarTrigger className="-ml-1" />
+        
+        {/* Master Site Search */}
+        <form onSubmit={handleSearch} className="hidden sm:flex items-center">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search everything..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-64 pl-9 h-9 bg-background/50 border-border focus:bg-background"
+            />
+          </div>
+        </form>
+      </div>
       
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
+        {/* Mobile search button */}
+        <Button variant="ghost" size="icon" className="sm:hidden h-9 w-9">
+          <Search className="h-4 w-4" />
+        </Button>
+        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-              <Avatar className="h-8 w-8">
+            <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+              <Avatar className="h-9 w-9 border-2 border-primary/20">
                 <AvatarImage src={user?.user_metadata?.avatar_url} alt={displayName} />
-                <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="w-56 bg-card border-border">
             <div className="flex items-center gap-2 p-2">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary/10 text-primary text-sm">
+              <Avatar className="h-9 w-9 border-2 border-primary/20">
+                <AvatarImage src={user?.user_metadata?.avatar_url} alt={displayName} />
+                <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
