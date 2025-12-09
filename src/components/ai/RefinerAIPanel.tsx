@@ -35,6 +35,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { FileUploadArea } from './FileUploadArea';
 import { ProactiveTips } from './ProactiveTips';
 import { AIActionButton, ActionType } from './AIActionButton';
+import { UIHighlighter, detectUIReferences } from './UIHighlighter';
 
 interface UploadedFile {
   file: File;
@@ -146,6 +147,7 @@ export function RefinerAIPanel() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<UploadedFile[]>([]);
   const [showFileUpload, setShowFileUpload] = useState(false);
+  const [highlightTargets, setHighlightTargets] = useState<ReturnType<typeof detectUIReferences>>([]);
   const [projectContext, setProjectContext] = useState<ProjectContext>({
     hasProject: false,
     hasTranscript: false,
@@ -320,6 +322,14 @@ export function RefinerAIPanel() {
             textBuffer = line + "\n" + textBuffer;
             break;
           }
+        }
+      }
+      
+      // Detect UI references in the final response and show highlights
+      if (assistantContent) {
+        const targets = detectUIReferences(assistantContent);
+        if (targets.length > 0) {
+          setHighlightTargets(targets);
         }
       }
     } catch (error) {
@@ -627,6 +637,12 @@ export function RefinerAIPanel() {
           onClick={() => setIsOpen(false)}
         />
       )}
+
+      {/* UI Element Highlighter */}
+      <UIHighlighter 
+        targets={highlightTargets} 
+        onClear={() => setHighlightTargets([])} 
+      />
     </>
   );
 }
