@@ -122,10 +122,18 @@ serve(async (req) => {
       };
       extension = formatMap[extension] || extension;
       
-      console.log(`Content type: ${contentType}, extension: ${extension}`);
+      // Also map the content type to a supported MIME type
+      const mimeTypeMap: Record<string, string> = {
+        'video/quicktime': 'video/mp4',
+        'audio/x-m4a': 'audio/m4a',
+        'audio/x-wav': 'audio/wav',
+      };
+      const mappedContentType = mimeTypeMap[contentType] || contentType;
+      
+      console.log(`Content type: ${contentType} -> ${mappedContentType}, extension: ${extension}`);
 
       const audioArrayBuffer = await audioResponse.arrayBuffer();
-      audioBlob = new Blob([audioArrayBuffer], { type: contentType });
+      audioBlob = new Blob([audioArrayBuffer], { type: mappedContentType });
       
       console.log(`Audio file ready: ${audioBlob.size} bytes`);
     }
