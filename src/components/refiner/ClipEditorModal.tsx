@@ -15,11 +15,13 @@ import {
   Monitor,
   Pencil,
   Save,
+  MessageCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
   DialogContent,
@@ -93,6 +95,7 @@ export function ClipEditorModal({
   );
   const videoRef = useRef<HTMLVideoElement>(null);
   const grades = getScoreGrades(clip.score);
+  const { toast } = useToast();
   
   // Update format when prop changes
   useEffect(() => {
@@ -299,9 +302,67 @@ export function ClipEditorModal({
               Export XML
             </Button>
             
-            <Button variant="outline" className="w-full justify-start" size="sm">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start" 
+              size="sm"
+              onClick={async () => {
+                const videoUrl = clip.renderUrl || mediaUrl;
+                if (!videoUrl) {
+                  toast({
+                    title: 'No video available',
+                    description: 'Render the clip first before downloading.',
+                    variant: 'destructive',
+                  });
+                  return;
+                }
+                try {
+                  const response = await fetch(videoUrl);
+                  const blob = await response.blob();
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `${clip.title.replace(/[^a-zA-Z0-9]/g, '_')}_HD.mp4`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  window.URL.revokeObjectURL(url);
+                  toast({
+                    title: 'Download started',
+                    description: 'Your HD clip is downloading.',
+                  });
+                } catch (error) {
+                  window.open(videoUrl, '_blank');
+                }
+              }}
+            >
               <Download className="mr-2 h-4 w-4" />
               Download HD
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              className="w-full justify-start" 
+              size="sm"
+              onClick={() => {
+                const videoUrl = clip.renderUrl || mediaUrl;
+                const shareText = `Check out this clip: ${clip.title}`;
+                
+                if (navigator.share && videoUrl) {
+                  navigator.share({
+                    title: clip.title,
+                    text: shareText,
+                    url: videoUrl,
+                  }).catch(() => {
+                    window.open(`sms:?body=${encodeURIComponent(`${shareText}\n${videoUrl}`)}`, '_blank');
+                  });
+                } else if (videoUrl) {
+                  window.open(`sms:?body=${encodeURIComponent(`${shareText}\n${videoUrl}`)}`, '_blank');
+                }
+              }}
+            >
+              <MessageCircle className="mr-2 h-4 w-4" />
+              Share via Text
             </Button>
             
             <div className="border-t border-border my-3" />
@@ -320,7 +381,6 @@ export function ClipEditorModal({
             <Button variant="outline" className="w-full justify-start" size="sm">
               <Volume2 className="mr-2 h-4 w-4" />
               Enhance speech
-              <Badge variant="secondary" className="ml-auto text-[10px]">Beta</Badge>
             </Button>
             
             <Button variant="outline" className="w-full justify-start" size="sm">
@@ -331,7 +391,8 @@ export function ClipEditorModal({
             
             <Button variant="outline" className="w-full justify-start" size="sm">
               <Monitor className="mr-2 h-4 w-4" />
-              16:9
+              {currentFormat === 'landscape' || currentFormat === '16:9' ? '16:9' :
+               currentFormat === '1:1' ? '1:1' : '9:16'}
             </Button>
           </div>
         </div>
