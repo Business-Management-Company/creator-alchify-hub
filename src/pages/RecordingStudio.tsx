@@ -356,183 +356,175 @@ const RecordingStudio = () => {
 
       <AppLayout defaultSidebarOpen={false}>
         <div className="p-4 space-y-4 bg-background min-h-screen">
-          {/* Compact Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {invitedGuests.length > 0 && (
-                <Badge variant="secondary" className="flex items-center gap-1">
-                  <Users className="h-3 w-3" />
-                  {invitedGuests.length} guest{invitedGuests.length > 1 ? 's' : ''}
-                </Badge>
-              )}
-              {isRecording && (
-                <Badge variant="destructive" className="animate-pulse flex items-center gap-2">
-                  <Circle className="h-3 w-3 fill-current" />
-                  {sessionMode === 'stream-record' && 'LIVE • '}
-                  REC {formatTime(recordingTime)}
-                </Badge>
-              )}
-              <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Invite Guest
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Invite Guest to Session</DialogTitle>
-                    <DialogDescription>
-                      Share a link or send an email invitation
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 pt-4">
-                    {/* Share Link */}
-                    <div className="space-y-2">
-                      <Label>Shareable Link</Label>
-                      <div className="flex gap-2">
-                        <Input 
-                          value={generateInviteLink()} 
-                          readOnly 
-                          className="text-sm"
-                        />
-                        <Button 
-                          variant="outline" 
-                          size="icon"
-                          onClick={copyInviteLink}
-                        >
-                          {inviteLinkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t" />
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-background px-2 text-muted-foreground">or send email</span>
-                      </div>
-                    </div>
-                    
-                    {/* Email Invite */}
-                    <div className="space-y-3">
-                      <div>
-                        <Label htmlFor="guest-name">Guest Name</Label>
-                        <Input 
-                          id="guest-name"
-                          placeholder="Enter name"
-                          value={inviteName}
-                          onChange={e => setInviteName(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="guest-email">Guest Email</Label>
-                        <Input 
-                          id="guest-email"
-                          type="email"
-                          placeholder="Enter email"
-                          value={inviteEmail}
-                          onChange={e => setInviteEmail(e.target.value)}
-                        />
-                      </div>
-                      <Button className="w-full" onClick={sendEmailInvite}>
-                        <Mail className="h-4 w-4 mr-2" />
-                        Send Invitation
+          {/* Session Mode & Invite - Single Row Header */}
+          <div className="flex items-center gap-4 flex-wrap">
+            <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Invite Guest
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Invite Guest to Session</DialogTitle>
+                  <DialogDescription>
+                    Share a link or send an email invitation
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 pt-4">
+                  {/* Share Link */}
+                  <div className="space-y-2">
+                    <Label>Shareable Link</Label>
+                    <div className="flex gap-2">
+                      <Input 
+                        value={generateInviteLink()} 
+                        readOnly 
+                        className="text-sm"
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        onClick={copyInviteLink}
+                      >
+                        {inviteLinkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       </Button>
                     </div>
-                    
-                    {/* Invited Guests List */}
-                    {invitedGuests.length > 0 && (
-                      <div className="space-y-2 pt-2">
-                        <Label>Invited Guests</Label>
-                        <div className="space-y-2">
-                          {invitedGuests.map(guest => (
-                            <div key={guest.id} className="flex items-center justify-between p-2 rounded-lg bg-muted">
-                              <div>
-                                <div className="font-medium text-sm">{guest.name}</div>
-                                <div className="text-xs text-muted-foreground">{guest.email}</div>
-                              </div>
-                              <Badge variant={guest.status === 'joined' ? 'default' : 'secondary'}>
-                                {guest.status}
-                              </Badge>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </div>
-
-          {/* Session Mode Selection */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-4">
-                  <Label className="text-sm font-medium">Session Mode:</Label>
-                  <div className="flex gap-2">
-                    <Button
-                      variant={sessionMode === 'record' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setSessionMode('record')}
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      Record Only
-                    </Button>
-                    <Button
-                      variant={sessionMode === 'stream-record' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setSessionMode('stream-record')}
-                    >
-                      <Radio className="h-4 w-4 mr-2" />
-                      Stream + Record
-                    </Button>
+                  
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">or send email</span>
+                    </div>
                   </div>
-                </div>
-                
-                {sessionMode === 'stream-record' && (
-                  <div className="flex items-center gap-3 ml-auto">
-                    <Label className="text-sm">Stream to:</Label>
-                    {streamingDestinations.map(dest => {
-                      const Icon = dest.icon;
-                      return (
-                        <Button
-                          key={dest.id}
-                          variant={dest.enabled ? 'default' : 'outline'}
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => toggleStreamingDestination(dest.id)}
-                          title={dest.name}
-                        >
-                          <Icon className="h-4 w-4" />
-                        </Button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-              
-              {/* RTMP URLs for enabled streaming destinations */}
-              {sessionMode === 'stream-record' && streamingDestinations.some(d => d.enabled) && (
-                <div className="mt-4 space-y-2">
-                  {streamingDestinations.filter(d => d.enabled).map(dest => (
-                    <div key={dest.id} className="flex items-center gap-2">
-                      <Label className="w-24 text-sm">{dest.name}:</Label>
-                      <Input
-                        placeholder={`Enter ${dest.id === 'rtmp' ? 'RTMP URL' : 'Stream Key'}`}
-                        value={dest.rtmpUrl}
-                        onChange={e => updateRtmpUrl(dest.id, e.target.value)}
-                        className="flex-1"
+                  
+                  {/* Email Invite */}
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="guest-name">Guest Name</Label>
+                      <Input 
+                        id="guest-name"
+                        placeholder="Enter name"
+                        value={inviteName}
+                        onChange={e => setInviteName(e.target.value)}
                       />
                     </div>
-                  ))}
+                    <div>
+                      <Label htmlFor="guest-email">Guest Email</Label>
+                      <Input 
+                        id="guest-email"
+                        type="email"
+                        placeholder="Enter email"
+                        value={inviteEmail}
+                        onChange={e => setInviteEmail(e.target.value)}
+                      />
+                    </div>
+                    <Button className="w-full" onClick={sendEmailInvite}>
+                      <Mail className="h-4 w-4 mr-2" />
+                      Send Invitation
+                    </Button>
+                  </div>
+                  
+                  {/* Invited Guests List */}
+                  {invitedGuests.length > 0 && (
+                    <div className="space-y-2 pt-2">
+                      <Label>Invited Guests</Label>
+                      <div className="space-y-2">
+                        {invitedGuests.map(guest => (
+                          <div key={guest.id} className="flex items-center justify-between p-2 rounded-lg bg-muted">
+                            <div>
+                              <div className="font-medium text-sm">{guest.name}</div>
+                              <div className="text-xs text-muted-foreground">{guest.email}</div>
+                            </div>
+                            <Badge variant={guest.status === 'joined' ? 'default' : 'secondary'}>
+                              {guest.status}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </DialogContent>
+            </Dialog>
+
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">Session Mode:</span>
+              <div className="flex gap-2">
+                <Button
+                  variant={sessionMode === 'record' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSessionMode('record')}
+                >
+                  <Save className="h-4 w-4 mr-1" />
+                  Record Only
+                </Button>
+                <Button
+                  variant={sessionMode === 'stream-record' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSessionMode('stream-record')}
+                >
+                  <Radio className="h-4 w-4 mr-1" />
+                  Stream + Record
+                </Button>
+              </div>
+            </div>
+
+            {invitedGuests.length > 0 && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <Users className="h-3 w-3" />
+                {invitedGuests.length} guest{invitedGuests.length > 1 ? 's' : ''}
+              </Badge>
+            )}
+            {isRecording && (
+              <Badge variant="destructive" className="animate-pulse flex items-center gap-2">
+                <Circle className="h-3 w-3 fill-current" />
+                {sessionMode === 'stream-record' && 'LIVE • '}
+                REC {formatTime(recordingTime)}
+              </Badge>
+            )}
+          </div>
+
+          {/* Streaming Destinations (show only when stream mode selected) */}
+          {sessionMode === 'stream-record' && (
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-sm text-muted-foreground">Stream to:</span>
+              {streamingDestinations.map(dest => {
+                const Icon = dest.icon;
+                return (
+                  <Button
+                    key={dest.id}
+                    variant={dest.enabled ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => toggleStreamingDestination(dest.id)}
+                  >
+                    <Icon className="h-4 w-4 mr-1" />
+                    {dest.name}
+                  </Button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* RTMP URLs for enabled streaming destinations */}
+          {sessionMode === 'stream-record' && streamingDestinations.some(d => d.enabled) && (
+            <div className="flex items-center gap-3 flex-wrap">
+              {streamingDestinations.filter(d => d.enabled).map(dest => (
+                <div key={dest.id} className="flex items-center gap-2">
+                  <Label className="text-sm">{dest.name}:</Label>
+                  <Input
+                    placeholder={`Enter ${dest.id === 'rtmp' ? 'RTMP URL' : 'Stream Key'}`}
+                    value={dest.rtmpUrl}
+                    onChange={e => updateRtmpUrl(dest.id, e.target.value)}
+                    className="w-64"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
             {/* Main Preview Area */}
