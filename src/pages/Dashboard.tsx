@@ -21,6 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/layout/AppLayout';
 import { UsageIndicator } from '@/components/UsageIndicator';
+import { DailyBriefButton } from '@/components/briefs/DailyBriefButton';
 import confetti from 'canvas-confetti';
 import {
   Dialog,
@@ -215,13 +216,16 @@ const Dashboard = () => {
         )}
 
         {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Welcome back{user.user_metadata?.display_name ? `, ${user.user_metadata.display_name}` : ''}!
-          </h1>
-          <p className="text-muted-foreground">
-            Ready to refine some content? Upload something new or continue working on a project.
-          </p>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">
+              Welcome back{user.user_metadata?.display_name ? `, ${user.user_metadata.display_name}` : ''}!
+            </h1>
+            <p className="text-muted-foreground">
+              Ready to refine some content? Upload something new or continue working on a project.
+            </p>
+          </div>
+          <DailyBriefButton />
         </div>
         
         {/* Quick Stats */}

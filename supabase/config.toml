@@ -14,3 +14,12 @@ verify_jwt = true
 
 [functions.render-creatomate]
 verify_jwt = false
+
+[functions.scrape-competitors]
+verify_jwt = true
+
+[functions.generate-daily-brief]
+verify_jwt = true
+
+[functions.run-daily-brief-pipeline]
+verify_jwt = true
