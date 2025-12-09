@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Flame } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,15 +7,31 @@ import { useAuth } from "@/contexts/AuthContext";
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const navLinks = [
-    { name: "Features", href: "#features" },
-    { name: "How It Works", href: "#how-it-works" },
-    { name: "For Creators", href: "#creators" },
+    { name: "Features", href: "/#features", hash: "#features" },
+    { name: "How It Works", href: "/#how-it-works", hash: "#how-it-works" },
+    { name: "For Creators", href: "/#creators", hash: "#creators" },
     { name: "About", href: "/about", isRoute: true },
     { name: "Transparency", href: "/transparency", isRoute: true },
     { name: "Pricing", href: "/pricing", isRoute: true },
   ];
+
+  const handleHashClick = (e: React.MouseEvent, hash: string, href: string) => {
+    e.preventDefault();
+    // If we're on the home page, just scroll to the section
+    if (location.pathname === '/') {
+      const element = document.querySelector(hash);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+      // Navigate to home page with hash
+      navigate(href);
+    }
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
@@ -44,6 +60,7 @@ const Navbar = () => {
                 <a
                   key={link.name}
                   href={link.href}
+                  onClick={(e) => handleHashClick(e, link.hash!, link.href)}
                   className="text-muted-foreground hover:text-foreground transition-colors duration-200"
                 >
                   {link.name}
@@ -97,8 +114,11 @@ const Navbar = () => {
                   <a
                     key={link.name}
                     href={link.href}
+                    onClick={(e) => {
+                      handleHashClick(e, link.hash!, link.href);
+                      setIsOpen(false);
+                    }}
                     className="text-muted-foreground hover:text-foreground transition-colors"
-                    onClick={() => setIsOpen(false)}
                   >
                     {link.name}
                   </a>
