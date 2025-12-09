@@ -653,28 +653,28 @@ const Refiner = () => {
         {/* Fixed Bottom Navigation Bar */}
         {project && (
           <div className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border shadow-lg">
-            <div className="max-w-7xl mx-auto px-4 py-2">
+            <div className="max-w-7xl mx-auto px-6 py-4">
               <div className="flex items-center justify-between">
                 {/* Left - Status */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   {isProcessingComplete ? (
                     <>
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                      <span className="text-sm font-medium text-green-600">Ready</span>
+                      <CheckCircle className="h-6 w-6 text-green-500" />
+                      <span className="text-base font-medium text-green-600">Ready</span>
                     </>
                   ) : (
                     <>
-                      <Sparkles className="h-5 w-5 text-primary" />
-                      <span className="text-sm font-medium text-muted-foreground">Pending</span>
+                      <Sparkles className="h-6 w-6 text-primary" />
+                      <span className="text-base font-medium text-muted-foreground">Pending</span>
                     </>
                   )}
                 </div>
 
                 {/* Center - Tab Navigation */}
-                <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
+                <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg p-1.5">
                   <button
                     onClick={() => setActiveTab('overview')}
-                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    className={`px-5 py-2 text-base font-medium rounded-md transition-colors ${
                       activeTab === 'overview' 
                         ? 'bg-background text-foreground shadow-sm' 
                         : 'text-muted-foreground hover:text-foreground'
@@ -684,18 +684,18 @@ const Refiner = () => {
                   </button>
                   <button
                     onClick={() => setActiveTab('clips')}
-                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                    className={`px-5 py-2 text-base font-medium rounded-md transition-colors flex items-center gap-2 ${
                       activeTab === 'clips' 
                         ? 'bg-background text-foreground shadow-sm' 
                         : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    <Scissors className="h-3.5 w-3.5" />
+                    <Scissors className="h-4 w-4" />
                     Clips
                   </button>
                   <button
                     onClick={() => setActiveTab('audio')}
-                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    className={`px-5 py-2 text-base font-medium rounded-md transition-colors ${
                       activeTab === 'audio' 
                         ? 'bg-background text-foreground shadow-sm' 
                         : 'text-muted-foreground hover:text-foreground'
@@ -705,7 +705,7 @@ const Refiner = () => {
                   </button>
                   <button
                     onClick={() => setActiveTab('video')}
-                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    className={`px-5 py-2 text-base font-medium rounded-md transition-colors ${
                       activeTab === 'video' 
                         ? 'bg-background text-foreground shadow-sm' 
                         : 'text-muted-foreground hover:text-foreground'
@@ -715,7 +715,7 @@ const Refiner = () => {
                   </button>
                   <button
                     onClick={() => setActiveTab('distribute')}
-                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    className={`px-5 py-2 text-base font-medium rounded-md transition-colors ${
                       activeTab === 'distribute' 
                         ? 'bg-background text-foreground shadow-sm' 
                         : 'text-muted-foreground hover:text-foreground'
@@ -726,13 +726,13 @@ const Refiner = () => {
                 </div>
 
                 {/* Right - Actions */}
-                <div className="flex items-center gap-3">
-                  <Button size="default" variant="outline" disabled={!isProcessingComplete}>
-                    <Share2 className="mr-2 h-4 w-4" />
+                <div className="flex items-center gap-4">
+                  <Button size="lg" variant="outline" disabled={!isProcessingComplete}>
+                    <Share2 className="mr-2 h-5 w-5" />
                     Share
                   </Button>
-                  <Button size="default" variant="outline" disabled={!isProcessingComplete}>
-                    <Download className="mr-2 h-4 w-4" />
+                  <Button size="lg" variant="outline" disabled={!isProcessingComplete}>
+                    <Download className="mr-2 h-5 w-5" />
                     Export
                   </Button>
                 </div>
@@ -742,7 +742,7 @@ const Refiner = () => {
         )}
 
         {/* Bottom spacer for fixed bar */}
-        {project && <div className="h-16" />}
+        {project && <div className="h-20" />}
       </AppLayout>
     </>
   );
