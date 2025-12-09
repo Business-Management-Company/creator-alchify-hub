@@ -329,3 +329,29 @@ All colors MUST be HSL.
   60% { opacity: 0; }
   100% { top: 10%; opacity: 0; }
 }
+
+/* Subtle pulse for attention-grabbing */
+@keyframes pulse-subtle {
+  0%, 100% { 
+    opacity: 1;
+    border-color: hsl(var(--primary) / 0.3);
+  }
+  50% { 
+    opacity: 0.9;
+    border-color: hsl(var(--primary) / 0.6);
+  }
+}
+
+/* Subtle bounce for icon attention */
+@keyframes bounce-subtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 1.5s ease-in-out infinite;
+}

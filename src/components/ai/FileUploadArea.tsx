@@ -254,7 +254,9 @@ export function FileUploadArea({
         isDragging
           ? "border-primary bg-primary/5"
           : "border-muted-foreground/25 hover:border-primary/50",
-        compact ? "p-3" : "p-4"
+        compact ? "p-3" : "p-4",
+        // Pulsing animation to draw attention
+        compact && "animate-pulse-subtle"
       )}
     >
       <input
@@ -270,7 +272,7 @@ export function FileUploadArea({
       )}>
         <div className={cn(
           "p-2 rounded-full bg-primary/10",
-          compact ? "" : "mx-auto"
+          compact ? "animate-bounce-subtle" : "mx-auto"
         )}>
           <Upload className={cn(
             "text-primary",

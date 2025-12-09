@@ -645,13 +645,14 @@ export function RefinerAIPanel() {
                     {/* Interactive Action Buttons for AI responses */}
                     {message.role === 'assistant' && message.content && (
                       <>
+                        {/* Show action buttons - use uploadedProjectId if available */}
                         <div className="flex flex-wrap gap-2 mt-2">
                           {detectActions(message.content).map((action) => (
                             <AIActionButton
                               key={action}
                               action={action}
                               onUploadClick={() => setShowFileUpload(true)}
-                              projectId={params.projectId}
+                              projectId={message.uploadedProjectId || params.projectId}
                             />
                           ))}
                         </div>
@@ -662,7 +663,23 @@ export function RefinerAIPanel() {
                             {(message.isUploadConfirmation ? postUploadPrompts : followUpPrompts).map((prompt) => (
                               <button
                                 key={prompt.label}
-                                onClick={() => handleQuickAction({ ...prompt, category: 'general' })}
+                                onClick={() => {
+                                  // For post-upload, navigate to refiner with the uploaded project
+                                  if (message.isUploadConfirmation && message.uploadedProjectId && 
+                                      (prompt.prompt.toLowerCase().includes('alchify') || prompt.prompt.toLowerCase().includes('transcri'))) {
+                                    setMessages(prev => [...prev, { role: 'user', content: prompt.prompt }]);
+                                    setMessages(prev => [...prev, { 
+                                      role: 'assistant', 
+                                      content: `🚀 **Let's go!** Taking you to the Refiner Studio now...`
+                                    }]);
+                                    setTimeout(() => {
+                                      navigate(`/refiner/${message.uploadedProjectId}`);
+                                      setIsOpen(false);
+                                    }, 800);
+                                  } else {
+                                    handleQuickAction({ ...prompt, category: 'general' });
+                                  }
+                                }}
                                 className={cn(
                                   "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium transition-colors",
                                   prompt.label.includes('Alchify')

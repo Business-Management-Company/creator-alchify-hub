@@ -6,7 +6,10 @@ import {
   Volume2, 
   Download,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Wand2,
+  FileText,
+  Instagram
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -18,13 +21,17 @@ export type ActionType =
   | 'clean-audio' 
   | 'export' 
   | 'go-to-refiner'
-  | 'go-to-projects';
+  | 'go-to-projects'
+  | 'alchify'
+  | 'transcript-only'
+  | 'instagram-story';
 
 interface AIActionButtonProps {
   action: ActionType;
   label?: string;
   onUploadClick?: () => void;
   projectId?: string;
+  onAction?: (action: ActionType) => void;
   className?: string;
 }
 
@@ -36,6 +43,9 @@ const actionConfig: Record<ActionType, { icon: React.ElementType; defaultLabel: 
   'export': { icon: Download, defaultLabel: 'Export' },
   'go-to-refiner': { icon: Sparkles, defaultLabel: 'Open in Refiner' },
   'go-to-projects': { icon: ArrowRight, defaultLabel: 'View Projects', path: '/projects' },
+  'alchify': { icon: Wand2, defaultLabel: 'Alchify it' },
+  'transcript-only': { icon: FileText, defaultLabel: 'Transcript only' },
+  'instagram-story': { icon: Instagram, defaultLabel: 'Instagram Story' },
 };
 
 export function AIActionButton({ 
@@ -43,6 +53,7 @@ export function AIActionButton({
   label, 
   onUploadClick,
   projectId,
+  onAction,
   className 
 }: AIActionButtonProps) {
   const navigate = useNavigate();
@@ -50,6 +61,12 @@ export function AIActionButton({
   const Icon = config.icon;
 
   const handleClick = () => {
+    // If custom onAction handler provided, use it
+    if (onAction) {
+      onAction(action);
+      return;
+    }
+
     switch (action) {
       case 'upload':
         if (onUploadClick) {
@@ -62,6 +79,7 @@ export function AIActionButton({
         navigate('/projects');
         break;
       case 'go-to-refiner':
+      case 'alchify':
         if (projectId) {
           navigate(`/refiner/${projectId}`);
         }
@@ -70,7 +88,9 @@ export function AIActionButton({
       case 'add-captions':
       case 'clean-audio':
       case 'export':
-        // These trigger UI actions in the refiner
+      case 'transcript-only':
+      case 'instagram-story':
+        // Navigate to refiner with the project
         if (projectId) {
           navigate(`/refiner/${projectId}`);
         }
@@ -78,17 +98,23 @@ export function AIActionButton({
     }
   };
 
+  // Highlight "Alchify" button with gradient
+  const isAlchify = action === 'alchify';
+
   return (
     <Button
-      variant="outline"
+      variant={isAlchify ? "default" : "outline"}
       size="sm"
       onClick={handleClick}
       className={cn(
-        "gap-2 mt-2 bg-primary/10 hover:bg-primary/20 border-primary/30 text-foreground",
+        "gap-2 mt-2",
+        isAlchify 
+          ? "bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90 shadow-md" 
+          : "bg-primary/10 hover:bg-primary/20 border-primary/30 text-foreground",
         className
       )}
     >
-      <Icon className="h-4 w-4 text-primary" />
+      <Icon className={cn("h-4 w-4", isAlchify ? "" : "text-primary")} />
       {label || config.defaultLabel}
     </Button>
   );
