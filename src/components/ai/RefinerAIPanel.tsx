@@ -72,10 +72,17 @@ const detectActions = (content: string): ActionType[] => {
   return actions;
 };
 
-// Format message content - convert **text** to bold
+// Format message content - convert **text** to bold and fix bullet formatting
 const formatMessageContent = (content: string): React.ReactNode => {
+  // First, convert dashes to proper bullets and add spacing
+  let formattedContent = content
+    // Replace "- " at start of lines with bullet
+    .replace(/^- /gm, '• ')
+    // Replace "- " after newlines with bullet
+    .replace(/\n- /g, '\n\n• ');
+  
   // Split by **text** pattern and convert to bold spans
-  const parts = content.split(/\*\*(.+?)\*\*/g);
+  const parts = formattedContent.split(/\*\*(.+?)\*\*/g);
   
   return parts.map((part, index) => {
     // Odd indices are the captured groups (text between **)

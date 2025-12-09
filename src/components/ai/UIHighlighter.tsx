@@ -131,51 +131,43 @@ function HighlightPointer({ target, onDismiss }: HighlightPointerProps) {
         }}
       />
 
-      {/* Bold arrow pointer - Creatomate style */}
+      {/* Blue popup tooltip with X dismiss */}
       <div
         className={cn(
-          "fixed z-[102] pointer-events-auto cursor-pointer",
-          "animate-in slide-in-from-right-4 fade-in duration-500",
+          "fixed z-[102] pointer-events-auto",
+          "animate-in slide-in-from-left-4 fade-in duration-300",
           visible ? "opacity-100" : "opacity-0"
         )}
         style={{
-          top: position.top + position.height / 2 - 20,
-          left: position.left + position.width + 24,
+          top: position.top + position.height / 2,
+          left: position.left + position.width + 16,
+          transform: 'translateY(-50%)',
         }}
-        onClick={onDismiss}
       >
-        {/* Arrow SVG - bold style pointing left */}
-        <svg
-          width="120"
-          height="40"
-          viewBox="0 0 120 40"
-          fill="none"
-          className="drop-shadow-lg"
-        >
-          {/* Arrow shaft */}
-          <path
-            d="M120 20 L40 20"
-            stroke="hsl(var(--primary))"
-            strokeWidth="6"
-            strokeLinecap="round"
-          />
-          {/* Arrow head */}
-          <path
-            d="M50 8 L38 20 L50 32"
-            stroke="hsl(var(--primary))"
-            strokeWidth="6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-          />
-        </svg>
+        {/* Arrow pointing to element */}
+        <div 
+          className="absolute left-0 top-1/2 -translate-x-full -translate-y-1/2"
+          style={{
+            width: 0,
+            height: 0,
+            borderTop: '10px solid transparent',
+            borderBottom: '10px solid transparent',
+            borderRight: '12px solid hsl(var(--primary))',
+          }}
+        />
         
-        {/* Label below arrow */}
-        <div className="absolute top-full left-0 mt-2 flex items-center gap-2 whitespace-nowrap">
-          <span className="text-sm font-semibold text-primary">{target.label}</span>
-          <button className="hover:bg-muted rounded p-1 transition-colors">
-            <X className="h-3.5 w-3.5 text-muted-foreground" />
-          </button>
+        {/* Tooltip box */}
+        <div className="bg-primary text-primary-foreground rounded-lg shadow-xl px-4 py-3 min-w-[160px]">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm font-semibold">{target.label}</span>
+            <button 
+              onClick={onDismiss}
+              className="p-1 hover:bg-primary-foreground/20 rounded-md transition-colors"
+            >
+              <X className="h-4 w-4 text-primary-foreground" />
+            </button>
+          </div>
+          <p className="text-xs text-primary-foreground/80 mt-1">Click here to continue</p>
         </div>
       </div>
     </>,
