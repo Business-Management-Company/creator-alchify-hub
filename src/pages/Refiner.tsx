@@ -79,8 +79,6 @@ interface PipelineState {
   removeFillers: PipelineStatus;
   removeGaps: PipelineStatus;
   audioCleanup: PipelineStatus;
-  generateCaptions: PipelineStatus;
-  aiClips: PipelineStatus;
 }
 
 const FILLER_WORDS = ['um', 'uh', 'like', 'you know', 'basically', 'actually', 'so,', 'well,'];
@@ -103,8 +101,6 @@ const Refiner = () => {
     removeFillers: 'pending',
     removeGaps: 'pending',
     audioCleanup: 'pending',
-    generateCaptions: 'pending',
-    aiClips: 'pending',
   });
 
   useEffect(() => {
@@ -187,8 +183,6 @@ const Refiner = () => {
           removeFillers: 'complete',
           removeGaps: 'complete',
           audioCleanup: 'complete',
-          generateCaptions: 'complete',
-          aiClips: 'complete',
         });
         // Set processing results if transcript exists
         setProcessingResults({
@@ -207,8 +201,6 @@ const Refiner = () => {
           removeFillers: 'pending',
           removeGaps: 'pending',
           audioCleanup: 'pending',
-          generateCaptions: 'pending',
-          aiClips: 'pending',
         });
       }
       
@@ -415,14 +407,6 @@ const Refiner = () => {
                 <PipelineStep 
                   label="Audio Cleanup" 
                   status={pipelineState.audioCleanup}
-                />
-                <PipelineStep 
-                  label="Generate Captions" 
-                  status={pipelineState.generateCaptions}
-                />
-                <PipelineStep 
-                  label="AI Clips" 
-                  status={pipelineState.aiClips}
                 />
               </CardContent>
             </Card>
@@ -742,17 +726,13 @@ const Refiner = () => {
                 </div>
 
                 {/* Right - Actions */}
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="hero" onClick={() => setActiveTab('clips')} disabled={!isProcessingComplete}>
-                    <Scissors className="mr-1.5 h-4 w-4" />
-                    Generate Clips
-                  </Button>
-                  <Button size="sm" variant="outline" disabled={!isProcessingComplete}>
-                    <Share2 className="mr-1.5 h-4 w-4" />
+                <div className="flex items-center gap-3">
+                  <Button size="default" variant="outline" disabled={!isProcessingComplete}>
+                    <Share2 className="mr-2 h-4 w-4" />
                     Share
                   </Button>
-                  <Button size="sm" variant="outline" disabled={!isProcessingComplete}>
-                    <Download className="mr-1.5 h-4 w-4" />
+                  <Button size="default" variant="outline" disabled={!isProcessingComplete}>
+                    <Download className="mr-2 h-4 w-4" />
                     Export
                   </Button>
                 </div>
@@ -856,18 +836,6 @@ const NotProcessedCTA = ({
       updatePipelineStep('audioCleanup', 'active');
       await new Promise(r => setTimeout(r, 600));
       updatePipelineStep('audioCleanup', 'complete');
-
-      // Step 5: Generate Captions (simulated)
-      setProcessingStatus('Generating captions...');
-      updatePipelineStep('generateCaptions', 'active');
-      await new Promise(r => setTimeout(r, 500));
-      updatePipelineStep('generateCaptions', 'complete');
-
-      // Step 6: AI Clips (simulated)
-      setProcessingStatus('Identifying viral moments...');
-      updatePipelineStep('aiClips', 'active');
-      await new Promise(r => setTimeout(r, 400));
-      updatePipelineStep('aiClips', 'complete');
 
       toast({
         title: 'Content Alchified! ✨',
