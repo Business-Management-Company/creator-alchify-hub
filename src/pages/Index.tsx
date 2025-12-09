@@ -31,7 +31,7 @@ const Index = () => {
       </div>
       
       {/* Welcome video popup - shows after 5 seconds for first-time visitors */}
-      <WelcomeVideoModal delay={5000} videoPath="welcome.mp4" />
+      <WelcomeVideoModal delay={5000} videoPath="Alchify_Content Gold" />
     </>
   );
 };
