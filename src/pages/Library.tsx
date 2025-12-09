@@ -190,7 +190,12 @@ const Library = () => {
       case 'transcribing':
         return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Transcribing...</Badge>;
       case 'editing':
-        return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Ready</Badge>;
+        return (
+          <Badge className="bg-primary/20 text-primary border-primary/30">
+            <Wand2 className="h-3 w-3 mr-1" />
+            Alchified
+          </Badge>
+        );
       case 'exported':
         return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">Exported</Badge>;
       default:
