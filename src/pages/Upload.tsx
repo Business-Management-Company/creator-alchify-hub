@@ -10,7 +10,8 @@ import {
   Music,
   CheckCircle,
   AlertCircle,
-  ArrowLeft
+  ArrowLeft,
+  Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +38,7 @@ const Upload = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadStage, setUploadStage] = useState<'uploading' | 'processing'>('uploading');
 
   useEffect(() => {
     if (!loading && !user) {
@@ -113,6 +115,7 @@ const Upload = () => {
     
     setIsUploading(true);
     setUploadProgress(0);
+    setUploadStage('uploading');
     
     try {
       // Generate unique file path
@@ -131,14 +134,9 @@ const Upload = () => {
       
       if (uploadError) throw uploadError;
       
-      setUploadProgress(70);
+      setUploadProgress(40);
       
-      // Get the file URL
-      const { data: urlData } = supabase.storage
-        .from('media-uploads')
-        .getPublicUrl(filePath);
-      
-      // Create project record
+      // Create project record with 'processing' status (auto-Alchify starts)
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .insert({
@@ -148,19 +146,60 @@ const Upload = () => {
           source_file_name: file.name,
           source_file_type: getFileType(file.type),
           source_file_size: file.size,
-          status: 'uploaded',
+          status: 'processing', // Start in processing state
         })
         .select()
         .single();
       
       if (projectError) throw projectError;
       
-      setUploadProgress(100);
+      setUploadProgress(60);
+      setUploadStage('processing');
       
       toast({
-        title: 'Upload complete!',
-        description: 'Your content is ready for transcription.',
+        title: 'Alchifying your content...',
+        description: 'AI is transcribing, enhancing, and preparing your content.',
       });
+      
+      // Auto-start transcription (the magic of Alchify!)
+      try {
+        const { data, error } = await supabase.functions.invoke('transcribe-audio', {
+          body: { projectId: project.id }
+        });
+        
+        setUploadProgress(90);
+        
+        if (error || data?.error) {
+          console.error('Auto-transcription warning:', error || data?.error);
+          // Don't fail the upload, just note the issue
+          toast({
+            title: 'Upload complete',
+            description: 'Content uploaded. You can start transcription in the Refiner.',
+          });
+        } else {
+          // Log AI action
+          await supabase.from('ai_action_log').insert({
+            project_id: project.id,
+            user_id: user.id,
+            action_type: 'auto_alchify',
+            action_details: {
+              word_count: data.transcript?.wordCount,
+              filler_count: data.transcript?.fillerCount,
+              auto_processed: true
+            }
+          });
+          
+          toast({
+            title: 'Content Alchified! ✨',
+            description: `Transcribed ${data.transcript?.wordCount || 0} words. Ready to refine!`,
+          });
+        }
+      } catch (transcribeError) {
+        console.error('Auto-transcription error:', transcribeError);
+        // Continue anyway - user can manually transcribe
+      }
+      
+      setUploadProgress(100);
       
       // Navigate to refiner
       setTimeout(() => {
@@ -216,7 +255,7 @@ const Upload = () => {
             </Button>
             <h1 className="text-3xl font-bold text-foreground mb-2">Upload Content</h1>
             <p className="text-muted-foreground">
-              Drop your raw video or audio files. We'll transcribe and help you refine them.
+              Drop your raw content. Alchify will automatically transcribe, enhance, and prepare it for you.
             </p>
           </div>
           
@@ -308,12 +347,29 @@ const Upload = () => {
           
           {/* Upload Progress */}
           {isUploading && (
-            <div className="mt-6 space-y-2">
+            <div className="mt-6 space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Uploading...</span>
+                <span className="text-muted-foreground flex items-center gap-2">
+                  {uploadStage === 'uploading' ? (
+                    <>
+                      <UploadIcon className="h-4 w-4" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+                      Alchifying your content...
+                    </>
+                  )}
+                </span>
                 <span className="text-foreground font-medium">{uploadProgress}%</span>
               </div>
               <Progress value={uploadProgress} className="h-2" />
+              {uploadStage === 'processing' && (
+                <p className="text-xs text-muted-foreground text-center">
+                  AI is transcribing, detecting fillers, and preparing your content
+                </p>
+              )}
             </div>
           )}
           
@@ -326,8 +382,8 @@ const Upload = () => {
               onClick={handleUpload}
               disabled={!title.trim()}
             >
-              <CheckCircle className="mr-2 h-5 w-5" />
-              Start Processing
+              <Sparkles className="mr-2 h-5 w-5" />
+              Alchify My Content
             </Button>
           )}
         </div>
