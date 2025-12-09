@@ -34,12 +34,37 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { FileUploadArea } from './FileUploadArea';
 import { ProactiveTips } from './ProactiveTips';
+import { AIActionButton, ActionType } from './AIActionButton';
 
 interface UploadedFile {
   file: File;
   preview?: string;
   type: 'video' | 'audio' | 'image' | 'document';
 }
+
+// Detect actionable suggestions in AI responses
+const detectActions = (content: string): ActionType[] => {
+  const actions: ActionType[] = [];
+  const lowerContent = content.toLowerCase();
+  
+  if (lowerContent.includes('upload') && (lowerContent.includes('click') || lowerContent.includes('button') || lowerContent.includes('drag'))) {
+    actions.push('upload');
+  }
+  if (lowerContent.includes('create clip') || lowerContent.includes('generate clip') || lowerContent.includes('viral clip')) {
+    actions.push('create-clips');
+  }
+  if (lowerContent.includes('add caption') || lowerContent.includes('sync caption')) {
+    actions.push('add-captions');
+  }
+  if (lowerContent.includes('clean') && lowerContent.includes('audio') || lowerContent.includes('noise reduction')) {
+    actions.push('clean-audio');
+  }
+  if (lowerContent.includes('export') && (lowerContent.includes('tiktok') || lowerContent.includes('youtube') || lowerContent.includes('instagram'))) {
+    actions.push('export');
+  }
+  
+  return actions;
+};
 
 interface Message {
   role: 'user' | 'assistant';
@@ -499,6 +524,20 @@ export function RefinerAIPanel() {
                       </div>
                     )}
                     <p className="text-sm whitespace-pre-wrap">{message.content || '...'}</p>
+                    
+                    {/* Interactive Action Buttons for AI responses */}
+                    {message.role === 'assistant' && message.content && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {detectActions(message.content).map((action) => (
+                          <AIActionButton
+                            key={action}
+                            action={action}
+                            onUploadClick={() => setShowFileUpload(true)}
+                            projectId={params.projectId}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))
