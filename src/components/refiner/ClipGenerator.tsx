@@ -262,7 +262,8 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
           title: 'Clips generated!',
           description: `Found ${demoClips.length} potential viral moments from your content.`,
         });
-        onClipGenerated?.();
+        // Call callback without causing navigation
+        if (onClipGenerated) onClipGenerated();
         return;
       }
 
@@ -278,7 +279,7 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
         description: `Found ${data.clips?.length || 0} potential clips from your content.`,
       });
 
-      onClipGenerated?.();
+      if (onClipGenerated) onClipGenerated();
     } catch (error) {
       console.error('Clip generation error:', error);
       // Fallback to demo clips
@@ -317,7 +318,7 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
         title: 'Clips generated!',
         description: `Found ${demoClips.length} potential viral moments.`,
       });
-      onClipGenerated?.();
+      if (onClipGenerated) onClipGenerated();
     } finally {
       setIsGenerating(false);
     }
