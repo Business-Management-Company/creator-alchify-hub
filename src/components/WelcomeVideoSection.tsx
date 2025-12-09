@@ -91,7 +91,6 @@ export function WelcomeVideoSection({ videoPath = 'alchify-welcome.mp4' }: Welco
             {videoUrl && (
               <video
                 ref={videoRef}
-                src={videoUrl}
                 muted={isMuted}
                 playsInline
                 preload="metadata"
@@ -107,7 +106,9 @@ export function WelcomeVideoSection({ videoPath = 'alchify-welcome.mp4' }: Welco
                     setVideoError(true);
                   }
                 }}
-              />
+              >
+                <source src={videoUrl} type="video/mp4" />
+              </video>
             )}
 
             {/* Play Button Overlay - Shows when not playing */}
