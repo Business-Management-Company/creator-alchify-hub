@@ -13,7 +13,7 @@ export function WelcomeVideoSection({ videoPath = 'alchify-welcome.mp4' }: Welco
   const [isMuted, setIsMuted] = useState(true);
   const [showControls, setShowControls] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [videoLoaded, setVideoLoaded] = useState(false);
+  const [playAttempted, setPlayAttempted] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -31,17 +31,19 @@ export function WelcomeVideoSection({ videoPath = 'alchify-welcome.mp4' }: Welco
   }, [videoPath]);
 
   const handlePlayClick = () => {
-    if (videoError) {
-      // If video failed, don't try to play
-      return;
-    }
+    if (videoError) return;
+    
+    setPlayAttempted(true);
     
     if (videoRef.current) {
-      setIsPlaying(true);
-      videoRef.current.play().catch((err) => {
-        console.error('Video play error:', err);
-        setVideoError(true);
-      });
+      videoRef.current.play()
+        .then(() => {
+          setIsPlaying(true);
+        })
+        .catch((err) => {
+          console.error('Video play error:', err);
+          setVideoError(true);
+        });
     }
   };
 
@@ -97,8 +99,14 @@ export function WelcomeVideoSection({ videoPath = 'alchify-welcome.mp4' }: Welco
                 onEnded={handleVideoEnd}
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
-                onCanPlay={() => { console.log('Video can play'); setVideoLoaded(true); }}
-                onError={(e) => { console.error('Video error event:', e); setVideoError(true); }}
+                onCanPlay={() => console.log('Video can play')}
+                onError={(e) => {
+                  console.error('Video error event:', e);
+                  // Only set error if user already tried to play
+                  if (playAttempted) {
+                    setVideoError(true);
+                  }
+                }}
               />
             )}
 
