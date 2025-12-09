@@ -36,13 +36,13 @@ import {
   Play,
   Trash2,
   Wand2,
-  Download,
   FolderOpen,
   Clock,
   HardDrive,
   Filter
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import VideoThumbnail from '@/components/VideoThumbnail';
 
 type ViewMode = 'grid' | 'list';
 type FilterType = 'all' | 'video' | 'audio' | 'processing';
@@ -390,16 +390,19 @@ const Library = () => {
                 >
                   <CardContent className="p-0">
                     {/* Thumbnail */}
-                    <div className="aspect-[16/9] h-28 bg-gradient-to-br from-muted/80 to-muted flex items-center justify-center relative">
-                      <div className="p-3 rounded-full bg-background/20">
-                        <TypeIcon className="h-8 w-8 text-foreground/40" />
-                      </div>
+                    <div className="aspect-[16/9] h-28 bg-gradient-to-br from-muted/80 to-muted flex items-center justify-center relative overflow-hidden">
+                      <VideoThumbnail
+                        sourceFileUrl={item.source_file_url}
+                        sourceFileType={item.source_file_type}
+                        className="w-full h-full"
+                        showControls={false}
+                      />
                       {item.source_duration_seconds && (
-                        <div className="absolute bottom-2 right-2 bg-background/90 backdrop-blur-sm text-xs px-2 py-1 rounded font-medium">
+                        <div className="absolute bottom-2 right-2 bg-background/90 backdrop-blur-sm text-xs px-2 py-1 rounded font-medium z-10">
                           {formatDuration(item.source_duration_seconds)}
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 z-10">
                         <Button size="sm" variant="default" onClick={(e) => {
                           e.stopPropagation();
                           handleQuickAction('open', item);
