@@ -402,8 +402,16 @@ const Refiner = () => {
           </div>
         </div>
 
-        {/* Processing Results - Only show if we have a project */}
-        {project && (
+        {/* Not Yet Processed - Show CTA prominently */}
+        {project && !isProcessingComplete && (
+          <NotProcessedCTA 
+            projectId={project.id} 
+            onProcessingComplete={() => fetchProject()}
+          />
+        )}
+
+        {/* Processing Results - Only show if we have processed content */}
+        {project && isProcessingComplete && (
           <Card className="mt-6">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
@@ -425,7 +433,7 @@ const Refiner = () => {
                 <StatCard 
                   value={processingResults?.fillerCount || 0}
                   label="Fillers Found"
-                  color="text-red-500"
+                  color="text-destructive"
                 />
                 <StatCard 
                   value={0}
@@ -494,14 +502,6 @@ const Refiner = () => {
               </div>
             </CardContent>
           </Card>
-        )}
-
-        {/* Not Yet Processed - Show CTA */}
-        {project && !isProcessingComplete && (
-          <NotProcessedCTA 
-            projectId={project.id} 
-            onProcessingComplete={() => fetchProject()}
-          />
         )}
 
         {/* Processing Complete & Actions */}
