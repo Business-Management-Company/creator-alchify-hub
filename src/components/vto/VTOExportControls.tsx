@@ -1,26 +1,32 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Download, Save, Share2, ChevronDown } from 'lucide-react';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Download, Save, Share2, ChevronDown, Plus, Trash2, Clock, Star } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-interface SavedVersion {
+export interface SavedVersion {
   id: string;
   name: string;
   savedAt: Date;
+  isLive?: boolean;
+  isActive?: boolean;
 }
 
 interface VTOExportControlsProps {
   onSave: () => void;
   onVersionChange?: (versionId: string) => void;
+  onNewDraft?: () => void;
+  onDeleteVersion?: (versionId: string) => void;
   savedVersions?: SavedVersion[];
   currentVersionId?: string;
   contentRef?: React.RefObject<HTMLDivElement>;
@@ -29,6 +35,8 @@ interface VTOExportControlsProps {
 export const VTOExportControls = ({ 
   onSave, 
   onVersionChange,
+  onNewDraft,
+  onDeleteVersion,
   savedVersions = [],
   currentVersionId,
   contentRef
@@ -38,10 +46,25 @@ export const VTOExportControls = ({
 
   // Default versions if none provided
   const versions: SavedVersion[] = savedVersions.length > 0 ? savedVersions : [
-    { id: 'current', name: 'Current Draft', savedAt: new Date() },
-    { id: 'q3-2025', name: 'Q3 2025 Final', savedAt: new Date('2025-09-30') },
+    { id: 'current', name: 'Current Draft', savedAt: new Date(), isActive: true },
+    { id: 'q3-2025', name: 'Q3 2025 Final', savedAt: new Date('2025-09-30'), isLive: true },
     { id: 'q2-2025', name: 'Q2 2025 Final', savedAt: new Date('2025-06-30') },
   ];
+
+  const currentVersion = versions.find(v => v.id === (currentVersionId || 'current')) || versions[0];
+
+  const formatTimeAgo = (date: Date) => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 60) return `${diffMins} minutes ago`;
+    if (diffHours < 24) return `about ${diffHours} hours ago`;
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return date.toLocaleDateString();
+  };
 
   const handleExportPDF = async () => {
     setIsExporting(true);
@@ -51,15 +74,12 @@ export const VTOExportControls = ({
     });
 
     try {
-      // Get the content element
       const element = contentRef?.current || document.querySelector('.vto-content');
       
       if (!element) {
-        // Fallback: Generate a simple text-based PDF
         const pdf = new jsPDF('p', 'mm', 'a4');
         const pageWidth = pdf.internal.pageSize.getWidth();
         
-        // Header
         pdf.setFillColor(42, 42, 42);
         pdf.rect(0, 0, pageWidth, 40, 'F');
         
@@ -69,7 +89,6 @@ export const VTOExportControls = ({
         pdf.setFontSize(12);
         pdf.text('Vision/Traction Organizer - Board Presentation', pageWidth / 2, 30, { align: 'center' });
         
-        // Content
         pdf.setTextColor(0, 0, 0);
         let y = 55;
         
@@ -137,7 +156,6 @@ export const VTOExportControls = ({
         pdf.setTextColor(100, 100, 100);
         pdf.text('18-month runway to reach $1.2M ARR, 25K users, and Series A readiness.', 25, y);
         
-        // Footer
         const pageHeight = pdf.internal.pageSize.getHeight();
         pdf.setFontSize(9);
         pdf.setTextColor(150, 150, 150);
@@ -151,7 +169,6 @@ export const VTOExportControls = ({
           description: 'Your VTO board presentation has been saved.',
         });
       } else {
-        // Use html2canvas for full page capture
         const canvas = await html2canvas(element as HTMLElement, {
           scale: 2,
           useCORS: true,
@@ -225,49 +242,122 @@ export const VTOExportControls = ({
         });
       }
     } catch (error) {
-      // User cancelled or error
       console.log('Share cancelled');
     }
   };
 
+  const handleNewDraft = () => {
+    onNewDraft?.();
+    toast({
+      title: 'New Draft Created',
+      description: 'Starting fresh from current version',
+    });
+  };
+
+  const handleDeleteVersion = (versionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDeleteVersion?.(versionId);
+    toast({
+      title: 'Version Deleted',
+      description: 'The version has been removed',
+    });
+  };
+
   return (
-    <div className="flex flex-wrap items-center gap-3 justify-between">
-      {/* Version Selector */}
-      <Select 
-        value={currentVersionId || 'current'} 
-        onValueChange={(value) => onVersionChange?.(value)}
-      >
-        <SelectTrigger className="w-[200px]">
-          <SelectValue placeholder="Select version" />
-        </SelectTrigger>
-        <SelectContent className="bg-card border border-border">
+    <div className="flex flex-wrap items-center gap-3">
+      {/* Version Selector Dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" className="gap-2 min-w-[200px] justify-between">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span className="truncate max-w-[140px]">{currentVersion?.name}</span>
+            </div>
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-[300px] bg-card border border-border z-50">
+          {/* Header */}
+          <div className="flex items-center justify-between px-3 py-2">
+            <span className="font-medium text-sm">Saved Versions</span>
+            <Badge variant="secondary" className="rounded-full h-5 w-5 p-0 flex items-center justify-center text-xs">
+              {versions.length}
+            </Badge>
+          </div>
+          <DropdownMenuSeparator />
+          
+          {/* New Draft Option */}
+          <DropdownMenuItem onClick={handleNewDraft} className="gap-2 cursor-pointer">
+            <Plus className="h-4 w-4" />
+            <span>New Draft</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          
+          {/* Version List */}
           {versions.map((version) => (
-            <SelectItem key={version.id} value={version.id}>
-              {version.name}
-            </SelectItem>
+            <DropdownMenuItem 
+              key={version.id}
+              onClick={() => onVersionChange?.(version.id)}
+              className={cn(
+                "flex flex-col items-start gap-1 cursor-pointer p-3",
+                version.id === currentVersionId && "bg-primary/10 border-l-2 border-primary"
+              )}
+            >
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  {version.isLive && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}
+                  <span className="font-medium truncate max-w-[150px]">{version.name}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {version.isLive && (
+                    <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/30">
+                      Live
+                    </Badge>
+                  )}
+                  {version.isActive && (
+                    <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/30">
+                      Active
+                    </Badge>
+                  )}
+                  {version.id !== 'current' && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                      onClick={(e) => handleDeleteVersion(version.id, e)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                <span>{formatTimeAgo(version.savedAt)}</span>
+              </div>
+            </DropdownMenuItem>
           ))}
-        </SelectContent>
-      </Select>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {/* Action Buttons */}
-      <div className="flex items-center gap-2">
-        <Button 
-          onClick={handleExportPDF} 
-          disabled={isExporting}
-          className="gap-2"
-        >
-          <Download className="h-4 w-4" />
-          {isExporting ? 'Generating...' : 'Download PDF'}
-        </Button>
-        <Button onClick={handleShare} variant="outline" className="gap-2">
-          <Share2 className="h-4 w-4" />
-          Share
-        </Button>
-        <Button onClick={handleSaveVersion} variant="outline" className="gap-2">
-          <Save className="h-4 w-4" />
-          Save Version
-        </Button>
-      </div>
+      <Button onClick={handleSaveVersion} className="gap-2">
+        <Save className="h-4 w-4" />
+        Save Version
+      </Button>
+      <Button 
+        onClick={handleExportPDF} 
+        disabled={isExporting}
+        variant="outline"
+        className="gap-2"
+      >
+        <Download className="h-4 w-4" />
+        {isExporting ? 'Generating...' : 'Download'}
+      </Button>
+      <Button onClick={handleShare} variant="outline" className="gap-2">
+        <Share2 className="h-4 w-4" />
+        Share
+      </Button>
     </div>
   );
 };
