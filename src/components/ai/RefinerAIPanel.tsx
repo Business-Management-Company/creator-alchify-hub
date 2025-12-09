@@ -43,24 +43,29 @@ interface UploadedFile {
   type: 'video' | 'audio' | 'image' | 'document';
 }
 
-// Detect actionable suggestions in AI responses
+// Detect actionable suggestions in AI responses - more aggressive detection
 const detectActions = (content: string): ActionType[] => {
   const actions: ActionType[] = [];
   const lowerContent = content.toLowerCase();
   
-  if (lowerContent.includes('upload') && (lowerContent.includes('click') || lowerContent.includes('button') || lowerContent.includes('drag'))) {
+  // Upload action - trigger on any upload mention
+  if (lowerContent.includes('upload')) {
     actions.push('upload');
   }
-  if (lowerContent.includes('create clip') || lowerContent.includes('generate clip') || lowerContent.includes('viral clip')) {
+  // Clips action
+  if (lowerContent.includes('clip') || lowerContent.includes('clips')) {
     actions.push('create-clips');
   }
-  if (lowerContent.includes('add caption') || lowerContent.includes('sync caption')) {
+  // Captions action
+  if (lowerContent.includes('caption')) {
     actions.push('add-captions');
   }
-  if (lowerContent.includes('clean') && lowerContent.includes('audio') || lowerContent.includes('noise reduction')) {
+  // Audio cleanup action
+  if (lowerContent.includes('audio') || lowerContent.includes('noise')) {
     actions.push('clean-audio');
   }
-  if (lowerContent.includes('export') && (lowerContent.includes('tiktok') || lowerContent.includes('youtube') || lowerContent.includes('instagram'))) {
+  // Export action
+  if (lowerContent.includes('export') || lowerContent.includes('tiktok') || lowerContent.includes('youtube') || lowerContent.includes('instagram') || lowerContent.includes('shorts')) {
     actions.push('export');
   }
   

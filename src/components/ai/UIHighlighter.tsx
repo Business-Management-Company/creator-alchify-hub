@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowRight, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface HighlightTarget {
@@ -131,36 +131,49 @@ function HighlightPointer({ target, onDismiss }: HighlightPointerProps) {
         }}
       />
 
-      {/* Tooltip pointer */}
+      {/* Tooltip box pointer */}
       <div
         className={cn(
-          "fixed z-[102] flex items-center gap-2 px-3 py-2 rounded-lg",
-          "bg-primary text-primary-foreground shadow-lg",
+          "fixed z-[102] flex flex-col gap-1 px-4 py-3 rounded-lg",
+          "bg-card border border-primary shadow-xl",
           "animate-in slide-in-from-bottom-2 fade-in duration-300",
-          "pointer-events-auto cursor-pointer"
+          "pointer-events-auto cursor-pointer min-w-[180px]"
         )}
         style={{
-          top: position.top + position.height + 12,
+          top: position.top + position.height + 16,
           left: position.left + position.width / 2,
           transform: 'translateX(-50%)',
         }}
         onClick={onDismiss}
       >
-        <ArrowRight className="h-4 w-4 rotate-[-90deg]" />
-        <span className="text-sm font-medium">{target.label}</span>
-        <button className="ml-1 hover:bg-primary-foreground/20 rounded p-0.5">
-          <X className="h-3 w-3" />
-        </button>
-        
         {/* Arrow pointing up */}
         <div 
           className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0"
           style={{
-            borderLeft: '8px solid transparent',
-            borderRight: '8px solid transparent',
-            borderBottom: '8px solid hsl(var(--primary))',
+            borderLeft: '10px solid transparent',
+            borderRight: '10px solid transparent',
+            borderBottom: '10px solid hsl(var(--primary))',
           }}
         />
+        <div 
+          className="absolute -top-[6px] left-1/2 -translate-x-1/2 w-0 h-0"
+          style={{
+            borderLeft: '8px solid transparent',
+            borderRight: '8px solid transparent',
+            borderBottom: '8px solid hsl(var(--card))',
+          }}
+        />
+        
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+            <span className="text-sm font-semibold text-foreground">{target.label}</span>
+          </div>
+          <button className="hover:bg-muted rounded p-1 transition-colors">
+            <X className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
+        </div>
+        <p className="text-xs text-muted-foreground">Click here or tap to dismiss</p>
       </div>
     </>,
     document.body
