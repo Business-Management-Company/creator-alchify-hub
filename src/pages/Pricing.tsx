@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Check, Zap, HardDrive, Mic, Video, Radio, Users, Crown, Building2, ArrowLeft } from 'lucide-react';
+import { Helmet } from "react-helmet-async";
+import { Check, Zap, HardDrive, Mic, Video, Radio, Users, Crown, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +10,8 @@ import { usePricingPlans, useUserPlan, usePlanLimits } from '@/hooks/usePricing'
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
 export default function Pricing() {
   const [annual, setAnnual] = useState(false);
@@ -62,27 +65,30 @@ export default function Pricing() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
+      <>
+        <Navbar />
+        <div className="min-h-screen flex items-center justify-center pt-16">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Back Button */}
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate(-1)} 
-          className="mb-6 -ml-2"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-
-        {/* Header */}
-        <div className="text-center mb-12">
+    <>
+      <Helmet>
+        <title>Pricing - Alchify</title>
+        <meta
+          name="description"
+          content="Simple, transparent pricing for Alchify. Start free and scale as you grow."
+        />
+      </Helmet>
+      <div className="min-h-screen bg-background text-foreground">
+        <Navbar />
+        <main className="pt-24 pb-16 px-4">
+          <div className="max-w-7xl mx-auto">
+            {/* Header */}
+            <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">
             Simple, Transparent Pricing
           </h1>
@@ -278,7 +284,10 @@ export default function Pricing() {
             Questions? <button className="text-primary hover:underline">Contact our sales team</button>
           </p>
         </div>
+          </div>
+        </main>
+        <Footer />
       </div>
-    </div>
+    </>
   );
 }
