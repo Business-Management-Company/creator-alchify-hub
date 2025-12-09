@@ -87,18 +87,19 @@ export const ShareVTODialog = ({ open, onOpenChange, versionName = 'Current VTO'
 
   const handleShare = async () => {
     setIsLoading(true);
+    const boardPortalUrl = `${window.location.origin}/board`;
 
     try {
       if (shareMode === 'view') {
         // Copy link and navigate to board portal view
-        await navigator.clipboard.writeText(window.location.href);
+        await navigator.clipboard.writeText(boardPortalUrl);
         toast({
           title: 'Link Copied',
-          description: 'VTO link copied. Opening board portal view...',
+          description: 'Board portal link copied. Opening view...',
         });
-        // In production, would navigate to board portal
+        window.open('/board', '_blank');
       } else if (shareMode === 'share') {
-        await navigator.clipboard.writeText(window.location.href);
+        await navigator.clipboard.writeText(boardPortalUrl);
         toast({
           title: 'Shared to Board Portal',
           description: 'VTO has been shared to the board portal.',

@@ -26,6 +26,7 @@ import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminTechStack from "./pages/admin/AdminTechStack";
 import AdminCEOVTO from "./pages/admin/AdminCEOVTO";
 import AdminContacts from "./pages/admin/AdminContacts";
+import BoardPortal from "./pages/BoardPortal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -62,6 +63,8 @@ const App = () => (
               <Route path="/admin/tech-stack" element={<AdminTechStack />} />
               <Route path="/admin/ceo-vto" element={<AdminCEOVTO />} />
               <Route path="/admin/contacts" element={<AdminContacts />} />
+              {/* Board Portal - Public access for board members */}
+              <Route path="/board" element={<BoardPortal />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
