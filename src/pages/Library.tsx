@@ -22,6 +22,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { 
@@ -70,6 +80,8 @@ const Library = () => {
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [sortOption, setSortOption] = useState<SortOption>('newest');
   const [searchQuery, setSearchQuery] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<MediaItem | null>(null);
 
   // Fetch all media items
   const { data: mediaItems, isLoading } = useQuery({
@@ -203,7 +215,11 @@ const Library = () => {
     }
   };
 
-  const handleQuickAction = (action: string, item: MediaItem) => {
+  const handleQuickAction = (action: string, item: MediaItem, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
     switch (action) {
       case 'open':
         navigate(`/refiner/${item.id}`);
@@ -212,10 +228,17 @@ const Library = () => {
         navigate('/post-production', { state: { selectedProject: item.id } });
         break;
       case 'delete':
-        if (confirm('Are you sure you want to delete this item?')) {
-          deleteMutation.mutate(item.id);
-        }
+        setItemToDelete(item);
+        setDeleteDialogOpen(true);
         break;
+    }
+  };
+
+  const confirmDelete = () => {
+    if (itemToDelete) {
+      deleteMutation.mutate(itemToDelete.id);
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
     }
   };
 
@@ -447,7 +470,7 @@ const Library = () => {
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
-                              onClick={() => handleQuickAction('delete', item)}
+                              onClick={(e) => handleQuickAction('delete', item, e)}
                               className="text-destructive focus:text-destructive"
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
@@ -531,7 +554,7 @@ const Library = () => {
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem 
-                                onClick={() => handleQuickAction('delete', item)}
+                                onClick={(e) => handleQuickAction('delete', item, e)}
                                 className="text-destructive focus:text-destructive"
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
@@ -548,6 +571,24 @@ const Library = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure you want to delete this?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete "{itemToDelete?.title}". This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   );
