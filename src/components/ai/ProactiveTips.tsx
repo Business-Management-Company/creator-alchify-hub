@@ -85,15 +85,17 @@ export function ProactiveTips({ onTipAction }: ProactiveTipsProps) {
     const path = location.pathname;
     let tip: Tip | null = null;
 
-    // Dashboard tips - only show on first visit (check localStorage)
+    // Dashboard tips - only show ONCE (check and immediately set localStorage)
     if (path === '/' || path.includes('/dashboard')) {
-      const hasSeenDashboardTip = localStorage.getItem('alchify_seen_dashboard_tip');
-      if (!hasSeenDashboardTip) {
+      const hasSeenUploadTip = localStorage.getItem('alchify_seen_upload_tip');
+      if (!hasSeenUploadTip) {
+        // Immediately mark as seen so it never shows again
+        localStorage.setItem('alchify_seen_upload_tip', 'true');
         tip = {
           id: 'dashboard-start',
           icon: Upload,
-          title: 'Ready to create?',
-          description: 'Upload your first video or audio to start refining',
+          title: 'Upload',
+          description: 'Click here to continue',
           action: 'Get started',
           actionPrompt: 'Help me upload my first content and walk me through the refinement process',
         };
