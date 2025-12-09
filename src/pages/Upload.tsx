@@ -3,12 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { 
   Upload as UploadIcon, 
-  File, 
   X, 
   Loader2, 
   Video, 
   Music,
-  CheckCircle,
   AlertCircle,
   ArrowLeft,
   Sparkles
@@ -110,12 +108,71 @@ const Upload = () => {
     return ACCEPTED_VIDEO_TYPES.includes(mimeType) ? 'video' : 'audio';
   };
 
+  // Upload file with real progress tracking
+  const uploadFileWithProgress = async (
+    file: File, 
+    filePath: string, 
+    onProgress: (percent: number) => void
+  ): Promise<void> => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        // Get the upload URL from Supabase
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          reject(new Error('Not authenticated'));
+          return;
+        }
+
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const uploadUrl = `${supabaseUrl}/storage/v1/object/media-uploads/${filePath}`;
+
+        const xhr = new XMLHttpRequest();
+        
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            onProgress(percent);
+          }
+        });
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            try {
+              const errorData = JSON.parse(xhr.responseText);
+              reject(new Error(errorData.message || `Upload failed: ${xhr.status}`));
+            } catch {
+              reject(new Error(`Upload failed with status ${xhr.status}`));
+            }
+          }
+        });
+
+        xhr.addEventListener('error', () => {
+          reject(new Error('Network error during upload'));
+        });
+
+        xhr.addEventListener('abort', () => {
+          reject(new Error('Upload was cancelled'));
+        });
+
+        xhr.open('POST', uploadUrl, true);
+        xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
+        xhr.setRequestHeader('x-upsert', 'false');
+        xhr.send(file);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  };
+
   const handleUpload = async () => {
     if (!file || !user || !title.trim()) return;
     
     setIsUploading(true);
     setUploadProgress(0);
     setUploadStage('uploading');
+    setUploadError(null);
     
     try {
       // Generate unique file path
@@ -123,20 +180,16 @@ const Upload = () => {
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
       
-      // Upload file to storage
-      setUploadProgress(10);
-      const { error: uploadError } = await supabase.storage
-        .from('media-uploads')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false,
-        });
+      // Upload with real progress tracking
+      await uploadFileWithProgress(file, filePath, (percent) => {
+        // Map 0-100 upload progress to 0-70 of total (save 30% for processing)
+        setUploadProgress(Math.round(percent * 0.7));
+      });
       
-      if (uploadError) throw uploadError;
+      setUploadProgress(70);
+      setUploadStage('processing');
       
-      setUploadProgress(40);
-      
-      // Create project record with 'processing' status (auto-Alchify starts)
+      // Create project record with 'processing' status
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .insert({
@@ -146,35 +199,36 @@ const Upload = () => {
           source_file_name: file.name,
           source_file_type: getFileType(file.type),
           source_file_size: file.size,
-          status: 'processing', // Start in processing state
+          status: 'processing',
         })
         .select()
         .single();
       
-      if (projectError) throw projectError;
+      if (projectError) {
+        console.error('Project creation error:', projectError);
+        throw new Error(`Failed to create project: ${projectError.message}`);
+      }
       
-      setUploadProgress(60);
-      setUploadStage('processing');
+      setUploadProgress(80);
       
       toast({
         title: 'Alchifying your content...',
         description: 'AI is transcribing, enhancing, and preparing your content.',
       });
       
-      // Auto-start transcription (the magic of Alchify!)
+      // Auto-start transcription
       try {
         const { data, error } = await supabase.functions.invoke('transcribe-audio', {
           body: { projectId: project.id }
         });
         
-        setUploadProgress(90);
+        setUploadProgress(95);
         
         if (error || data?.error) {
           console.error('Auto-transcription warning:', error || data?.error);
-          // Don't fail the upload, just note the issue
           toast({
             title: 'Upload complete',
-            description: 'Content uploaded. You can start transcription in the Refiner.',
+            description: 'Content uploaded. Transcription will continue in the background.',
           });
         } else {
           // Log AI action
@@ -208,13 +262,13 @@ const Upload = () => {
       
     } catch (error) {
       console.error('Upload error:', error);
+      setUploadError(error instanceof Error ? error.message : 'Upload failed');
       toast({
         title: 'Upload failed',
         description: error instanceof Error ? error.message : 'Something went wrong',
         variant: 'destructive',
       });
       setUploadProgress(0);
-    } finally {
       setIsUploading(false);
     }
   };
@@ -353,7 +407,7 @@ const Upload = () => {
                   {uploadStage === 'uploading' ? (
                     <>
                       <UploadIcon className="h-4 w-4" />
-                      Uploading...
+                      Uploading... ({uploadProgress}%)
                     </>
                   ) : (
                     <>
