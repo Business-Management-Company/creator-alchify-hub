@@ -48,13 +48,13 @@ function buildCaptionText(words: WordSegment[], startOffset: number): string {
   })).map(w => w.word).join(' ');
 }
 
-// Get Y position based on position preference
-function getYPosition(position: string, height: number): string {
+// Get Y position based on position preference (as percentage for Creatomate)
+function getYPosition(position: string): string {
   switch (position) {
-    case 'top': return `${height * 0.15}`;
-    case 'center': return `${height * 0.5}`;
+    case 'top': return '15%';
+    case 'center': return '50%';
     case 'bottom': 
-    default: return `${height * 0.8}`;
+    default: return '75%'; // Changed from 80% to 75% to ensure visibility
   }
 }
 
@@ -155,26 +155,30 @@ serve(async (req) => {
       // Add captions if words are provided
       if (words && words.length > 0) {
         const captionText = buildCaptionText(words, startTime);
-        const yPos = getYPosition(position, config.height);
+        const yPos = getYPosition(position);
 
         // Creatomate transcript-style animated captions
+        // Using percentage-based positioning for proper placement
         source.elements.push({
           type: 'text',
           transcript: captionText,
           transcript_effect: 'highlight', // Word-by-word highlight effect
           transcript_color: highlightColor,
-          y: yPos,
-          width: '90%',
+          y: yPos, // Now percentage like "75%"
+          width: '85%',
           x_alignment: '50%',
+          y_alignment: '50%',
           font_family: fontFamily,
           font_weight: '800',
-          font_size: `${fontSize} px`,
+          font_size_maximum: `${fontSize} px`,
           fill_color: textColor,
-          background_color: backgroundColor,
-          background_x_padding: '15%',
-          background_y_padding: '8%',
-          background_border_radius: '8%',
+          background_color: '#000000CC', // Solid black with transparency
+          background_x_padding: '20 px',
+          background_y_padding: '12 px',
+          background_border_radius: '12 px',
           text_transform: 'uppercase',
+          text_align: 'center',
+          line_height: '120%',
           // Word timing from transcript
           transcript_words: words.map(w => ({
             word: w.word,
