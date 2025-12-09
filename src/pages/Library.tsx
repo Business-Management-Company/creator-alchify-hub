@@ -390,9 +390,9 @@ const Library = () => {
                 >
                   <CardContent className="p-0">
                     {/* Thumbnail */}
-                    <div className="aspect-video bg-gradient-to-br from-muted/80 to-muted flex items-center justify-center relative">
-                      <div className="p-4 rounded-full bg-background/20">
-                        <TypeIcon className="h-10 w-10 text-foreground/40" />
+                    <div className="aspect-[16/9] h-28 bg-gradient-to-br from-muted/80 to-muted flex items-center justify-center relative">
+                      <div className="p-3 rounded-full bg-background/20">
+                        <TypeIcon className="h-8 w-8 text-foreground/40" />
                       </div>
                       {item.source_duration_seconds && (
                         <div className="absolute bottom-2 right-2 bg-background/90 backdrop-blur-sm text-xs px-2 py-1 rounded font-medium">
