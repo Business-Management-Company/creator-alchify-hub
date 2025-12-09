@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
 import AppLayout from '@/components/layout/AppLayout';
@@ -39,6 +39,8 @@ import { VTOData } from '@/types/vto';
 const AdminCEOVTO = () => {
   const navigate = useNavigate();
   const { isAdmin, loading } = useAdminCheck();
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [currentVersionId, setCurrentVersionId] = useState('current');
 
   // VTO State
   const [vtoData, setVtoData] = useState<VTOData>({
@@ -142,21 +144,33 @@ const AdminCEOVTO = () => {
   return (
     <AppLayout>
       <div className="space-y-8 max-w-6xl mx-auto pb-12">
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <Badge variant="outline" className="mb-2">EOS Vision/Traction Organizer</Badge>
-          <h1 className="text-4xl font-bold">Alchify CEO VTO</h1>
-          <p className="text-sm text-muted-foreground">{getCurrentQuarter()} Strategic Planning</p>
+        {/* Header with Export Controls */}
+        <div className="space-y-4">
+          <div className="text-center space-y-2">
+            <Badge variant="outline" className="mb-2">EOS Vision/Traction Organizer</Badge>
+            <h1 className="text-4xl font-bold">Alchify CEO VTO</h1>
+            <p className="text-sm text-muted-foreground">{getCurrentQuarter()} Strategic Planning</p>
+          </div>
+          
+          {/* Export Controls at Top */}
+          <VTOExportControls 
+            onSave={handleSave}
+            currentVersionId={currentVersionId}
+            onVersionChange={setCurrentVersionId}
+            contentRef={contentRef}
+          />
         </div>
 
-        {/* SECTION 2: Vision Components */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Eye className="h-5 w-5 text-primary" />
-            <h2 className="text-2xl font-bold">Vision (Long-Term Strategy)</h2>
+        {/* VTO Content - Wrapped in ref for PDF export */}
+        <div ref={contentRef} className="vto-content space-y-8">
+          {/* SECTION 2: Vision Components */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Eye className="h-5 w-5 text-primary" />
+              <h2 className="text-2xl font-bold">Vision (Long-Term Strategy)</h2>
+            </div>
+            <Separator />
           </div>
-          <Separator />
-        </div>
 
         <VTOCoreValues 
           values={vtoData.coreValues} 
@@ -561,13 +575,11 @@ const AdminCEOVTO = () => {
           </CardContent>
         </Card>
 
-        {/* SECTION 5: Export Controls */}
-        <VTOExportControls onSave={handleSave} />
-
         <div className="text-center text-sm text-muted-foreground pb-8">
           <p>Confidential - For Board Review Only</p>
           <p>Alchify Inc. • The Crucible for Creators</p>
         </div>
+        </div> {/* Close vto-content div */}
       </div>
     </AppLayout>
   );
