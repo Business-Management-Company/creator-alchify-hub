@@ -11,3 +11,6 @@ verify_jwt = true
 
 [functions.alchify-refiner-ai]
 verify_jwt = true
+
+[functions.render-creatomate]
+verify_jwt = true
