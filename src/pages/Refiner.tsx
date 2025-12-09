@@ -16,11 +16,22 @@ import {
   Plus,
   Video,
   Music,
-  Clock
+  Clock,
+  User,
+  Layers,
+  Image,
+  Play,
+  Check,
+  BarChart3,
+  Settings2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,6 +50,7 @@ interface Project {
   source_file_name: string | null;
   source_file_type: string | null;
   source_file_size: number | null;
+  source_duration_seconds: number | null;
   created_at: string;
 }
 
@@ -49,6 +61,14 @@ interface Transcript {
   avg_confidence: number | null;
   word_count: number | null;
   filler_words_detected: number | null;
+}
+
+interface ProcessingResults {
+  wordCount: number;
+  fillerCount: number;
+  segmentCount: number;
+  minutesSaved: number;
+  accuracyScore: number;
 }
 
 const FILLER_WORDS = ['um', 'uh', 'like', 'you know', 'basically', 'actually', 'so,', 'well,'];
@@ -66,46 +86,13 @@ const removeFillerWords = (content: string): { cleaned: string; removedCount: nu
     cleaned = cleaned.replace(regex, '');
   });
   
-  // Clean up extra spaces and commas
   cleaned = cleaned.replace(/\s+/g, ' ').replace(/\s*,\s*,/g, ',').trim();
   
   return { cleaned, removedCount };
 };
 
-// Component to highlight filler words in transcript
-const TranscriptContent = ({ content }: { content: string }) => {
-  const fillerWords = ['um', 'uh', 'like', 'you know', 'basically', 'actually'];
-  
-  // Create regex pattern for filler words
-  const pattern = new RegExp(`\\b(${fillerWords.join('|')})\\b`, 'gi');
-  
-  // Split content and highlight filler words
-  const parts = content.split(pattern);
-  
-  return (
-    <p className="text-foreground whitespace-pre-wrap leading-relaxed">
-      {parts.map((part, index) => {
-        const isFillerWord = fillerWords.some(
-          filler => part.toLowerCase() === filler.toLowerCase()
-        );
-        
-        if (isFillerWord) {
-          return (
-            <span 
-              key={index} 
-              className="bg-accent/20 text-accent px-1 rounded cursor-pointer hover:bg-accent/30 transition-colors"
-              title="Filler word - click to remove"
-            >
-              {part}
-            </span>
-          );
-        }
-        
-        return <span key={index}>{part}</span>;
-      })}
-    </p>
-  );
-};
+// Tool types for the unified studio
+type ActiveTool = 'transcript' | 'clips' | 'captions' | 'speaker-focus' | 'lower-thirds' | 'b-roll' | 'timeline' | null;
 
 const Refiner = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -120,7 +107,12 @@ const Refiner = () => {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isRemovingFillers, setIsRemovingFillers] = useState(false);
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<'clips' | 'captions' | null>(null);
+  const [activeTool, setActiveTool] = useState<ActiveTool>(null);
+  const [processingResults, setProcessingResults] = useState<ProcessingResults | null>(null);
+  
+  // Processing options
+  const [autoRemoveFillers, setAutoRemoveFillers] = useState(false);
+  const [autoNoiseReduction, setAutoNoiseReduction] = useState(true);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -194,6 +186,14 @@ const Refiner = () => {
       
       if (transcriptData) {
         setTranscript(transcriptData);
+        // Set processing results if transcript exists
+        setProcessingResults({
+          wordCount: transcriptData.word_count || 0,
+          fillerCount: transcriptData.filler_words_detected || 0,
+          segmentCount: 0,
+          minutesSaved: Math.round((transcriptData.filler_words_detected || 0) * 0.5 / 60 * 10) / 10,
+          accuracyScore: Math.round((transcriptData.avg_confidence || 0.95) * 100),
+        });
       }
       
     } catch (error) {
@@ -214,12 +214,10 @@ const Refiner = () => {
     setIsTranscribing(true);
     
     try {
-      // Update project status locally
       setProject(prev => prev ? { ...prev, status: 'transcribing' } : null);
       
       let audioData: string | undefined;
       
-      // Check if we need to extract audio from video (file > 25MB)
       const fileSize = project.source_file_size || 0;
       if (needsAudioExtraction(fileSize)) {
         toast({
@@ -227,7 +225,6 @@ const Refiner = () => {
           description: 'Your file is large, extracting audio for faster transcription.',
         });
         
-        // Get signed URL for the file
         if (!project.source_file_url) {
           throw new Error('No source file URL found');
         }
@@ -240,10 +237,8 @@ const Refiner = () => {
           throw new Error('Failed to get file URL for audio extraction');
         }
         
-        // Extract audio from video
         const { audioBlob } = await extractAudioFromVideo(signedUrlData.signedUrl);
         
-        // Convert audio blob to base64
         const arrayBuffer = await audioBlob.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
         let binaryString = '';
@@ -256,15 +251,14 @@ const Refiner = () => {
       }
       
       toast({
-        title: 'Transcription started',
-        description: 'AI is processing your content. This may take a moment.',
+        title: 'AI Processing Started',
+        description: 'Transcribing your content. This may take a moment.',
       });
       
-      // Call the transcription edge function
       const { data, error } = await supabase.functions.invoke('transcribe-audio', {
         body: { 
           projectId: project.id,
-          audioData: audioData // Pass extracted audio if available
+          audioData: audioData
         }
       });
       
@@ -276,7 +270,7 @@ const Refiner = () => {
         throw new Error(data.error);
       }
       
-      // Log AI action for authenticity tracking
+      // Log AI action
       await supabase.from('ai_action_log').insert({
         project_id: project.id,
         user_id: user?.id,
@@ -289,7 +283,15 @@ const Refiner = () => {
         }
       });
       
-      // Refresh the project and transcript data
+      // Set processing results
+      setProcessingResults({
+        wordCount: data.transcript?.wordCount || 0,
+        fillerCount: data.transcript?.fillerCount || 0,
+        segmentCount: data.transcript?.segmentCount || 0,
+        minutesSaved: Math.round((data.transcript?.fillerCount || 0) * 0.5 / 60 * 10) / 10,
+        accuracyScore: Math.round((data.transcript?.confidence || 0.95) * 100),
+      });
+      
       await fetchProject();
       
       toast({
@@ -305,7 +307,6 @@ const Refiner = () => {
         variant: 'destructive',
       });
       
-      // Reset project status
       setProject(prev => prev ? { ...prev, status: 'uploaded' } : null);
     } finally {
       setIsTranscribing(false);
@@ -320,7 +321,6 @@ const Refiner = () => {
     try {
       const { cleaned, removedCount } = removeFillerWords(transcript.content);
       
-      // Update transcript in database
       const { error } = await supabase
         .from('transcripts')
         .update({ 
@@ -332,7 +332,6 @@ const Refiner = () => {
       
       if (error) throw error;
       
-      // Log AI action for authenticity tracking
       await supabase.from('ai_action_log').insert({
         project_id: project?.id,
         user_id: user?.id,
@@ -344,13 +343,14 @@ const Refiner = () => {
         }
       });
       
-      // Update local state
       setTranscript(prev => prev ? { 
         ...prev, 
         content: cleaned, 
         filler_words_detected: 0,
         word_count: cleaned.split(/\s+/).filter(w => w.length > 0).length
       } : null);
+      
+      setProcessingResults(prev => prev ? { ...prev, fillerCount: 0 } : null);
       
       toast({
         title: 'Fillers removed!',
@@ -369,6 +369,22 @@ const Refiner = () => {
     }
   };
 
+  const handleToolClick = (tool: ActiveTool) => {
+    setActiveTool(activeTool === tool ? null : tool);
+    if (activeTool !== tool) {
+      setTimeout(() => {
+        document.getElementById(`${tool}-section`)?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  };
+
+  const formatDuration = (seconds: number | null) => {
+    if (!seconds) return '--:--';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -383,11 +399,11 @@ const Refiner = () => {
       <>
         <Helmet>
           <title>Refiner Studio | Alchify</title>
-          <meta name="description" content="AI-powered content refinement studio for transcription, filler removal, and clip generation." />
+          <meta name="description" content="AI-powered content refinement studio for transcription, editing, clip generation, and more." />
         </Helmet>
         
         <AppLayout>
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-5xl mx-auto">
             {/* Header */}
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
@@ -395,7 +411,7 @@ const Refiner = () => {
                 Refiner Studio
               </h1>
               <p className="text-muted-foreground mt-2">
-                Select a project to start refining with AI-powered tools
+                Your unified AI-powered editing suite. Select a project to start refining.
               </p>
             </div>
             
@@ -426,14 +442,14 @@ const Refiner = () => {
                     </Button>
                   </div>
                 ) : (
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {projects.map((p) => (
                       <button
                         key={p.id}
                         onClick={() => navigate(`/refiner/${p.id}`)}
-                        className="flex items-start gap-4 p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-left group"
+                        className="flex flex-col gap-3 p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-left group"
                       >
-                        <div className="w-24 h-16 rounded-md overflow-hidden bg-muted flex-shrink-0">
+                        <div className="aspect-video rounded-md overflow-hidden bg-muted">
                           <VideoThumbnail 
                             sourceFileUrl={p.source_file_url}
                             sourceFileType={p.source_file_type}
@@ -449,10 +465,17 @@ const Refiner = () => {
                             <Badge variant="secondary" className="text-xs">
                               {p.source_file_type || 'video'}
                             </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(p.created_at).toLocaleDateString()}
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {formatDuration(p.source_duration_seconds)}
                             </span>
                           </div>
+                          {p.status === 'editing' && (
+                            <Badge variant="default" className="mt-2 text-xs">
+                              <Check className="h-3 w-3 mr-1" />
+                              Has Transcript
+                            </Badge>
+                          )}
                         </div>
                       </button>
                     ))}
@@ -481,16 +504,23 @@ const Refiner = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/projects')}>
+            <Button variant="ghost" size="icon" onClick={() => navigate('/refiner')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
               <h1 className="text-2xl font-bold text-foreground">{project.title}</h1>
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant="secondary">{project.source_file_type}</Badge>
-                <Badge variant={project.status === 'transcribing' ? 'default' : 'outline'}>
-                  {project.status}
-                </Badge>
+                <span className="text-sm text-muted-foreground flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {formatDuration(project.source_duration_seconds)}
+                </span>
+                {transcript && (
+                  <Badge variant="default">
+                    <Check className="h-3 w-3 mr-1" />
+                    Transcribed
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
@@ -502,64 +532,137 @@ const Refiner = () => {
             </Button>
           </div>
         </div>
+
+        {/* Processing Results Banner */}
+        {processingResults && transcript && (
+          <Card className="mb-6 border-primary/20 bg-primary/5">
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                  <span className="font-medium">AI Processing Results</span>
+                </div>
+                <div className="flex items-center gap-6 text-sm">
+                  <div className="text-center">
+                    <div className="text-xl font-bold text-primary">{processingResults.wordCount}</div>
+                    <div className="text-muted-foreground text-xs">Words</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xl font-bold text-accent">{processingResults.fillerCount}</div>
+                    <div className="text-muted-foreground text-xs">Fillers Found</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xl font-bold text-green-500">{processingResults.accuracyScore}%</div>
+                    <div className="text-muted-foreground text-xs">Accuracy</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xl font-bold text-purple-500">{processingResults.minutesSaved}</div>
+                    <div className="text-muted-foreground text-xs">Min Saved</div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         
         {/* Main Content */}
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Media Preview */}
-          <div className="bg-card/50 border border-border rounded-xl overflow-hidden">
-            <div className="aspect-video bg-muted/50 flex items-center justify-center">
-              {mediaUrl && project.source_file_type === 'video' ? (
-                <video 
-                  src={mediaUrl} 
-                  controls 
-                  preload="metadata"
-                  className="w-full h-full object-contain bg-black"
-                  onLoadedMetadata={(e) => {
-                    // Seek to 0.1s to show first frame as thumbnail
-                    const video = e.currentTarget;
-                    video.currentTime = 0.1;
-                  }}
-                />
-              ) : mediaUrl && project.source_file_type === 'audio' ? (
-                <div className="flex flex-col items-center gap-4 p-8">
-                  <div className="p-6 rounded-full bg-primary/10">
-                    <Volume2 className="h-12 w-12 text-primary" />
+        <div className="grid lg:grid-cols-5 gap-6">
+          {/* Media Preview - Takes 3 columns */}
+          <div className="lg:col-span-3 space-y-4">
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="aspect-video bg-muted/50 flex items-center justify-center">
+                {mediaUrl && project.source_file_type === 'video' ? (
+                  <video 
+                    src={mediaUrl} 
+                    controls 
+                    preload="metadata"
+                    className="w-full h-full object-contain bg-black"
+                    onLoadedMetadata={(e) => {
+                      const video = e.currentTarget;
+                      video.currentTime = 0.1;
+                    }}
+                  />
+                ) : mediaUrl && project.source_file_type === 'audio' ? (
+                  <div className="flex flex-col items-center gap-4 p-8">
+                    <div className="p-6 rounded-full bg-primary/10">
+                      <Volume2 className="h-12 w-12 text-primary" />
+                    </div>
+                    <audio src={mediaUrl} controls className="w-full max-w-md" />
                   </div>
-                  <audio src={mediaUrl} controls className="w-full max-w-md" />
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                  <AlertCircle className="h-8 w-8" />
-                  <p>Media preview unavailable</p>
-                </div>
-              )}
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <AlertCircle className="h-8 w-8" />
+                    <p>Media preview unavailable</p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-          
-          {/* AI Tools Panel */}
-          <div className="space-y-4">
-            {/* Quick Actions Grid */}
-            <div className="grid grid-cols-1 gap-4">
-              {/* Generate Transcript Card */}
-              <div className="bg-card/50 border border-border rounded-xl p-6">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <FileText className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">Transcript</h3>
-                    {transcript ? (
-                      <p className="text-sm text-muted-foreground">{transcript.word_count || 0} words</p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">AI-powered speech to text</p>
+
+            {/* Transcript Display */}
+            {transcript?.content && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Transcript
+                    </CardTitle>
+                    {transcript.filler_words_detected !== null && transcript.filler_words_detected > 0 && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={handleRemoveFillers}
+                        disabled={isRemovingFillers}
+                      >
+                        {isRemovingFillers ? (
+                          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                        ) : (
+                          <Wand2 className="mr-2 h-3 w-3" />
+                        )}
+                        Remove {transcript.filler_words_detected} Fillers
+                      </Button>
                     )}
                   </div>
-                  {transcript && transcript.filler_words_detected !== null && transcript.filler_words_detected > 0 && (
-                    <Badge variant="secondary" className="ml-auto">{transcript.filler_words_detected} fillers</Badge>
-                  )}
-                </div>
-                
-                {!transcript ? (
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-muted/30 rounded-lg p-4 max-h-48 overflow-y-auto">
+                    <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                      {transcript.content}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
+                    <span>{transcript.word_count} words</span>
+                    {transcript.avg_confidence && (
+                      <Badge variant="secondary" className="text-xs">
+                        {(transcript.avg_confidence * 100).toFixed(1)}% confidence
+                      </Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+          
+          {/* AI Tools Panel - Takes 2 columns */}
+          <div className="lg:col-span-2 space-y-3">
+            <h3 className="font-semibold text-foreground flex items-center gap-2 mb-4">
+              <Sparkles className="h-5 w-5 text-primary" />
+              AI Tools
+            </h3>
+
+            {/* Step 1: Transcription */}
+            {!transcript ? (
+              <Card className="border-primary/30">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-foreground">Generate Transcript</h3>
+                      <p className="text-xs text-muted-foreground">Start AI processing</p>
+                    </div>
+                  </div>
                   <Button 
                     variant="hero" 
                     className="w-full"
@@ -578,121 +681,86 @@ const Refiner = () => {
                       </>
                     )}
                   </Button>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="p-3 bg-background/50 rounded-lg border border-border max-h-32 overflow-y-auto">
-                      <p className="text-sm text-foreground line-clamp-4">{transcript.content}</p>
+                  {isTranscribing && (
+                    <div className="mt-3">
+                      <Progress value={45} className="h-2" />
+                      <p className="text-xs text-muted-foreground mt-1 text-center">AI is processing your content...</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {transcript.avg_confidence && (
-                        <Badge variant={transcript.avg_confidence > 0.9 ? 'default' : 'secondary'}>
-                          {(transcript.avg_confidence * 100).toFixed(1)}% confidence
-                        </Badge>
-                      )}
-                      {transcript.filler_words_detected !== null && transcript.filler_words_detected > 0 && (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="ml-auto text-accent border-accent/30"
-                          onClick={handleRemoveFillers}
-                          disabled={isRemovingFillers}
-                        >
-                          {isRemovingFillers ? (
-                            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                          ) : (
-                            <Wand2 className="mr-2 h-3 w-3" />
-                          )}
-                          Remove Fillers
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {/* AI Post Production Card */}
-              <div className="bg-card/50 border border-border rounded-xl p-6">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 rounded-lg bg-accent/10">
-                    <Sparkles className="h-5 w-5 text-accent" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">AI Post Production</h3>
-                    <p className="text-sm text-muted-foreground">Audio cleanup, filler removal, noise reduction</p>
-                  </div>
-                </div>
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => navigate('/post-production')}
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* Clip Generator */}
+                <ToolCard
+                  icon={Film}
+                  title="AI Clip Generator"
+                  description="Create viral clips for TikTok, Reels, Shorts"
+                  isActive={activeTool === 'clips'}
+                  onClick={() => handleToolClick('clips')}
                   disabled={!transcript}
-                >
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  {transcript ? 'Open Post Production' : 'Generate Transcript First'}
-                </Button>
-              </div>
-              
-              {/* AI Clip Generator Card */}
-              <div className="bg-card/50 border border-border rounded-xl p-6">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Film className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">AI Clip Generator</h3>
-                    <p className="text-sm text-muted-foreground">Create viral clips for TikTok, Reels, Shorts</p>
-                  </div>
-                </div>
-                <Button 
-                  variant={activeSection === 'clips' ? 'hero' : 'outline'} 
-                  className="w-full"
+                />
+
+                {/* Captions */}
+                <ToolCard
+                  icon={Captions}
+                  title="Captions & Subtitles"
+                  description="Export SRT, WebVTT, or burn-in captions"
+                  isActive={activeTool === 'captions'}
+                  onClick={() => handleToolClick('captions')}
                   disabled={!transcript}
-                  onClick={() => {
-                    setActiveSection(activeSection === 'clips' ? null : 'clips');
-                    // Scroll to clips section
-                    setTimeout(() => {
-                      document.getElementById('clips-section')?.scrollIntoView({ behavior: 'smooth' });
-                    }, 100);
-                  }}
-                >
-                  <Film className="mr-2 h-4 w-4" />
-                  {transcript ? (activeSection === 'clips' ? 'Close Clips' : 'Generate Clips') : 'Generate Transcript First'}
-                </Button>
-              </div>
-              
-              {/* Captions Card */}
-              <div className="bg-card/50 border border-border rounded-xl p-6">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 rounded-lg bg-secondary/30">
-                    <Captions className="h-5 w-5 text-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">Captions & Subtitles</h3>
-                    <p className="text-sm text-muted-foreground">Export SRT, WebVTT, or burn-in captions</p>
-                  </div>
-                </div>
-                <Button 
-                  variant={activeSection === 'captions' ? 'hero' : 'outline'}
-                  className="w-full"
+                />
+
+                {/* Speaker Focus */}
+                <ToolCard
+                  icon={User}
+                  title="Speaker Focus"
+                  description="AI camera framing for single-speaker content"
+                  isActive={activeTool === 'speaker-focus'}
+                  onClick={() => handleToolClick('speaker-focus')}
                   disabled={!transcript}
-                  onClick={() => {
-                    setActiveSection(activeSection === 'captions' ? null : 'captions');
-                    // Scroll to captions section
-                    setTimeout(() => {
-                      document.getElementById('captions-section')?.scrollIntoView({ behavior: 'smooth' });
-                    }, 100);
-                  }}
-                >
-                  <Captions className="mr-2 h-4 w-4" />
-                  {transcript ? (activeSection === 'captions' ? 'Close Captions' : 'Edit Captions') : 'Generate Transcript First'}
-                </Button>
-              </div>
-            </div>
+                  badge="New"
+                />
+
+                {/* Lower Thirds */}
+                <ToolCard
+                  icon={Layers}
+                  title="Lower Thirds & Graphics"
+                  description="Add name overlays, titles, logos"
+                  isActive={activeTool === 'lower-thirds'}
+                  onClick={() => handleToolClick('lower-thirds')}
+                  disabled={!transcript}
+                  badge="New"
+                />
+
+                {/* B-Roll Suggestions */}
+                <ToolCard
+                  icon={Image}
+                  title="B-Roll Suggestions"
+                  description="AI suggests stock footage for key moments"
+                  isActive={activeTool === 'b-roll'}
+                  onClick={() => handleToolClick('b-roll')}
+                  disabled={!transcript}
+                  badge="New"
+                />
+
+                {/* Timeline Editor */}
+                <ToolCard
+                  icon={Play}
+                  title="Timeline Editor"
+                  description="Multi-track editing with audio/video layers"
+                  isActive={activeTool === 'timeline'}
+                  onClick={() => handleToolClick('timeline')}
+                  disabled={!transcript}
+                  badge="New"
+                />
+              </>
+            )}
           </div>
         </div>
         
-        {/* Tools Section - Show when transcript exists and section is active */}
-        {transcript && activeSection === 'clips' && (
+        {/* Tool Sections - Show when transcript exists and tool is active */}
+        {transcript && activeTool === 'clips' && (
           <div id="clips-section" className="mt-6">
             <ClipGenerator 
               projectId={project.id} 
@@ -703,16 +771,163 @@ const Refiner = () => {
           </div>
         )}
         
-        {transcript && activeSection === 'captions' && (
+        {transcript && activeTool === 'captions' && (
           <div id="captions-section" className="mt-6">
             <CaptionEditor 
               transcriptContent={transcript.content}
             />
           </div>
         )}
+
+        {transcript && activeTool === 'speaker-focus' && (
+          <div id="speaker-focus-section" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5 text-primary" />
+                  Speaker Focus
+                </CardTitle>
+                <CardDescription>
+                  AI-powered camera framing that highlights the active speaker
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12 text-muted-foreground">
+                  <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <h3 className="font-medium mb-2">Coming Soon</h3>
+                  <p className="text-sm max-w-md mx-auto">
+                    Speaker Focus will use AI to automatically detect and highlight the active speaker, 
+                    creating dynamic camera movements for single-camera content.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {transcript && activeTool === 'lower-thirds' && (
+          <div id="lower-thirds-section" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Layers className="h-5 w-5 text-primary" />
+                  Lower Thirds & Graphics
+                </CardTitle>
+                <CardDescription>
+                  Add professional name overlays, titles, and logos to your video
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12 text-muted-foreground">
+                  <Layers className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <h3 className="font-medium mb-2">Coming Soon</h3>
+                  <p className="text-sm max-w-md mx-auto">
+                    Lower Thirds will let you add customizable name cards, titles, and branding 
+                    graphics that appear at key moments in your video.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {transcript && activeTool === 'b-roll' && (
+          <div id="b-roll-section" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Image className="h-5 w-5 text-primary" />
+                  B-Roll Suggestions
+                </CardTitle>
+                <CardDescription>
+                  AI analyzes your transcript and suggests relevant stock footage
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12 text-muted-foreground">
+                  <Image className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <h3 className="font-medium mb-2">Coming Soon</h3>
+                  <p className="text-sm max-w-md mx-auto">
+                    B-Roll Suggestions will analyze your content and recommend stock footage 
+                    or images to insert at key moments to enhance your video.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {transcript && activeTool === 'timeline' && (
+          <div id="timeline-section" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Play className="h-5 w-5 text-primary" />
+                  Timeline Editor
+                </CardTitle>
+                <CardDescription>
+                  Multi-track editing with separate audio and video layers
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12 text-muted-foreground">
+                  <Play className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <h3 className="font-medium mb-2">Coming Soon</h3>
+                  <p className="text-sm max-w-md mx-auto">
+                    The Timeline Editor will provide a professional multi-track editing interface 
+                    with separate audio and video layers, drag-and-drop clips, and precise trimming.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </AppLayout>
     </>
   );
 };
+
+// Tool Card Component
+interface ToolCardProps {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+  isActive: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+  badge?: string;
+}
+
+const ToolCard = ({ icon: Icon, title, description, isActive, onClick, disabled, badge }: ToolCardProps) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className={`w-full text-left p-4 rounded-xl border transition-all ${
+      isActive 
+        ? 'border-primary bg-primary/10' 
+        : 'border-border bg-card hover:border-primary/50 hover:bg-primary/5'
+    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+  >
+    <div className="flex items-center gap-3">
+      <div className={`p-2 rounded-lg ${isActive ? 'bg-primary/20' : 'bg-muted'}`}>
+        <Icon className={`h-4 w-4 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <h4 className={`font-medium text-sm ${isActive ? 'text-primary' : 'text-foreground'}`}>
+            {title}
+          </h4>
+          {badge && (
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+              {badge}
+            </Badge>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground truncate">{description}</p>
+      </div>
+      {isActive && <Check className="h-4 w-4 text-primary flex-shrink-0" />}
+    </div>
+  </button>
+);
 
 export default Refiner;
