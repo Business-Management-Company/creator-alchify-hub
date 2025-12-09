@@ -1,4 +1,4 @@
-import { Clock, Ban, Accessibility, Shield, LayoutDashboard } from "lucide-react";
+import { Clock, Ban, Accessibility, Shield, LayoutDashboard, Sparkles } from "lucide-react";
 
 const painPoints = [
   {
@@ -25,6 +25,11 @@ const painPoints = [
     icon: LayoutDashboard,
     pain: "Overwhelmed by tool sprawl",
     solution: "One dashboard connects everything. No more juggling 10 apps.",
+  },
+  {
+    icon: Sparkles,
+    pain: "Content that doesn't stand out",
+    solution: "AI-powered enhancements make every piece of content shine.",
   },
 ];
 
