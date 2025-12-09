@@ -81,16 +81,19 @@ export function ProactiveTips({ onTipAction }: ProactiveTipsProps) {
     const path = location.pathname;
     let tip: Tip | null = null;
 
-    // Dashboard tips
+    // Dashboard tips - only show on first visit (check localStorage)
     if (path === '/' || path.includes('/dashboard')) {
-      tip = {
-        id: 'dashboard-start',
-        icon: Upload,
-        title: 'Ready to create?',
-        description: 'Upload your first video or audio to start refining',
-        action: 'Get started',
-        actionPrompt: 'Help me upload my first content and walk me through the refinement process',
-      };
+      const hasSeenDashboardTip = localStorage.getItem('alchify_seen_dashboard_tip');
+      if (!hasSeenDashboardTip) {
+        tip = {
+          id: 'dashboard-start',
+          icon: Upload,
+          title: 'Ready to create?',
+          description: 'Upload your first video or audio to start refining',
+          action: 'Get started',
+          actionPrompt: 'Help me upload my first content and walk me through the refinement process',
+        };
+      }
     }
 
     // Upload page tips
@@ -173,6 +176,10 @@ export function ProactiveTips({ onTipAction }: ProactiveTipsProps) {
 
   const handleDismiss = () => {
     if (currentTip) {
+      // Mark dashboard tip as permanently seen
+      if (currentTip.id === 'dashboard-start') {
+        localStorage.setItem('alchify_seen_dashboard_tip', 'true');
+      }
       setDismissed(prev => new Set([...prev, currentTip.id]));
       setCurrentTip(null);
     }

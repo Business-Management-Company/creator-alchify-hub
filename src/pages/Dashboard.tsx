@@ -13,7 +13,8 @@ import {
   Video,
   Music,
   Loader2,
-  PartyPopper
+  PartyPopper,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,6 +22,13 @@ import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/layout/AppLayout';
 import { UsageIndicator } from '@/components/UsageIndicator';
 import confetti from 'canvas-confetti';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface Project {
   id: string;
@@ -39,6 +47,7 @@ const Dashboard = () => {
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationMessage, setCelebrationMessage] = useState('');
+  const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -52,9 +61,17 @@ const Dashboard = () => {
     }
   }, [user]);
 
-  // Check for celebration triggers from URL params
+  // Check for celebration triggers and welcome message from URL params
   useEffect(() => {
     const celebration = searchParams.get('celebration');
+    const welcome = searchParams.get('welcome');
+    
+    if (welcome === 'true') {
+      setShowWelcomeDialog(true);
+      searchParams.delete('welcome');
+      setSearchParams(searchParams, { replace: true });
+    }
+    
     if (celebration === 'first-upload') {
       triggerCelebration('Congrats! You uploaded your first project! 🎉');
       // Remove the param after showing
@@ -165,6 +182,27 @@ const Dashboard = () => {
       </Helmet>
       
       <AppLayout>
+        {/* Welcome Back Dialog */}
+        <Dialog open={showWelcomeDialog} onOpenChange={setShowWelcomeDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader className="text-center">
+              <DialogTitle className="text-xl flex items-center justify-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                Welcome back!
+              </DialogTitle>
+              <DialogDescription className="text-center">
+                You have successfully signed in. Ready to create something amazing?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-center pt-2">
+              <Button onClick={() => setShowWelcomeDialog(false)} variant="default">
+                Let's go
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Celebration Banner */}
         {showCelebration && (
           <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-fade-in">

@@ -72,10 +72,8 @@ const Auth = () => {
             });
           }
         } else {
-          toast({
-            title: 'Welcome back!',
-            description: 'You have successfully signed in.',
-          });
+          // Navigate with welcome flag to show centered dialog
+          navigate('/dashboard?welcome=true');
         }
       } else {
         const { error } = await signUp(email, password, displayName);
