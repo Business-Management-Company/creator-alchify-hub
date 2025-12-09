@@ -11,7 +11,9 @@ import {
   AlertCircle,
   Type,
   Play,
-  X
+  X,
+  Save,
+  Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +30,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useToast } from '@/hooks/use-toast';
+import { useConfetti } from '@/hooks/useConfetti';
 import { supabase } from '@/integrations/supabase/client';
 import { ClipEditorModal } from './ClipEditorModal';
 
@@ -281,6 +284,7 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
     animation: 'pop',
   });
   const { toast } = useToast();
+  const { celebrate } = useConfetti();
 
   // Auto-generate clips when autoGenerate prop is true
   useEffect(() => {
@@ -365,6 +369,7 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
         ];
         
         setClips(demoClips);
+        celebrate('first_clip');
         toast({
           title: 'Clips generated!',
           description: `Found ${demoClips.length} potential viral moments from your content.`,
@@ -380,6 +385,7 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
       }));
       
       setClips(clipsWithStatus);
+      celebrate('first_clip');
 
       toast({
         title: 'Clips generated!',
@@ -441,8 +447,8 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
     ));
 
     toast({
-      title: 'Render started!',
-      description: `Creating your ${platform} clip with animated word-by-word captions...`,
+      title: 'Rendering clip...',
+      description: `Creating your clip with animated captions. This may take a moment.`,
     });
 
     try {
@@ -510,7 +516,7 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
 
       toast({
         title: 'Clip ready!',
-        description: `Your ${platform} clip is ready to preview and download.`,
+        description: `Your clip is ready to preview and download.`,
       });
 
     } catch (error) {
@@ -526,7 +532,7 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
       ));
       toast({
         title: 'Clip ready!',
-        description: `Your ${platform} clip is ready.`,
+        description: `Your clip is ready.`,
       });
     } finally {
       setRenderingClips(prev => {
