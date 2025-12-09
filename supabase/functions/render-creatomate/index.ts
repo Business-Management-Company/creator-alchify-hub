@@ -173,9 +173,9 @@ serve(async (req) => {
           font_size_maximum: `${fontSize} px`,
           fill_color: textColor,
           background_color: '#000000CC', // Solid black with transparency
-          background_x_padding: '20 px',
-          background_y_padding: '12 px',
-          background_border_radius: '12 px',
+          background_x_padding: '5%', // Use percentage, not pixels
+          background_y_padding: '2%', // Use percentage, not pixels
+          background_border_radius: '3%', // Use percentage, not pixels
           text_transform: 'uppercase',
           text_align: 'center',
           line_height: '120%',
