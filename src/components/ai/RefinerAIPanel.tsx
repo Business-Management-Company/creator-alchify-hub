@@ -67,6 +67,33 @@ const detectActions = (content: string): ActionType[] => {
   return actions;
 };
 
+// Format message content - convert **text** to bold
+const formatMessageContent = (content: string): React.ReactNode => {
+  // Split by **text** pattern and convert to bold spans
+  const parts = content.split(/\*\*(.+?)\*\*/g);
+  
+  return parts.map((part, index) => {
+    // Odd indices are the captured groups (text between **)
+    if (index % 2 === 1) {
+      return <strong key={index} className="font-semibold">{part}</strong>;
+    }
+    return part;
+  });
+};
+
+// Quick prompts to show after AI responses
+interface QuickPrompt {
+  label: string;
+  prompt: string;
+  icon: React.ElementType;
+}
+
+const followUpPrompts: QuickPrompt[] = [
+  { label: 'Alchify it', icon: Wand2, prompt: 'Alchify this content - apply full refinement with transcription, audio cleanup, and filler word removal' },
+  { label: 'Transcript only', icon: FileText, prompt: 'Just generate a transcript from this content without other processing' },
+  { label: 'Instagram Story', icon: ImageIcon, prompt: 'Optimize this content for Instagram Stories - vertical 9:16 format with captions' },
+];
+
 interface Message {
   role: 'user' | 'assistant';
   content: string;
@@ -533,20 +560,40 @@ export function RefinerAIPanel() {
                         ))}
                       </div>
                     )}
-                    <p className="text-sm whitespace-pre-wrap">{message.content || '...'}</p>
+                    <div className="text-sm whitespace-pre-wrap">
+                      {message.content ? formatMessageContent(message.content) : '...'}
+                    </div>
                     
                     {/* Interactive Action Buttons for AI responses */}
                     {message.role === 'assistant' && message.content && (
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {detectActions(message.content).map((action) => (
-                          <AIActionButton
-                            key={action}
-                            action={action}
-                            onUploadClick={() => setShowFileUpload(true)}
-                            projectId={params.projectId}
-                          />
-                        ))}
-                      </div>
+                      <>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {detectActions(message.content).map((action) => (
+                            <AIActionButton
+                              key={action}
+                              action={action}
+                              onUploadClick={() => setShowFileUpload(true)}
+                              projectId={params.projectId}
+                            />
+                          ))}
+                        </div>
+                        
+                        {/* Quick follow-up prompts */}
+                        {index === messages.length - 1 && !isLoading && (
+                          <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border/50">
+                            {followUpPrompts.map((prompt) => (
+                              <button
+                                key={prompt.label}
+                                onClick={() => handleQuickAction({ ...prompt, category: 'general' })}
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium bg-background/80 hover:bg-background border border-border/50 hover:border-primary/50 transition-colors"
+                              >
+                                <prompt.icon className="h-3 w-3 text-primary" />
+                                {prompt.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
