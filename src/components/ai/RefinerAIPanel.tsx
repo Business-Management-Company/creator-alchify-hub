@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { useLocation, useParams } from 'react-router-dom';
 import { 
   Sparkles, 
   X, 
@@ -11,13 +11,25 @@ import {
   Share2,
   Loader2,
   Bot,
-  User
+  User,
+  Wand2,
+  FileText,
+  Video,
+  Mic,
+  Download,
+  Zap,
+  TrendingUp,
+  Film,
+  Layout,
+  Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -28,25 +40,122 @@ interface QuickAction {
   label: string;
   icon: React.ElementType;
   prompt: string;
+  category?: 'general' | 'contextual';
 }
 
-const quickActions: QuickAction[] = [
-  { label: 'Upload content', icon: Upload, prompt: 'I want to upload new content to refine' },
-  { label: 'Create clips', icon: Scissors, prompt: 'Help me create viral clips from my content' },
-  { label: 'Add captions', icon: Captions, prompt: 'I need help adding captions to my video' },
-  { label: 'Clean audio', icon: Volume2, prompt: 'How can I clean up the audio in my content?' },
-  { label: 'Export tips', icon: Share2, prompt: 'What are the best export settings for social media?' },
+interface ProjectContext {
+  hasProject: boolean;
+  hasTranscript: boolean;
+  hasClips: boolean;
+  projectTitle?: string;
+  projectStatus?: string;
+}
+
+// Base quick actions available everywhere
+const baseQuickActions: QuickAction[] = [
+  { label: 'Upload content', icon: Upload, prompt: 'I want to upload new content to refine', category: 'general' },
+  { label: 'Create clips', icon: Scissors, prompt: 'Help me create viral clips from my content', category: 'general' },
+  { label: 'Add captions', icon: Captions, prompt: 'I need help adding captions to my video', category: 'general' },
+  { label: 'Clean audio', icon: Volume2, prompt: 'How can I clean up the audio in my content?', category: 'general' },
+  { label: 'Export tips', icon: Share2, prompt: 'What are the best export settings for social media?', category: 'general' },
 ];
+
+// Contextual actions based on page/state
+const contextualActions: Record<string, QuickAction[]> = {
+  'Dashboard': [
+    { label: 'Start new project', icon: Zap, prompt: 'Help me start a new content refinement project', category: 'contextual' },
+    { label: 'View analytics', icon: TrendingUp, prompt: 'Show me insights about my content performance', category: 'contextual' },
+    { label: 'Quick tips', icon: Wand2, prompt: 'Give me quick tips to improve my content workflow', category: 'contextual' },
+  ],
+  'Upload': [
+    { label: 'File formats', icon: FileText, prompt: 'What video and audio formats are supported?', category: 'contextual' },
+    { label: 'Optimization tips', icon: Zap, prompt: 'How can I optimize my file for faster processing?', category: 'contextual' },
+    { label: 'Batch upload', icon: Layout, prompt: 'Can I upload multiple files at once?', category: 'contextual' },
+  ],
+  'Refiner Studio': [
+    { label: 'Generate clips', icon: Film, prompt: 'Analyze my transcript and suggest the best viral clips', category: 'contextual' },
+    { label: 'Remove fillers', icon: Wand2, prompt: 'Help me remove filler words from my transcript', category: 'contextual' },
+    { label: 'Speaker focus', icon: Video, prompt: 'How do I use the speaker focus feature?', category: 'contextual' },
+    { label: 'Lower thirds', icon: Layout, prompt: 'Help me add lower thirds and graphics', category: 'contextual' },
+  ],
+  'Refiner Studio - With Transcript': [
+    { label: 'Create TikTok clips', icon: Film, prompt: 'Create viral TikTok clips from my transcript', category: 'contextual' },
+    { label: 'Find viral moments', icon: TrendingUp, prompt: 'Identify the most engaging moments in my content', category: 'contextual' },
+    { label: 'Improve captions', icon: Captions, prompt: 'How can I improve my caption styling?', category: 'contextual' },
+    { label: 'Export for platforms', icon: Download, prompt: 'Export my content optimized for TikTok, Instagram, and YouTube', category: 'contextual' },
+  ],
+  'Recording Studio': [
+    { label: 'Recording tips', icon: Mic, prompt: 'Give me tips for getting the best recording quality', category: 'contextual' },
+    { label: 'Streaming setup', icon: Video, prompt: 'How do I set up streaming to multiple platforms?', category: 'contextual' },
+    { label: 'Invite guests', icon: User, prompt: 'How do I invite guests to my recording session?', category: 'contextual' },
+  ],
+  'Projects': [
+    { label: 'Organize projects', icon: Layout, prompt: 'What are the best ways to organize my projects?', category: 'contextual' },
+    { label: 'Batch processing', icon: Zap, prompt: 'Can I process multiple projects at once?', category: 'contextual' },
+  ],
+  'Library': [
+    { label: 'Find content', icon: FileText, prompt: 'How do I search and filter my media library?', category: 'contextual' },
+    { label: 'Storage tips', icon: Download, prompt: 'How can I manage my storage usage?', category: 'contextual' },
+  ],
+  'Settings': [
+    { label: 'Theme options', icon: Settings, prompt: 'How do I customize my theme settings?', category: 'contextual' },
+    { label: 'Integrations', icon: Layout, prompt: 'What integrations are available?', category: 'contextual' },
+  ],
+};
 
 export function RefinerAIPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [projectContext, setProjectContext] = useState<ProjectContext>({
+    hasProject: false,
+    hasTranscript: false,
+    hasClips: false,
+  });
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const location = useLocation();
+  const params = useParams();
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  // Fetch project context when on refiner page
+  useEffect(() => {
+    const fetchProjectContext = async () => {
+      const projectId = params.projectId;
+      if (!projectId || !user) {
+        setProjectContext({ hasProject: false, hasTranscript: false, hasClips: false });
+        return;
+      }
+
+      try {
+        const { data: project } = await supabase
+          .from('projects')
+          .select('title, status')
+          .eq('id', projectId)
+          .single();
+
+        const { data: transcript } = await supabase
+          .from('transcripts')
+          .select('id')
+          .eq('project_id', projectId)
+          .maybeSingle();
+
+        setProjectContext({
+          hasProject: !!project,
+          hasTranscript: !!transcript,
+          hasClips: false, // Can be extended when clips table exists
+          projectTitle: project?.title,
+          projectStatus: project?.status || undefined,
+        });
+      } catch (error) {
+        console.error('Failed to fetch project context:', error);
+      }
+    };
+
+    fetchProjectContext();
+  }, [params.projectId, user, location.pathname]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -64,14 +173,28 @@ export function RefinerAIPanel() {
 
   const getCurrentPage = () => {
     const path = location.pathname;
-    if (path.includes('/refiner')) return 'Refiner Studio';
+    if (path.includes('/refiner')) {
+      return projectContext.hasTranscript ? 'Refiner Studio - With Transcript' : 'Refiner Studio';
+    }
     if (path.includes('/upload')) return 'Upload';
-    if (path.includes('/dashboard')) return 'Dashboard';
+    if (path.includes('/dashboard') || path === '/') return 'Dashboard';
     if (path.includes('/projects')) return 'Projects';
     if (path.includes('/library')) return 'Library';
     if (path.includes('/recording')) return 'Recording Studio';
+    if (path.includes('/settings')) return 'Settings';
     return 'Dashboard';
   };
+
+  // Get quick actions based on current context
+  const activeQuickActions = useMemo(() => {
+    const currentPage = getCurrentPage();
+    const contextActions = contextualActions[currentPage] || [];
+    
+    // Combine contextual (priority) with a few general actions
+    const generalActions = baseQuickActions.slice(0, 2);
+    
+    return [...contextActions, ...generalActions].slice(0, 6);
+  }, [location.pathname, projectContext]);
 
   const streamChat = async (userMessage: string) => {
     const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/alchify-refiner-ai`;
@@ -261,7 +384,7 @@ export function RefinerAIPanel() {
                 
                 {/* Quick Actions */}
                 <div className="flex flex-wrap gap-2 justify-center">
-                  {quickActions.map((action) => (
+                  {activeQuickActions.map((action) => (
                     <button
                       key={action.label}
                       onClick={() => handleQuickAction(action)}
