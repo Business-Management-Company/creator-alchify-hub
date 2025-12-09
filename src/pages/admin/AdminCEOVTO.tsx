@@ -41,6 +41,11 @@ const AdminCEOVTO = () => {
   const { isAdmin, loading } = useAdminCheck();
   const contentRef = useRef<HTMLDivElement>(null);
   const [currentVersionId, setCurrentVersionId] = useState('current');
+  const [savedVersions, setSavedVersions] = useState([
+    { id: 'current', name: 'Current Draft', savedAt: new Date(), isActive: true },
+    { id: 'q3-2025', name: 'Q3 2025 Final', savedAt: new Date('2025-09-30'), isLive: true },
+    { id: 'q2-2025', name: 'Q2 2025 Final', savedAt: new Date('2025-06-30') },
+  ]);
 
   // VTO State
   const [vtoData, setVtoData] = useState<VTOData>({
@@ -115,6 +120,41 @@ const AdminCEOVTO = () => {
   const handleSave = () => {
     // In production, this would save to database
     console.log('Saving VTO:', vtoData);
+    const newVersion = {
+      id: `version-${Date.now()}`,
+      name: `${getCurrentQuarter()} Draft`,
+      savedAt: new Date(),
+      isActive: true,
+    };
+    setSavedVersions(prev => [newVersion, ...prev.map(v => ({ ...v, isActive: false }))]);
+    setCurrentVersionId(newVersion.id);
+  };
+
+  const handleNewDraft = () => {
+    const newVersion = {
+      id: `draft-${Date.now()}`,
+      name: 'New Draft',
+      savedAt: new Date(),
+      isActive: true,
+    };
+    setSavedVersions(prev => [newVersion, ...prev.map(v => ({ ...v, isActive: false }))]);
+    setCurrentVersionId(newVersion.id);
+  };
+
+  const handleDeleteVersion = (versionId: string) => {
+    setSavedVersions(prev => prev.filter(v => v.id !== versionId));
+    if (currentVersionId === versionId) {
+      setCurrentVersionId('current');
+    }
+  };
+
+  // Calculate current quarter dynamically
+  const getCurrentQuarter = () => {
+    const now = new Date();
+    const month = now.getMonth(); // 0-11
+    const year = now.getFullYear();
+    const quarter = Math.floor(month / 3) + 1;
+    return `Q${quarter} ${year}`;
   };
 
   if (loading) {
@@ -132,14 +172,6 @@ const AdminCEOVTO = () => {
     return null;
   }
 
-  // Calculate current quarter dynamically
-  const getCurrentQuarter = () => {
-    const now = new Date();
-    const month = now.getMonth(); // 0-11
-    const year = now.getFullYear();
-    const quarter = Math.floor(month / 3) + 1;
-    return `Q${quarter} ${year}`;
-  };
 
   return (
     <AppLayout>
@@ -155,6 +187,9 @@ const AdminCEOVTO = () => {
           {/* Export Controls at Top */}
           <VTOExportControls 
             onSave={handleSave}
+            onNewDraft={handleNewDraft}
+            onDeleteVersion={handleDeleteVersion}
+            savedVersions={savedVersions}
             currentVersionId={currentVersionId}
             onVersionChange={setCurrentVersionId}
             contentRef={contentRef}
