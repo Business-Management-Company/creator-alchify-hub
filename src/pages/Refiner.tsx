@@ -24,12 +24,29 @@ import {
   BarChart3,
   Share2,
   Save,
-  Scissors
+  Scissors,
+  X,
+  Monitor,
+  Smartphone,
+  Square
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -137,6 +154,9 @@ const Refiner = () => {
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [processingResults, setProcessingResults] = useState<ProcessingResults | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [showClipsTooltip, setShowClipsTooltip] = useState(false);
+  const [showFormatDialog, setShowFormatDialog] = useState(false);
+  const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const [pipelineState, setPipelineState] = useState<PipelineState>({
     transcription: 'pending',
     removeFillers: 'pending',
@@ -321,6 +341,9 @@ const Refiner = () => {
         audioEnhanced: 12,
       };
       setProcessingResults(newProcessingResults);
+      
+      // Show tooltip to prompt clips creation
+      setShowClipsTooltip(true);
       
       // Save to cache
       saveToCache(projectId, {
@@ -773,17 +796,49 @@ const Refiner = () => {
                   >
                     Overview
                   </button>
-                  <button
-                    onClick={() => setActiveTab('clips')}
-                    className={`px-5 py-2 text-base font-medium rounded-md transition-colors flex items-center gap-2 ${
-                      activeTab === 'clips' 
-                        ? 'bg-background text-foreground shadow-sm' 
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <Scissors className="h-4 w-4" />
-                    Clips
-                  </button>
+                  
+                  {/* Clips button with tooltip */}
+                  <div className="relative">
+                    <button
+                      onClick={() => {
+                        setShowClipsTooltip(false);
+                        if (isProcessingComplete) {
+                          setShowFormatDialog(true);
+                        } else {
+                          setActiveTab('clips');
+                        }
+                      }}
+                      className={`px-5 py-2 text-base font-medium rounded-md transition-colors flex items-center gap-2 ${
+                        activeTab === 'clips' 
+                          ? 'bg-background text-foreground shadow-sm' 
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Scissors className="h-4 w-4" />
+                      Clips
+                    </button>
+                    
+                    {/* Clips tooltip */}
+                    {showClipsTooltip && isProcessingComplete && (
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-50 animate-fade-in">
+                        <div className="bg-primary text-primary-foreground px-4 py-2.5 rounded-lg shadow-lg whitespace-nowrap flex items-center gap-2">
+                          <Sparkles className="h-4 w-4" />
+                          <span className="font-medium">Ready to create clips!</span>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowClipsTooltip(false);
+                            }}
+                            className="ml-2 p-0.5 hover:bg-primary-foreground/20 rounded"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <div className="w-3 h-3 bg-primary rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1.5" />
+                      </div>
+                    )}
+                  </div>
+                  
                   <button
                     onClick={() => setActiveTab('audio')}
                     className={`px-5 py-2 text-base font-medium rounded-md transition-colors ${
@@ -834,6 +889,76 @@ const Refiner = () => {
 
         {/* Bottom spacer for fixed bar */}
         {project && <div className="h-20" />}
+        
+        {/* Clip Format Selection Dialog */}
+        <Dialog open={showFormatDialog} onOpenChange={setShowFormatDialog}>
+          <DialogContent className="sm:max-w-lg bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Scissors className="h-5 w-5 text-primary" />
+                Choose Clip Format
+              </DialogTitle>
+              <DialogDescription>
+                Select an aspect ratio for your clips
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-3 py-4">
+              {/* Format options */}
+              <div className="grid grid-cols-1 gap-2">
+                {[
+                  { id: '9:16', label: '9:16 Vertical', desc: 'TikTok, Reels, Shorts', icon: Smartphone },
+                  { id: '1:1', label: '1:1 Square', desc: 'Instagram, Facebook', icon: Square },
+                  { id: '16:9', label: '16:9 Landscape', desc: 'YouTube, LinkedIn', icon: Monitor },
+                  { id: '4:5', label: '4:5 Vertical', desc: 'Instagram Feed', icon: Smartphone },
+                  { id: '16:10', label: '16:10 Landscape', desc: 'Presentations', icon: Monitor },
+                ].map((format) => (
+                  <button
+                    key={format.id}
+                    onClick={() => setSelectedFormat(format.id)}
+                    className={`w-full flex items-center gap-4 p-4 rounded-lg border transition-all ${
+                      selectedFormat === format.id
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                    }`}
+                  >
+                    <format.icon className={`h-6 w-6 ${selectedFormat === format.id ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <div className="text-left flex-1">
+                      <div className={`font-medium ${selectedFormat === format.id ? 'text-primary' : 'text-foreground'}`}>
+                        {format.label}
+                      </div>
+                      <div className="text-sm text-muted-foreground">{format.desc}</div>
+                    </div>
+                    {selectedFormat === format.id && (
+                      <Check className="h-5 w-5 text-primary" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" onClick={() => setShowFormatDialog(false)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="hero"
+                disabled={!selectedFormat}
+                onClick={() => {
+                  setShowFormatDialog(false);
+                  setActiveTab('clips');
+                  toast({
+                    title: `${selectedFormat} format selected`,
+                    description: 'AI is generating clip suggestions...',
+                  });
+                }}
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                Generate Clips
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </AppLayout>
     </>
   );
