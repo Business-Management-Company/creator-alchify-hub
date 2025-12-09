@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Scissors, 
   Loader2, 
@@ -58,6 +58,7 @@ interface ClipGeneratorProps {
   mediaUrl?: string | null;
   selectedFormat?: string | null;
   autoGenerate?: boolean;
+  autoRenderAll?: boolean; // Auto-render all clips when generated
   onClipGenerated?: () => void;
 }
 
@@ -75,6 +76,56 @@ const CAPTION_COLORS = [
   { value: '#FF69B4', label: 'Pink' },
   { value: '#00FFFF', label: 'Cyan' },
 ];
+
+// Simple component to show a video frame as thumbnail at a specific time
+function ClipThumbnail({ videoUrl, seekTime }: { videoUrl: string; seekTime: number }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleLoadedMetadata = () => {
+      video.currentTime = seekTime;
+    };
+
+    const handleSeeked = () => {
+      setIsLoaded(true);
+    };
+
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    video.addEventListener('seeked', handleSeeked);
+
+    // If already loaded, seek immediately
+    if (video.readyState >= 1) {
+      video.currentTime = seekTime;
+    }
+
+    return () => {
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('seeked', handleSeeked);
+    };
+  }, [videoUrl, seekTime]);
+
+  return (
+    <>
+      {!isLoaded && (
+        <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
+      <video
+        ref={videoRef}
+        src={videoUrl}
+        preload="metadata"
+        muted
+        playsInline
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+      />
+    </>
+  );
+}
 
 function timeToSeconds(time: string): number {
   const parts = time.split(':').map(Number);
@@ -213,11 +264,12 @@ function extractCaptionsForClip(
   return captionSegments;
 }
 
-export function ClipGenerator({ projectId, transcriptContent, transcriptSegments, mediaUrl, selectedFormat, autoGenerate, onClipGenerated }: ClipGeneratorProps) {
+export function ClipGenerator({ projectId, transcriptContent, transcriptSegments, mediaUrl, selectedFormat, autoGenerate, autoRenderAll = true, onClipGenerated }: ClipGeneratorProps) {
   const [clips, setClips] = useState<Clip[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [renderingClips, setRenderingClips] = useState<Set<number>>(new Set());
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [hasAutoRendered, setHasAutoRendered] = useState(false);
   const [captionStyle, setCaptionStyle] = useState<CaptionStyle>({
     font: 'Montserrat ExtraBold',
     color: '#FFFFFF',
@@ -234,6 +286,19 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
       generateClips();
     }
   }, [autoGenerate, transcriptContent]);
+
+  // Auto-render all clips when they are generated (only once)
+  useEffect(() => {
+    if (autoRenderAll && clips.length > 0 && !hasAutoRendered && mediaUrl) {
+      setHasAutoRendered(true);
+      // Start rendering all clips simultaneously
+      clips.forEach((clip, index) => {
+        if (clip.renderStatus === 'idle') {
+          renderClip(index, clip.platforms[0] || 'tiktok');
+        }
+      });
+    }
+  }, [clips, autoRenderAll, hasAutoRendered, mediaUrl]);
 
   const generateClips = async () => {
     if (!transcriptContent) {
@@ -755,7 +820,17 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
               }
             }}
           >
-            <div className="relative w-full h-full bg-gradient-to-br from-muted to-muted/50">
+            <div className="relative w-full h-full">
+              {/* Video Thumbnail Background - always shown */}
+              {mediaUrl ? (
+                <ClipThumbnail 
+                  videoUrl={mediaUrl} 
+                  seekTime={timeToSeconds(clip.startTime)}
+                />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50" />
+              )}
+
               {/* Time badge */}
               <div className="absolute top-2 right-2 z-10 bg-black/60 text-white text-xs px-2 py-0.5 rounded flex items-center gap-1">
                 <Clock className="h-3 w-3" />
@@ -767,23 +842,31 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
                 {clip.score * 10}
               </div>
 
-              {/* Content based on render status */}
-              {clip.renderStatus === 'rendering' ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm">
-                  <Loader2 className="h-10 w-10 text-primary animate-spin mb-2" />
-                  <span className="text-white text-sm font-medium">Rendering...</span>
+              {/* Render status overlay - shown on top of thumbnail */}
+              {clip.renderStatus === 'rendering' && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm z-10">
+                  <div className="relative">
+                    <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+                    <Sparkles className="absolute inset-0 m-auto h-6 w-6 text-primary animate-pulse" />
+                  </div>
+                  <span className="text-white text-sm font-medium mt-3">Rendering...</span>
                 </div>
-              ) : clip.renderStatus === 'done' && clip.renderUrl ? (
+              )}
+              
+              {/* Done state - play button overlay */}
+              {clip.renderStatus === 'done' && clip.renderUrl && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
                   <div className="p-4 rounded-full bg-white/20 backdrop-blur-sm group-hover:bg-white/30 transition-colors">
                     <Play className="h-8 w-8 text-white fill-white" />
                   </div>
                 </div>
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
-                  <div className="text-center p-4">
-                    <Video className="h-8 w-8 text-white/80 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-                    <span className="text-white text-xs font-medium">Click to render</span>
+              )}
+              
+              {/* Idle state - subtle play icon */}
+              {clip.renderStatus === 'idle' && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/30 transition-colors">
+                  <div className="p-3 rounded-full bg-white/10 backdrop-blur-sm group-hover:bg-white/20 group-hover:scale-110 transition-all">
+                    <Video className="h-6 w-6 text-white" />
                   </div>
                 </div>
               )}
