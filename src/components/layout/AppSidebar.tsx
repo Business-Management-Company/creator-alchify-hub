@@ -67,7 +67,6 @@ const navItems = [
 const secondaryItems = [
   { id: 'integrations', label: 'Integrations', icon: 'Plug', path: '/integrations' },
   { id: 'analytics', label: 'Analytics', icon: 'BarChart3', path: '/analytics' },
-  { id: 'pricing', label: 'Plans & Pricing', icon: 'CreditCard', path: '/pricing' },
   { id: 'settings', label: 'Settings', icon: 'Settings', path: '/settings' },
 ];
 
