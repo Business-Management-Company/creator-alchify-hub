@@ -289,64 +289,7 @@ const Refiner = () => {
       </Helmet>
       
       <AppLayout>
-        {/* Tabs Navigation */}
-        <div className="border-b border-border mb-4">
-          <div className="flex items-center justify-center gap-1">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'overview' 
-                  ? 'border-primary text-primary' 
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Overview
-            </button>
-            <button
-              onClick={() => setActiveTab('clips')}
-              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
-                activeTab === 'clips' 
-                  ? 'border-primary text-primary' 
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Scissors className="h-4 w-4" />
-              Clips
-            </button>
-            <button
-              onClick={() => setActiveTab('audio')}
-              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'audio' 
-                  ? 'border-primary text-primary' 
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Audio
-            </button>
-            <button
-              onClick={() => setActiveTab('video')}
-              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'video' 
-                  ? 'border-primary text-primary' 
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Video
-            </button>
-            <button
-              onClick={() => setActiveTab('distribute')}
-              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'distribute' 
-                  ? 'border-primary text-primary' 
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Distribute
-            </button>
-          </div>
-        </div>
-
-        <div className="grid lg:grid-cols-12 gap-4">
+        <div className="grid lg:grid-cols-12 gap-3">
           {/* Left Sidebar - Project Selection */}
           <div className="lg:col-span-3">
             <Card>
@@ -497,93 +440,64 @@ const Refiner = () => {
           />
         )}
 
-        {/* Processing Results - Show for all projects */}
-        {project && (
-          <Card className="mt-4">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-primary" />
+        {/* Processing Results - Compact */}
+        {project && activeTab === 'overview' && (
+          <Card className="mt-3">
+            <CardHeader className="pb-2 pt-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-primary" />
                 Processing Results
               </CardTitle>
-              <CardDescription>
-                AI improvements applied to your content
-              </CardDescription>
             </CardHeader>
-            <CardContent>
-              {/* Stats Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-                <StatCard 
-                  value={processingResults?.minutesSaved || 0}
-                  label="Minutes Saved"
-                  color="text-primary"
-                />
-                <StatCard 
-                  value={processingResults?.fillerCount || 0}
-                  label="Fillers Found"
-                  color="text-destructive"
-                />
-                <StatCard 
-                  value={0}
-                  label="Pauses Detected"
-                  color="text-orange-500"
-                />
-                <StatCard 
-                  value={`${processingResults?.audioEnhanced || 0}%`}
-                  label="Audio Enhanced"
-                  color="text-green-500"
-                />
-                <StatCard 
-                  value={processingResults?.clipsGenerated || 0}
-                  label="Clips Generated"
-                  color="text-purple-500"
-                />
-                <StatCard 
-                  value={processingResults?.wordCount || 0}
-                  label="Words Transcribed"
-                  color="text-blue-500"
-                />
+            <CardContent className="pb-3">
+              {/* Stats Grid - More compact */}
+              <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+                <div className="text-center">
+                  <div className="text-xl font-bold text-primary">{processingResults?.minutesSaved || 0}</div>
+                  <div className="text-[10px] text-muted-foreground">Min Saved</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl font-bold text-destructive">{processingResults?.fillerCount || 0}</div>
+                  <div className="text-[10px] text-muted-foreground">Fillers</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl font-bold text-orange-500">0</div>
+                  <div className="text-[10px] text-muted-foreground">Pauses</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl font-bold text-green-500">{processingResults?.audioEnhanced || 0}%</div>
+                  <div className="text-[10px] text-muted-foreground">Audio</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl font-bold text-purple-500">{processingResults?.clipsGenerated || 0}</div>
+                  <div className="text-[10px] text-muted-foreground">Clips</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl font-bold text-blue-500">{processingResults?.wordCount || 0}</div>
+                  <div className="text-[10px] text-muted-foreground">Words</div>
+                </div>
               </div>
 
-              {/* Details Grid */}
-              <div className="grid sm:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-medium text-foreground flex items-center gap-2 mb-3">
-                    <Volume2 className="h-4 w-4 text-muted-foreground" />
-                    Audio Enhancement
-                  </h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Noise Reduction</span>
-                      <span className="text-foreground">-18dB removed</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Normalization</span>
-                      <span className="text-foreground">-14 LUFS</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Dynamic Range</span>
-                      <span className="text-foreground">Optimized</span>
-                    </div>
+              {/* Details Grid - Compact */}
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Noise Reduction</span>
+                    <span>-18dB</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Normalization</span>
+                    <span>-14 LUFS</span>
                   </div>
                 </div>
-                <div>
-                  <h4 className="font-medium text-foreground flex items-center gap-2 mb-3">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    Content Cleanup
-                  </h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Filler words found</span>
-                      <span className="text-foreground">{processingResults?.fillerCount || 0} instances</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Segments created</span>
-                      <span className="text-foreground">{processingResults?.segmentCount || 0}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">AI Clips suggested</span>
-                      <span className="text-foreground">{processingResults?.clipsGenerated || 0}</span>
-                    </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Segments</span>
+                    <span>{processingResults?.segmentCount || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">AI Clips</span>
+                    <span>{processingResults?.clipsGenerated || 0}</span>
                   </div>
                 </div>
               </div>
@@ -591,44 +505,10 @@ const Refiner = () => {
           </Card>
         )}
 
-        {/* Processing Complete & Actions */}
-        {project && isProcessingComplete && (
-          <Card className="mt-6 border-green-500/30 bg-green-500/5">
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="h-6 w-6 text-green-500" />
-                  <div>
-                    <h4 className="font-semibold text-green-600">Processing Complete!</h4>
-                    <p className="text-sm text-muted-foreground">Your content is refined and ready</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Button variant="hero" onClick={() => setActiveTab('clips')}>
-                    <Scissors className="mr-2 h-4 w-4" />
-                    Generate Clips
-                  </Button>
-                  <Button variant="outline">
-                    <Share2 className="mr-2 h-4 w-4" />
-                    Share to Social
-                  </Button>
-                  <Button variant="outline" onClick={() => navigate('/library')}>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save to Library
-                  </Button>
-                  <Button variant="ghost">
-                    <Wand2 className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Tab Content - Clips */}
         {activeTab === 'clips' && project && (
-          <div className="mt-6 space-y-6">
+          <div className="mt-3 space-y-4">
             {transcript ? (
               <ClipGenerator 
                 projectId={project.id} 
@@ -662,7 +542,7 @@ const Refiner = () => {
 
         {/* Tab Content - Video Tools */}
         {activeTab === 'video' && project && (
-          <div className="mt-6 space-y-6">
+          <div className="mt-3 space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -707,7 +587,7 @@ const Refiner = () => {
 
         {/* Tab Content - Audio */}
         {activeTab === 'audio' && project && (
-          <div className="mt-6">
+          <div className="mt-3">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -737,7 +617,7 @@ const Refiner = () => {
 
         {/* Tab Content - Distribute */}
         {activeTab === 'distribute' && project && (
-          <div className="mt-6">
+          <div className="mt-3">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -763,6 +643,113 @@ const Refiner = () => {
             </Card>
           </div>
         )}
+
+        {/* Fixed Bottom Navigation Bar */}
+        {project && (
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border shadow-lg">
+            <div className="max-w-7xl mx-auto px-4 py-2">
+              <div className="flex items-center justify-between">
+                {/* Left - Status */}
+                <div className="flex items-center gap-2">
+                  {isProcessingComplete ? (
+                    <>
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      <span className="text-sm font-medium text-green-600">Ready</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-5 w-5 text-primary" />
+                      <span className="text-sm font-medium text-muted-foreground">Pending</span>
+                    </>
+                  )}
+                </div>
+
+                {/* Center - Tab Navigation */}
+                <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
+                  <button
+                    onClick={() => setActiveTab('overview')}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                      activeTab === 'overview' 
+                        ? 'bg-background text-foreground shadow-sm' 
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Overview
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('clips')}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                      activeTab === 'clips' 
+                        ? 'bg-background text-foreground shadow-sm' 
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Scissors className="h-3.5 w-3.5" />
+                    Clips
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('audio')}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                      activeTab === 'audio' 
+                        ? 'bg-background text-foreground shadow-sm' 
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Audio
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('video')}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                      activeTab === 'video' 
+                        ? 'bg-background text-foreground shadow-sm' 
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Video
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('distribute')}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                      activeTab === 'distribute' 
+                        ? 'bg-background text-foreground shadow-sm' 
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Distribute
+                  </button>
+                </div>
+
+                {/* Right - Actions */}
+                <div className="flex items-center gap-2">
+                  {isProcessingComplete ? (
+                    <>
+                      <Button size="sm" variant="hero" onClick={() => setActiveTab('clips')}>
+                        <Scissors className="mr-1.5 h-4 w-4" />
+                        Generate Clips
+                      </Button>
+                      <Button size="sm" variant="outline">
+                        <Share2 className="mr-1.5 h-4 w-4" />
+                        Share
+                      </Button>
+                      <Button size="sm" variant="outline">
+                        <Download className="mr-1.5 h-4 w-4" />
+                        Export
+                      </Button>
+                    </>
+                  ) : (
+                    <Button size="sm" variant="ghost" disabled className="opacity-50">
+                      <Download className="mr-1.5 h-4 w-4" />
+                      Export
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Bottom spacer for fixed bar */}
+        {project && <div className="h-16" />}
       </AppLayout>
     </>
   );

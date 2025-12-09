@@ -427,16 +427,16 @@ const Upload = () => {
             </div>
           )}
           
-          {/* Upload Button */}
+          {/* Upload Button - PROMINENT ALCHIFY CTA */}
           {file && !isUploading && (
             <Button
               variant="hero"
               size="lg"
-              className="w-full mt-6"
+              className="w-full mt-6 h-14 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
               onClick={handleUpload}
               disabled={!title.trim()}
             >
-              <Sparkles className="mr-2 h-5 w-5" />
+              <Sparkles className="mr-2 h-6 w-6" />
               Alchify My Content
             </Button>
           )}
