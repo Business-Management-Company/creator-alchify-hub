@@ -440,7 +440,7 @@ const Refiner = () => {
           />
         )}
 
-        {/* Processing Results - Compact */}
+        {/* Processing Results - Matching design */}
         {project && activeTab === 'overview' && (
           <Card className="mt-3">
             <CardHeader className="pb-2 pt-3">
@@ -448,56 +448,77 @@ const Refiner = () => {
                 <BarChart3 className="h-4 w-4 text-primary" />
                 Processing Results
               </CardTitle>
+              <CardDescription className="text-xs">AI improvements applied to your content</CardDescription>
             </CardHeader>
             <CardContent className="pb-3">
-              {/* Stats Grid - More compact */}
-              <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
-                <div className="text-center">
+              {/* Stats Grid - Boxed style */}
+              <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 mb-4">
+                <div className="border border-border rounded-lg p-3 text-center">
                   <div className="text-xl font-bold text-primary">{processingResults?.minutesSaved || 0}</div>
-                  <div className="text-[10px] text-muted-foreground">Min Saved</div>
+                  <div className="text-[10px] text-muted-foreground">Minutes Saved</div>
                 </div>
-                <div className="text-center">
+                <div className="border border-border rounded-lg p-3 text-center">
                   <div className="text-xl font-bold text-destructive">{processingResults?.fillerCount || 0}</div>
-                  <div className="text-[10px] text-muted-foreground">Fillers</div>
+                  <div className="text-[10px] text-muted-foreground">Fillers Found</div>
                 </div>
-                <div className="text-center">
+                <div className="border border-border rounded-lg p-3 text-center">
                   <div className="text-xl font-bold text-orange-500">0</div>
-                  <div className="text-[10px] text-muted-foreground">Pauses</div>
+                  <div className="text-[10px] text-muted-foreground">Pauses Detected</div>
                 </div>
-                <div className="text-center">
+                <div className="border border-border rounded-lg p-3 text-center">
                   <div className="text-xl font-bold text-green-500">{processingResults?.audioEnhanced || 0}%</div>
-                  <div className="text-[10px] text-muted-foreground">Audio</div>
+                  <div className="text-[10px] text-muted-foreground">Audio Enhanced</div>
                 </div>
-                <div className="text-center">
+                <div className="border border-border rounded-lg p-3 text-center">
                   <div className="text-xl font-bold text-purple-500">{processingResults?.clipsGenerated || 0}</div>
-                  <div className="text-[10px] text-muted-foreground">Clips</div>
+                  <div className="text-[10px] text-muted-foreground">Clips Generated</div>
                 </div>
-                <div className="text-center">
+                <div className="border border-border rounded-lg p-3 text-center">
                   <div className="text-xl font-bold text-blue-500">{processingResults?.wordCount || 0}</div>
-                  <div className="text-[10px] text-muted-foreground">Words</div>
+                  <div className="text-[10px] text-muted-foreground">Words Transcribed</div>
                 </div>
               </div>
 
-              {/* Details Grid - Compact */}
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div className="space-y-1">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Noise Reduction</span>
-                    <span>-18dB</span>
+              {/* Audio Enhancement & Content Cleanup */}
+              <div className="grid grid-cols-2 gap-6 text-sm">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Volume2 className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Audio Enhancement</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Normalization</span>
-                    <span>-14 LUFS</span>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Noise Reduction</span>
+                      <span>-18dB removed</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Normalization</span>
+                      <span>-14 LUFS</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Dynamic Range</span>
+                      <span>Optimized</span>
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Segments</span>
-                    <span>{processingResults?.segmentCount || 0}</span>
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Content Cleanup</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">AI Clips</span>
-                    <span>{processingResults?.clipsGenerated || 0}</span>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Filler words found</span>
+                      <span>{processingResults?.fillerCount || 0} instances</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Segments created</span>
+                      <span>{processingResults?.segmentCount || 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">AI Clips suggested</span>
+                      <span>{processingResults?.clipsGenerated || 0}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -721,27 +742,18 @@ const Refiner = () => {
 
                 {/* Right - Actions */}
                 <div className="flex items-center gap-2">
-                  {isProcessingComplete ? (
-                    <>
-                      <Button size="sm" variant="hero" onClick={() => setActiveTab('clips')}>
-                        <Scissors className="mr-1.5 h-4 w-4" />
-                        Generate Clips
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        <Share2 className="mr-1.5 h-4 w-4" />
-                        Share
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        <Download className="mr-1.5 h-4 w-4" />
-                        Export
-                      </Button>
-                    </>
-                  ) : (
-                    <Button size="sm" variant="ghost" disabled className="opacity-50">
-                      <Download className="mr-1.5 h-4 w-4" />
-                      Export
-                    </Button>
-                  )}
+                  <Button size="sm" variant="hero" onClick={() => setActiveTab('clips')} disabled={!isProcessingComplete}>
+                    <Scissors className="mr-1.5 h-4 w-4" />
+                    Generate Clips
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={!isProcessingComplete}>
+                    <Share2 className="mr-1.5 h-4 w-4" />
+                    Share
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={!isProcessingComplete}>
+                    <Download className="mr-1.5 h-4 w-4" />
+                    Export
+                  </Button>
                 </div>
               </div>
             </div>
