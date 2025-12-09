@@ -460,17 +460,17 @@ const Library = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleQuickAction('open', item)}>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleQuickAction('open', item); }}>
                               <Play className="h-4 w-4 mr-2" />
                               Open in Refiner
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleQuickAction('post-production', item)}>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleQuickAction('post-production', item); }}>
                               <Wand2 className="h-4 w-4 mr-2" />
                               Post Production
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
-                              onClick={(e) => handleQuickAction('delete', item, e)}
+                              onClick={(e) => { e.stopPropagation(); handleQuickAction('delete', item, e); }}
                               className="text-destructive focus:text-destructive"
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
@@ -544,17 +544,17 @@ const Library = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleQuickAction('open', item)}>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleQuickAction('open', item); }}>
                                 <Play className="h-4 w-4 mr-2" />
                                 Open in Refiner
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleQuickAction('post-production', item)}>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleQuickAction('post-production', item); }}>
                                 <Wand2 className="h-4 w-4 mr-2" />
                                 Post Production
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem 
-                                onClick={(e) => handleQuickAction('delete', item, e)}
+                                onClick={(e) => { e.stopPropagation(); handleQuickAction('delete', item, e); }}
                                 className="text-destructive focus:text-destructive"
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
