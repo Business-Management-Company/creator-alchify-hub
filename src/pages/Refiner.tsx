@@ -54,6 +54,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import { ClipGenerator } from '@/components/refiner/ClipGenerator';
 import { CaptionEditor } from '@/components/refiner/CaptionEditor';
 import { TranscriptSheet } from '@/components/refiner/TranscriptSheet';
+import { SpeakerFocus } from '@/components/refiner/SpeakerFocus';
 import { extractAudioFromVideo, needsAudioExtraction } from '@/lib/audio-extraction';
 import VideoThumbnail from '@/components/VideoThumbnail';
 
@@ -819,24 +820,27 @@ const Refiner = () => {
         {/* Tab Content - Video Tools */}
         {activeTab === 'video' && project && (
           <div className="mt-3 space-y-4">
+            {/* Speaker Focus - Active Feature */}
+            <SpeakerFocus
+              projectId={project.id}
+              mediaUrl={mediaUrl}
+              transcriptContent={transcript?.content || null}
+              transcriptSegments={transcript?.segments as any[] || null}
+            />
+
+            {/* Other Video Tools */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Video className="h-5 w-5 text-primary" />
-                  Video Editing Tools
+                  More Video Tools
                 </CardTitle>
                 <CardDescription>
-                  Advanced video editing and enhancement features
+                  Additional video editing and enhancement features
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <ToolCard
-                    icon={User}
-                    title="Speaker Focus"
-                    description="AI camera framing for single-speaker content"
-                    badge="Coming Soon"
-                  />
+                <div className="grid md:grid-cols-3 gap-4">
                   <ToolCard
                     icon={Layers}
                     title="Lower Thirds & Graphics"
