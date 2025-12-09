@@ -10,12 +10,14 @@ interface WelcomeVideoSectionProps {
 
 export function WelcomeVideoSection({ videoPath = 'alchify-welcome.mp4' }: WelcomeVideoSectionProps) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false); // Audio ON by default
   const [showControls, setShowControls] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [playAttempted, setPlayAttempted] = useState(false);
   const [videoError, setVideoError] = useState(false);
+  const [hasAutoPlayed, setHasAutoPlayed] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Fetch video URL from storage
   useEffect(() => {
@@ -29,6 +31,50 @@ export function WelcomeVideoSection({ videoPath = 'alchify-welcome.mp4' }: Welco
       setVideoUrl(data.publicUrl);
     }
   }, [videoPath]);
+
+  // Intersection Observer for scroll-triggered autoplay
+  useEffect(() => {
+    if (!containerRef.current || !videoUrl || hasAutoPlayed) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !hasAutoPlayed && videoRef.current) {
+            setHasAutoPlayed(true);
+            setPlayAttempted(true);
+            
+            // Try to play with audio first
+            videoRef.current.muted = false;
+            videoRef.current.play()
+              .then(() => {
+                setIsPlaying(true);
+                setIsMuted(false);
+              })
+              .catch(() => {
+                // If autoplay with audio fails, try muted (browser policy)
+                if (videoRef.current) {
+                  videoRef.current.muted = true;
+                  videoRef.current.play()
+                    .then(() => {
+                      setIsPlaying(true);
+                      setIsMuted(true);
+                    })
+                    .catch((err) => {
+                      console.error('Video autoplay failed:', err);
+                      setVideoError(true);
+                    });
+                }
+              });
+          }
+        });
+      },
+      { threshold: 0.5 } // Trigger when 50% visible
+    );
+
+    observer.observe(containerRef.current);
+
+    return () => observer.disconnect();
+  }, [videoUrl, hasAutoPlayed]);
 
   const handlePlayClick = () => {
     if (videoError) return;
@@ -75,6 +121,7 @@ export function WelcomeVideoSection({ videoPath = 'alchify-welcome.mp4' }: Welco
         <div className="max-w-4xl mx-auto">
           {/* Video Container */}
           <div 
+            ref={containerRef}
             className="relative rounded-2xl overflow-hidden bg-card border border-border shadow-2xl group cursor-pointer"
             onClick={!isPlaying ? handlePlayClick : undefined}
           >
