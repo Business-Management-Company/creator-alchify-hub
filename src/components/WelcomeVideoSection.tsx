@@ -93,14 +93,16 @@ export function WelcomeVideoSection({ videoPath = 'alchify-welcome.mp4' }: Welco
                 ref={videoRef}
                 muted={isMuted}
                 playsInline
-                preload="metadata"
+                preload="auto"
                 className={`w-full aspect-video object-cover ${isPlaying ? 'block' : 'hidden'}`}
                 onEnded={handleVideoEnd}
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
                 onCanPlay={() => console.log('Video can play')}
+                onLoadedData={() => console.log('Video loaded data')}
                 onError={(e) => {
-                  console.error('Video error event:', e);
+                  const target = e.target as HTMLVideoElement;
+                  console.error('Video error:', target.error?.message, target.error?.code);
                   // Only set error if user already tried to play
                   if (playAttempted) {
                     setVideoError(true);
@@ -108,6 +110,7 @@ export function WelcomeVideoSection({ videoPath = 'alchify-welcome.mp4' }: Welco
                 }}
               >
                 <source src={videoUrl} type="video/mp4" />
+                Your browser does not support the video tag.
               </video>
             )}
 
