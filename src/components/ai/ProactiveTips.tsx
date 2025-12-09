@@ -31,7 +31,11 @@ interface ProactiveTipsProps {
 
 export function ProactiveTips({ onTipAction }: ProactiveTipsProps) {
   const [currentTip, setCurrentTip] = useState<Tip | null>(null);
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [dismissed, setDismissed] = useState<Set<string>>(() => {
+    // Load dismissed tips from localStorage on mount
+    const saved = localStorage.getItem('alchify_dismissed_tips');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
   const [projectContext, setProjectContext] = useState({
     hasProject: false,
     hasTranscript: false,
@@ -176,11 +180,10 @@ export function ProactiveTips({ onTipAction }: ProactiveTipsProps) {
 
   const handleDismiss = () => {
     if (currentTip) {
-      // Mark dashboard tip as permanently seen
-      if (currentTip.id === 'dashboard-start') {
-        localStorage.setItem('alchify_seen_dashboard_tip', 'true');
-      }
-      setDismissed(prev => new Set([...prev, currentTip.id]));
+      const newDismissed = new Set([...dismissed, currentTip.id]);
+      setDismissed(newDismissed);
+      // Persist all dismissed tips to localStorage
+      localStorage.setItem('alchify_dismissed_tips', JSON.stringify([...newDismissed]));
       setCurrentTip(null);
     }
   };
