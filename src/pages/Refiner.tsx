@@ -79,6 +79,8 @@ interface PipelineState {
   removeFillers: PipelineStatus;
   removeGaps: PipelineStatus;
   audioCleanup: PipelineStatus;
+  enhanceAudio: PipelineStatus;
+  enhanceVideo: PipelineStatus;
 }
 
 const FILLER_WORDS = ['um', 'uh', 'like', 'you know', 'basically', 'actually', 'so,', 'well,'];
@@ -140,6 +142,8 @@ const Refiner = () => {
     removeFillers: 'pending',
     removeGaps: 'pending',
     audioCleanup: 'pending',
+    enhanceAudio: 'pending',
+    enhanceVideo: 'pending',
   });
 
   useEffect(() => {
@@ -231,6 +235,8 @@ const Refiner = () => {
           removeFillers: 'complete',
           removeGaps: 'complete',
           audioCleanup: 'complete',
+          enhanceAudio: 'complete',
+          enhanceVideo: 'complete',
         };
         setPipelineState(newPipelineState);
         const newProcessingResults: ProcessingResults = {
@@ -259,6 +265,8 @@ const Refiner = () => {
           removeFillers: 'pending',
           removeGaps: 'pending',
           audioCleanup: 'pending',
+          enhanceAudio: 'pending',
+          enhanceVideo: 'pending',
         });
       }
       
@@ -299,6 +307,8 @@ const Refiner = () => {
         removeFillers: 'complete',
         removeGaps: 'complete',
         audioCleanup: 'complete',
+        enhanceAudio: 'complete',
+        enhanceVideo: 'complete',
       };
       setPipelineState(newPipelineState);
       const newProcessingResults: ProcessingResults = {
@@ -460,11 +470,11 @@ const Refiner = () => {
 
           {/* Right Sidebar - Processing Pipeline */}
           <div className="lg:col-span-4">
-            <Card>
+            <Card className="h-full">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Processing Pipeline</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-4">
                 <PipelineStep 
                   label="Transcription" 
                   status={pipelineState.transcription}
@@ -480,6 +490,14 @@ const Refiner = () => {
                 <PipelineStep 
                   label="Audio Cleanup" 
                   status={pipelineState.audioCleanup}
+                />
+                <PipelineStep 
+                  label="Enhance Audio" 
+                  status={pipelineState.enhanceAudio}
+                />
+                <PipelineStep 
+                  label="Enhance Video" 
+                  status={pipelineState.enhanceVideo}
                 />
               </CardContent>
             </Card>
@@ -905,10 +923,22 @@ const NotProcessedCTA = ({
       updatePipelineStep('removeGaps', 'complete');
 
       // Step 4: Audio Cleanup (simulated)
-      setProcessingStatus('Enhancing audio quality...');
+      setProcessingStatus('Cleaning up audio...');
       updatePipelineStep('audioCleanup', 'active');
-      await new Promise(r => setTimeout(r, 600));
+      await new Promise(r => setTimeout(r, 500));
       updatePipelineStep('audioCleanup', 'complete');
+
+      // Step 5: Enhance Audio (simulated)
+      setProcessingStatus('Enhancing audio quality...');
+      updatePipelineStep('enhanceAudio', 'active');
+      await new Promise(r => setTimeout(r, 600));
+      updatePipelineStep('enhanceAudio', 'complete');
+
+      // Step 6: Enhance Video (simulated)
+      setProcessingStatus('Enhancing video quality...');
+      updatePipelineStep('enhanceVideo', 'active');
+      await new Promise(r => setTimeout(r, 700));
+      updatePipelineStep('enhanceVideo', 'complete');
 
       toast({
         title: 'Content Alchified! ✨',
@@ -968,12 +998,12 @@ const NotProcessedCTA = ({
   );
 };
 
-// Pipeline Step Component with animation
+// Pipeline Step Component with animation - GREEN processing color
 const PipelineStep = ({ label, status }: { label: string; status: PipelineStatus }) => (
   <div className="flex items-center gap-3">
     <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ${
       status === 'complete' ? 'bg-green-500 scale-100' : 
-      status === 'active' ? 'bg-primary animate-pulse scale-110' : 
+      status === 'active' ? 'bg-green-500 animate-pulse scale-110' : 
       'bg-muted scale-100'
     }`}>
       {status === 'complete' && <Check className="h-4 w-4 text-white" />}
@@ -981,13 +1011,13 @@ const PipelineStep = ({ label, status }: { label: string; status: PipelineStatus
     </div>
     <span className={`transition-colors duration-300 ${
       status === 'complete' ? 'text-foreground font-medium' : 
-      status === 'active' ? 'text-primary font-medium' : 
+      status === 'active' ? 'text-green-600 font-medium' : 
       'text-muted-foreground'
     }`}>
       {label}
     </span>
     {status === 'active' && (
-      <span className="text-xs text-primary animate-pulse ml-auto">Processing...</span>
+      <span className="text-xs text-green-600 animate-pulse ml-auto">Processing...</span>
     )}
   </div>
 );
