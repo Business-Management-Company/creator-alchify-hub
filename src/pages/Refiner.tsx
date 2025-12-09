@@ -35,6 +35,7 @@ import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/layout/AppLayout';
 import { ClipGenerator } from '@/components/refiner/ClipGenerator';
 import { CaptionEditor } from '@/components/refiner/CaptionEditor';
+import { extractAudioFromVideo, needsAudioExtraction } from '@/lib/audio-extraction';
 import VideoThumbnail from '@/components/VideoThumbnail';
 
 interface Project {
@@ -405,7 +406,9 @@ const Refiner = () => {
         {/* Not Yet Processed - Show CTA prominently */}
         {project && !isProcessingComplete && (
           <NotProcessedCTA 
-            projectId={project.id} 
+            projectId={project.id}
+            fileSize={project.source_file_size || 0}
+            mediaUrl={mediaUrl}
             onProcessingComplete={() => fetchProject()}
           />
         )}
@@ -645,25 +648,64 @@ const Refiner = () => {
 
 // Not Processed CTA Component
 const NotProcessedCTA = ({ 
-  projectId, 
+  projectId,
+  fileSize,
+  mediaUrl,
   onProcessingComplete 
 }: { 
-  projectId: string; 
+  projectId: string;
+  fileSize: number;
+  mediaUrl: string | null;
   onProcessingComplete: () => void;
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState('');
   const { toast } = useToast();
 
   const handleStartProcessing = async () => {
     setIsProcessing(true);
     try {
+      let audioData: string | undefined;
+      
+      // Check if we need to extract audio first
+      if (needsAudioExtraction(fileSize) && mediaUrl) {
+        setProcessingStatus('Extracting audio from video...');
+        toast({
+          title: 'Extracting audio...',
+          description: 'This may take a moment for large files.',
+        });
+        
+        try {
+          const result = await extractAudioFromVideo(mediaUrl, (progress) => {
+            setProcessingStatus(`Extracting audio... ${progress}%`);
+          });
+          
+          // Convert blob to base64
+          const reader = new FileReader();
+          audioData = await new Promise<string>((resolve, reject) => {
+            reader.onloadend = () => {
+              const base64 = (reader.result as string).split(',')[1];
+              resolve(base64);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(result.audioBlob);
+          });
+          
+          console.log(`Audio extracted: ${(result.sizeBytes / 1024 / 1024).toFixed(2)}MB`);
+        } catch (extractError) {
+          console.error('Audio extraction failed:', extractError);
+          throw new Error('Failed to extract audio. The video format may not be supported.');
+        }
+      }
+      
+      setProcessingStatus('Transcribing content...');
       toast({
         title: 'Alchifying your content...',
         description: 'AI is transcribing and enhancing your content.',
       });
 
       const { data, error } = await supabase.functions.invoke('transcribe-audio', {
-        body: { projectId }
+        body: { projectId, audioData }
       });
 
       if (error) throw error;
@@ -684,6 +726,7 @@ const NotProcessedCTA = ({
       });
     } finally {
       setIsProcessing(false);
+      setProcessingStatus('');
     }
   };
 
@@ -711,7 +754,7 @@ const NotProcessedCTA = ({
             {isProcessing ? (
               <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Processing...
+                {processingStatus || 'Processing...'}
               </>
             ) : (
               <>
