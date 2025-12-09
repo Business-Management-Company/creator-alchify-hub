@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX, Maximize } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import thumbnailImage from '@/assets/welcome-video-thumbnail.jpg';
+import thumbnailImage from '@/assets/welcome-video-thumbnail.png';
 
 interface WelcomeVideoSectionProps {
   videoPath?: string;
@@ -17,32 +17,28 @@ export function WelcomeVideoSection({ videoPath = 'Alchify_Content Gold' }: Welc
   const [videoError, setVideoError] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Fetch video URL from storage - try multiple extensions
+  // Fetch video URL from storage
   useEffect(() => {
-    const tryExtensions = ['', '.mp4', '.mov', '.webm'];
+    const { data } = supabase.storage
+      .from('welcome-videos')
+      .getPublicUrl(videoPath);
     
-    // Try each extension
-    for (const ext of tryExtensions) {
-      const { data } = supabase.storage
-        .from('welcome-videos')
-        .getPublicUrl(videoPath + ext);
-      
-      if (data?.publicUrl) {
-        setVideoUrl(data.publicUrl);
-        break;
-      }
+    if (data?.publicUrl) {
+      setVideoUrl(data.publicUrl);
     }
   }, [videoPath]);
 
   const handlePlayClick = () => {
+    if (videoError) {
+      // If video failed, don't try to play
+      return;
+    }
+    
     if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-      setShowControls(true);
+      videoRef.current.play().catch((err) => {
+        console.error('Video play error:', err);
+        setVideoError(true);
+      });
     }
   };
 
@@ -59,6 +55,12 @@ export function WelcomeVideoSection({ videoPath = 'Alchify_Content Gold' }: Welc
       if (videoRef.current.requestFullscreen) {
         videoRef.current.requestFullscreen();
       }
+    }
+  };
+
+  const handlePauseClick = () => {
+    if (videoRef.current) {
+      videoRef.current.pause();
     }
   };
 
@@ -99,24 +101,33 @@ export function WelcomeVideoSection({ videoPath = 'Alchify_Content Gold' }: Welc
 
             {/* Play Button Overlay - Shows when not playing */}
             {!isPlaying && (
-              <div className="absolute inset-0 flex items-center justify-center bg-background/20 transition-all">
-                <button
-                  onClick={handlePlayClick}
-                  className="w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-lg hover:scale-110 transition-transform glow-primary"
-                >
-                  <Play className="h-8 w-8 text-primary-foreground ml-1" fill="currentColor" />
-                </button>
+              <div className="absolute inset-0 flex items-center justify-center bg-background/30 transition-all">
+                {videoError ? (
+                  <div className="text-center">
+                    <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-muted-foreground">Video unavailable</p>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handlePlayClick}
+                    className="w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-lg hover:scale-110 transition-transform glow-primary"
+                  >
+                    <Play className="h-8 w-8 text-primary-foreground ml-1" fill="currentColor" />
+                  </button>
+                )}
                 
                 {/* Label */}
-                <div className="absolute bottom-6 left-6">
-                  <p className="text-lg font-semibold text-white drop-shadow-lg">Watch: How Alchify Works</p>
-                  <p className="text-sm text-white/80 drop-shadow-lg">See the magic in 60 seconds</p>
-                </div>
+                {!videoError && (
+                  <div className="absolute bottom-6 left-6">
+                    <p className="text-lg font-semibold text-white drop-shadow-lg">Watch: How Alchify Works</p>
+                    <p className="text-sm text-white/80 drop-shadow-lg">See the magic in 60 seconds</p>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Video Controls - Shows when playing */}
-            {isPlaying && showControls && (
+            {isPlaying && (
               <div 
                 className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={(e) => e.stopPropagation()}
@@ -125,10 +136,10 @@ export function WelcomeVideoSection({ videoPath = 'Alchify_Content Gold' }: Welc
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={handlePlayClick}
+                    onClick={handlePauseClick}
                     className="text-foreground hover:bg-foreground/20"
                   >
-                    {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                    <Pause className="h-5 w-5" />
                   </Button>
                   
                   <Button
