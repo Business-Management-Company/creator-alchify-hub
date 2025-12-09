@@ -92,7 +92,7 @@ const AdminUsers = () => {
     }
   };
 
-  const assignRole = async (userId: string, role: 'admin' | 'moderator' | 'user') => {
+  const assignRole = async (userId: string, role: 'super_admin' | 'admin' | 'moderator' | 'user') => {
     try {
       const { error } = await supabase
         .from('user_roles')
@@ -121,7 +121,7 @@ const AdminUsers = () => {
         .from('user_roles')
         .delete()
         .eq('user_id', userId)
-        .eq('role', role as 'admin' | 'moderator' | 'user');
+        .eq('role', role as 'super_admin' | 'admin' | 'moderator' | 'user');
       
       if (error) throw error;
       
@@ -241,12 +241,12 @@ const AdminUsers = () => {
                             u.roles.map((role) => (
                               <Badge 
                                 key={role} 
-                                variant={role === 'admin' ? 'default' : 'secondary'}
+                                variant={role === 'super_admin' ? 'destructive' : role === 'admin' ? 'default' : 'secondary'}
                                 className="cursor-pointer"
                                 onClick={() => removeRole(u.id, role)}
                               >
-                                {role === 'admin' && <Shield className="h-3 w-3 mr-1" />}
-                                {role}
+                                {(role === 'admin' || role === 'super_admin') && <Shield className="h-3 w-3 mr-1" />}
+                                {role === 'super_admin' ? 'Super Admin' : role}
                               </Badge>
                             ))
                           ) : (
@@ -274,6 +274,10 @@ const AdminUsers = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => assignRole(u.id, 'super_admin')}>
+                              <Shield className="h-4 w-4 mr-2 text-destructive" />
+                              Make Super Admin
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => assignRole(u.id, 'admin')}>
                               <Shield className="h-4 w-4 mr-2" />
                               Make Admin
