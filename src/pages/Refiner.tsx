@@ -153,6 +153,7 @@ const Refiner = () => {
   const [transcript, setTranscript] = useState<Transcript | null>(null);
   const [loading, setLoading] = useState(true);
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+  const [mediaLoading, setMediaLoading] = useState(false);
   const [processingResults, setProcessingResults] = useState<ProcessingResults | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [showClipsTooltip, setShowClipsTooltip] = useState(false);
@@ -237,6 +238,7 @@ const Refiner = () => {
       
       // Get media URL
       if (projectData.source_file_url) {
+        setMediaLoading(true);
         const { data: urlData } = await supabase.storage
           .from('media-uploads')
           .createSignedUrl(projectData.source_file_url, 3600);
@@ -244,6 +246,7 @@ const Refiner = () => {
         if (urlData?.signedUrl) {
           setMediaUrl(urlData.signedUrl);
         }
+        setMediaLoading(false);
       }
       
       // Fetch transcript if exists - get the most recent one
@@ -456,7 +459,14 @@ const Refiner = () => {
                 {/* Video Preview with Processing Overlay */}
                 <div className="bg-card border border-border rounded-xl overflow-hidden relative">
                   <div className="aspect-video bg-muted/50 flex items-center justify-center relative">
-                    {mediaUrl && project.source_file_type === 'video' ? (
+                    {mediaLoading ? (
+                      <div className="w-full h-full bg-muted animate-pulse flex items-center justify-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">Loading preview...</p>
+                        </div>
+                      </div>
+                    ) : mediaUrl && project.source_file_type === 'video' ? (
                       <video 
                         src={mediaUrl} 
                         controls={!isProcessingActive}
