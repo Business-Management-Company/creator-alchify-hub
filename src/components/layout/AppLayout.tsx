@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import AppSidebar from './AppSidebar';
 import AppHeader from './AppHeader';
 import { SidebarProvider } from '@/components/ui/sidebar';
+import RefinerAIPanel from '@/components/ai/RefinerAIPanel';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -19,6 +20,7 @@ const AppLayout = ({ children, defaultSidebarOpen = true }: AppLayoutProps) => {
             {children}
           </main>
         </div>
+        <RefinerAIPanel />
       </div>
     </SidebarProvider>
   );

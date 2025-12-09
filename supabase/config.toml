@@ -8,3 +8,6 @@ verify_jwt = true
 
 [functions.render-clip]
 verify_jwt = true
+
+[functions.alchify-refiner-ai]
+verify_jwt = true
