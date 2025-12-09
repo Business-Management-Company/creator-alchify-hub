@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
 import AppLayout from '@/components/layout/AppLayout';
@@ -18,12 +19,101 @@ import {
   Sparkles,
   Shield,
   Globe,
-  BarChart3
+  BarChart3,
+  Eye,
+  Gauge
 } from 'lucide-react';
+import { VTOCoreValues } from '@/components/vto/VTOCoreValues';
+import { VTOCoreFocus } from '@/components/vto/VTOCoreFocus';
+import { VTOTenYearTarget } from '@/components/vto/VTOTenYearTarget';
+import { VTOMarketingStrategy } from '@/components/vto/VTOMarketingStrategy';
+import { VTOThreeYearPicture } from '@/components/vto/VTOThreeYearPicture';
+import { VTOOneYearPlan } from '@/components/vto/VTOOneYearPlan';
+import { VTORocks } from '@/components/vto/VTORocks';
+import { VTOIssues } from '@/components/vto/VTOIssues';
+import { VTOCEOAdjustments } from '@/components/vto/VTOCEOAdjustments';
+import { VTOCEOInsightPanel } from '@/components/vto/VTOCEOInsightPanel';
+import { VTOExportControls } from '@/components/vto/VTOExportControls';
+import { VTOData } from '@/types/vto';
 
 const AdminCEOVTO = () => {
   const navigate = useNavigate();
   const { isAdmin, loading } = useAdminCheck();
+
+  // VTO State
+  const [vtoData, setVtoData] = useState<VTOData>({
+    coreValues: [
+      { id: '1', value: 'Authenticity First' },
+      { id: '2', value: 'Creator Empowerment' },
+      { id: '3', value: 'Ethical AI' },
+      { id: '4', value: 'Continuous Innovation' },
+    ],
+    coreFocus: {
+      purpose: 'To empower creators to share their authentic voice with the world, eliminating the technical barriers that stand between raw ideas and polished content.',
+      niche: 'AI-powered content refinement and repurposing for podcasters and video creators',
+    },
+    tenYearTarget: {
+      target: '$100M ARR',
+      description: 'Alchify is the go-to platform for every serious content creator, processing 1 billion minutes of content annually and saving creators 100 million hours of editing time.',
+    },
+    marketingStrategy: {
+      targetMarket: 'Independent podcasters and video creators with 10K-500K audience, seeking to scale content output without scaling effort',
+      threeUniques: [
+        'Refiner AI: Context-aware assistant that learns your style',
+        'Authenticity Layer: No deepfakes, full transparency',
+        'One platform to replace 10+ tools',
+      ],
+      provenProcess: 'The Alchify Method™: Upload → Refine → Distribute',
+      guarantee: 'Save 6+ hours per episode or your money back',
+    },
+    threeYearPicture: {
+      revenue: '$5M ARR',
+      profit: '$1M EBITDA',
+      teamSize: '25 people',
+      keyMetrics: 'NPS 70+, Churn < 5%, 50K active creators',
+      productMilestones: 'Mobile app, API access, Enterprise tier, 10+ integrations',
+      successNarrative: 'Alchify is recognized as the industry standard for creator content refinement. Top podcasters and YouTubers credit Alchify for their content consistency and output growth. The platform has expanded beyond individual creators to agencies and media companies.',
+    },
+    oneYearPlan: {
+      revenueTarget: '$1.2M ARR',
+      profitTarget: '$200K',
+      priorities: [
+        'Launch paid tiers and reach 5K paying subscribers',
+        'Complete Creatomate integration for professional clips',
+        'Build enterprise tier with SSO and team features',
+        'Establish 3 major creator partnerships',
+        'Launch mobile companion app',
+      ],
+    },
+    rocks: [
+      { id: '1', title: 'Fix caption rendering in clips', owner: 'Engineering', dueQuarter: 'Q1', status: 'in_progress' },
+      { id: '2', title: 'Launch Stripe payment processing', owner: 'Product', dueQuarter: 'Q1', status: 'not_started' },
+      { id: '3', title: 'Sign 10 beta creator partnerships', owner: 'Growth', dueQuarter: 'Q1', status: 'in_progress' },
+      { id: '4', title: 'Complete multi-track timeline editor', owner: 'Engineering', dueQuarter: 'Q1', status: 'not_started' },
+    ],
+    issues: [
+      { id: '1', title: 'Creatomate captions not rendering', priority: 'high', forL10: true },
+      { id: '2', title: 'Large file transcription failures (>25MB)', priority: 'high', forL10: true },
+      { id: '3', title: 'Need legal review of ToS', priority: 'medium', forL10: false },
+      { id: '4', title: 'Competitor Opus Clips gaining market share', priority: 'medium', forL10: true },
+    ],
+    ceoAdjustments: {
+      visionClarity: 8,
+      teamAlignment: 7,
+      executionConfidence: 65,
+      quarterlyFocusLevel: 5,
+      riskLevel: 'medium',
+    },
+  });
+
+  const updateVTO = <K extends keyof VTOData>(key: K, value: VTOData[K]) => {
+    setVtoData(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleSave = () => {
+    // In production, this would save to database
+    console.log('Saving VTO:', vtoData);
+  };
 
   if (loading) {
     return (
@@ -42,13 +132,56 @@ const AdminCEOVTO = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-8 max-w-6xl mx-auto">
+      <div className="space-y-8 max-w-6xl mx-auto pb-12">
         {/* Header */}
         <div className="text-center space-y-2">
-          <Badge variant="outline" className="mb-2">Board Presentation</Badge>
+          <Badge variant="outline" className="mb-2">EOS Vision/Traction Organizer</Badge>
           <h1 className="text-4xl font-bold">Alchify CEO VTO</h1>
-          <p className="text-muted-foreground text-lg">Vision • Technology • Operations</p>
-          <p className="text-sm text-muted-foreground">Q4 2024 Board Deck</p>
+          <p className="text-muted-foreground text-lg">Vision • Traction • Operations</p>
+          <p className="text-sm text-muted-foreground">Q4 2024 Strategic Planning</p>
+        </div>
+
+        {/* SECTION 2: Vision Components */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Eye className="h-5 w-5 text-primary" />
+            <h2 className="text-2xl font-bold">Vision (Long-Term Strategy)</h2>
+          </div>
+          <Separator />
+        </div>
+
+        <VTOCoreValues 
+          values={vtoData.coreValues} 
+          onChange={(values) => updateVTO('coreValues', values)} 
+        />
+
+        <VTOCoreFocus 
+          coreFocus={vtoData.coreFocus} 
+          onChange={(focus) => updateVTO('coreFocus', focus)} 
+        />
+
+        <VTOTenYearTarget 
+          target={vtoData.tenYearTarget} 
+          onChange={(target) => updateVTO('tenYearTarget', target)} 
+        />
+
+        <VTOMarketingStrategy 
+          strategy={vtoData.marketingStrategy} 
+          onChange={(strategy) => updateVTO('marketingStrategy', strategy)} 
+        />
+
+        <VTOThreeYearPicture 
+          picture={vtoData.threeYearPicture} 
+          onChange={(picture) => updateVTO('threeYearPicture', picture)} 
+        />
+
+        {/* CEO Overview - Existing Content */}
+        <div className="space-y-2 mt-12">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-primary" />
+            <h2 className="text-2xl font-bold">CEO Overview</h2>
+          </div>
+          <Separator />
         </div>
 
         {/* Market Opportunity */}
@@ -303,7 +436,31 @@ const AdminCEOVTO = () => {
           </CardContent>
         </Card>
 
-        {/* Next Steps */}
+        {/* SECTION 3: Traction Components */}
+        <div className="space-y-2 mt-12">
+          <div className="flex items-center gap-2">
+            <Gauge className="h-5 w-5 text-primary" />
+            <h2 className="text-2xl font-bold">Traction (Execution Framework)</h2>
+          </div>
+          <Separator />
+        </div>
+
+        <VTOOneYearPlan 
+          plan={vtoData.oneYearPlan} 
+          onChange={(plan) => updateVTO('oneYearPlan', plan)} 
+        />
+
+        <VTORocks 
+          rocks={vtoData.rocks} 
+          onChange={(rocks) => updateVTO('rocks', rocks)} 
+        />
+
+        <VTOIssues 
+          issues={vtoData.issues} 
+          onChange={(issues) => updateVTO('issues', issues)} 
+        />
+
+        {/* Next Steps - From Original */}
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -360,7 +517,26 @@ const AdminCEOVTO = () => {
           </CardContent>
         </Card>
 
-        {/* Ask */}
+        {/* SECTION 4: CEO Adjustment Controls */}
+        <div className="space-y-2 mt-12">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <h2 className="text-2xl font-bold">CEO Controls & Insights</h2>
+          </div>
+          <Separator />
+        </div>
+
+        <VTOCEOAdjustments 
+          adjustments={vtoData.ceoAdjustments} 
+          onChange={(adjustments) => updateVTO('ceoAdjustments', adjustments)} 
+        />
+
+        <VTOCEOInsightPanel 
+          adjustments={vtoData.ceoAdjustments} 
+          data={vtoData} 
+        />
+
+        {/* The Ask */}
         <Card className="bg-primary/5 border-primary/20">
           <CardHeader>
             <CardTitle className="text-center">The Ask</CardTitle>
@@ -376,6 +552,9 @@ const AdminCEOVTO = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* SECTION 5: Export Controls */}
+        <VTOExportControls onSave={handleSave} />
 
         <div className="text-center text-sm text-muted-foreground pb-8">
           <p>Confidential - For Board Review Only</p>
