@@ -121,7 +121,10 @@ const AppSidebar = () => {
                       isActive={isActive(item.path)}
                       tooltip={item.label}
                     >
-                      <Link to={item.path}>
+                      <Link 
+                        to={item.path} 
+                        data-ui-element={item.id}
+                      >
                         {Icon && <Icon className="h-4 w-4" />}
                         <span>{item.label}</span>
                       </Link>
@@ -147,7 +150,10 @@ const AppSidebar = () => {
                       isActive={isActive(item.path)}
                       tooltip={item.label}
                     >
-                      <Link to={item.path}>
+                      <Link 
+                        to={item.path}
+                        data-ui-element={item.id}
+                      >
                         {Icon && <Icon className="h-4 w-4" />}
                         <span>{item.label}</span>
                       </Link>
