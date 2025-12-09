@@ -157,6 +157,8 @@ const Refiner = () => {
   const [showClipsTooltip, setShowClipsTooltip] = useState(false);
   const [showFormatDialog, setShowFormatDialog] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
+  const [isProcessingActive, setIsProcessingActive] = useState(false);
+  const [currentProcessingStep, setCurrentProcessingStep] = useState('');
   const [pipelineState, setPipelineState] = useState<PipelineState>({
     transcription: 'pending',
     removeFillers: 'pending',
@@ -443,15 +445,15 @@ const Refiner = () => {
           <div className="lg:col-span-5">
             {project ? (
               <div className="space-y-4">
-                {/* Video Preview */}
-                <div className="bg-card border border-border rounded-xl overflow-hidden">
-                  <div className="aspect-video bg-muted/50 flex items-center justify-center">
+                {/* Video Preview with Processing Overlay */}
+                <div className="bg-card border border-border rounded-xl overflow-hidden relative">
+                  <div className="aspect-video bg-muted/50 flex items-center justify-center relative">
                     {mediaUrl && project.source_file_type === 'video' ? (
                       <video 
                         src={mediaUrl} 
-                        controls 
+                        controls={!isProcessingActive}
                         preload="metadata"
-                        className="w-full h-full object-contain bg-black"
+                        className={`w-full h-full object-contain bg-black transition-all duration-300 ${isProcessingActive ? 'opacity-60' : ''}`}
                       />
                     ) : mediaUrl && project.source_file_type === 'audio' ? (
                       <div className="flex flex-col items-center gap-4 p-8">
@@ -464,6 +466,27 @@ const Refiner = () => {
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <AlertCircle className="h-8 w-8" />
                         <p>Media preview unavailable</p>
+                      </div>
+                    )}
+                    
+                    {/* Processing Overlay Animation */}
+                    {isProcessingActive && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm">
+                        <div className="relative">
+                          {/* Animated rings */}
+                          <div className="absolute inset-0 animate-ping rounded-full bg-green-500/30 w-24 h-24" />
+                          <div className="absolute inset-2 animate-ping rounded-full bg-green-500/40 w-20 h-20 animation-delay-150" />
+                          <div className="relative z-10 w-24 h-24 rounded-full bg-green-500/20 border-4 border-green-500 flex items-center justify-center">
+                            <Sparkles className="h-10 w-10 text-green-400 animate-pulse" />
+                          </div>
+                        </div>
+                        <div className="mt-6 text-center">
+                          <p className="text-white font-semibold text-lg">{currentProcessingStep || 'Processing...'}</p>
+                          <p className="text-white/70 text-sm mt-1">AI is refining your content</p>
+                        </div>
+                        {/* Scanning line animation */}
+                        <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-green-400 to-transparent animate-[scan_2s_ease-in-out_infinite]" 
+                             style={{ top: '50%', transform: 'translateY(-50%)' }} />
                       </div>
                     )}
                   </div>
@@ -535,6 +558,8 @@ const Refiner = () => {
             mediaUrl={mediaUrl}
             onProcessingComplete={handleProcessingComplete}
             updatePipelineStep={updatePipelineStep}
+            setIsProcessingActive={setIsProcessingActive}
+            setCurrentProcessingStep={setCurrentProcessingStep}
           />
         )}
 
@@ -970,13 +995,17 @@ const NotProcessedCTA = ({
   fileSize,
   mediaUrl,
   onProcessingComplete,
-  updatePipelineStep
+  updatePipelineStep,
+  setIsProcessingActive,
+  setCurrentProcessingStep,
 }: { 
   projectId: string;
   fileSize: number;
   mediaUrl: string | null;
   onProcessingComplete: () => void;
   updatePipelineStep: (step: keyof PipelineState, status: PipelineStatus) => void;
+  setIsProcessingActive: (active: boolean) => void;
+  setCurrentProcessingStep: (step: string) => void;
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState('');
@@ -984,12 +1013,14 @@ const NotProcessedCTA = ({
 
   const handleStartProcessing = async () => {
     setIsProcessing(true);
+    setIsProcessingActive(true);
     try {
       let audioData: string | undefined;
       
       // Check if we need to extract audio first
       if (needsAudioExtraction(fileSize) && mediaUrl) {
-        setProcessingStatus('Extracting audio from video...');
+        setProcessingStatus('Extracting audio...');
+        setCurrentProcessingStep('Extracting audio...');
         toast({
           title: 'Extracting audio...',
           description: 'This may take a moment for large files.',
@@ -998,6 +1029,7 @@ const NotProcessedCTA = ({
         try {
           const result = await extractAudioFromVideo(mediaUrl, (progress) => {
             setProcessingStatus(`Extracting audio... ${progress}%`);
+            setCurrentProcessingStep(`Extracting audio... ${progress}%`);
           });
           
           // Convert blob to base64
@@ -1020,6 +1052,7 @@ const NotProcessedCTA = ({
       
       // Step 1: Transcription
       setProcessingStatus('Transcribing content...');
+      setCurrentProcessingStep('Transcribing content...');
       updatePipelineStep('transcription', 'active');
       toast({
         title: 'Alchifying your content...',
@@ -1037,30 +1070,35 @@ const NotProcessedCTA = ({
 
       // Step 2: Remove Fillers (simulated)
       setProcessingStatus('Detecting filler words...');
+      setCurrentProcessingStep('Removing filler words...');
       updatePipelineStep('removeFillers', 'active');
       await new Promise(r => setTimeout(r, 500));
       updatePipelineStep('removeFillers', 'complete');
 
       // Step 3: Remove Gaps (simulated)
       setProcessingStatus('Analyzing audio gaps...');
+      setCurrentProcessingStep('Removing gaps...');
       updatePipelineStep('removeGaps', 'active');
       await new Promise(r => setTimeout(r, 400));
       updatePipelineStep('removeGaps', 'complete');
 
       // Step 4: Audio Cleanup (simulated)
       setProcessingStatus('Cleaning up audio...');
+      setCurrentProcessingStep('Cleaning up audio...');
       updatePipelineStep('audioCleanup', 'active');
       await new Promise(r => setTimeout(r, 500));
       updatePipelineStep('audioCleanup', 'complete');
 
       // Step 5: Enhance Audio (simulated)
       setProcessingStatus('Enhancing audio quality...');
+      setCurrentProcessingStep('Enhancing audio...');
       updatePipelineStep('enhanceAudio', 'active');
       await new Promise(r => setTimeout(r, 600));
       updatePipelineStep('enhanceAudio', 'complete');
 
       // Step 6: Enhance Video (simulated)
       setProcessingStatus('Enhancing video quality...');
+      setCurrentProcessingStep('Enhancing video...');
       updatePipelineStep('enhanceVideo', 'active');
       await new Promise(r => setTimeout(r, 700));
       updatePipelineStep('enhanceVideo', 'complete');
@@ -1080,7 +1118,9 @@ const NotProcessedCTA = ({
       });
     } finally {
       setIsProcessing(false);
+      setIsProcessingActive(false);
       setProcessingStatus('');
+      setCurrentProcessingStep('');
     }
   };
 
