@@ -137,8 +137,8 @@ const AdminCEOVTO = () => {
         <div className="text-center space-y-2">
           <Badge variant="outline" className="mb-2">EOS Vision/Traction Organizer</Badge>
           <h1 className="text-4xl font-bold">Alchify CEO VTO</h1>
-          <p className="text-muted-foreground text-lg">Vision • Traction • Operations</p>
-          <p className="text-sm text-muted-foreground">Q4 2024 Strategic Planning</p>
+          <p className="text-muted-foreground text-lg">Vision/Traction Organizer</p>
+          <p className="text-sm text-muted-foreground">Q4 2025 Strategic Planning</p>
         </div>
 
         {/* SECTION 2: Vision Components */}
