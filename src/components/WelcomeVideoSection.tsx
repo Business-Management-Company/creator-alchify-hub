@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Play, Pause, Volume2, VolumeX, Maximize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import thumbnailImage from '@/assets/welcome-video-thumbnail.jpg';
 
 interface WelcomeVideoSectionProps {
   videoPath?: string;
@@ -12,17 +13,24 @@ export function WelcomeVideoSection({ videoPath = 'Alchify_Content Gold' }: Welc
   const [isMuted, setIsMuted] = useState(true);
   const [showControls, setShowControls] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [videoLoaded, setVideoLoaded] = useState(false);
+  const [videoError, setVideoError] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Fetch video URL from storage
+  // Fetch video URL from storage - try multiple extensions
   useEffect(() => {
-    const { data } = supabase.storage
-      .from('welcome-videos')
-      .getPublicUrl(videoPath);
+    const tryExtensions = ['', '.mp4', '.mov', '.webm'];
     
-    if (data?.publicUrl) {
-      setVideoUrl(data.publicUrl);
+    // Try each extension
+    for (const ext of tryExtensions) {
+      const { data } = supabase.storage
+        .from('welcome-videos')
+        .getPublicUrl(videoPath + ext);
+      
+      if (data?.publicUrl) {
+        setVideoUrl(data.publicUrl);
+        break;
+      }
     }
   }, [videoPath]);
 
@@ -63,23 +71,35 @@ export function WelcomeVideoSection({ videoPath = 'Alchify_Content Gold' }: Welc
             className="relative rounded-2xl overflow-hidden bg-card border border-border shadow-2xl group cursor-pointer"
             onClick={!isPlaying ? handlePlayClick : undefined}
           >
-            {/* Video Element */}
+            {/* Thumbnail - Always show until video is playing */}
+            {!isPlaying && (
+              <img
+                src={thumbnailImage}
+                alt="Watch how Alchify works"
+                className="w-full aspect-video object-cover"
+              />
+            )}
+
+            {/* Video Element - Hidden until playing */}
             {videoUrl && (
               <video
                 ref={videoRef}
                 src={videoUrl}
                 muted={isMuted}
                 playsInline
-                className="w-full aspect-video object-cover"
+                preload="metadata"
+                className={`w-full aspect-video object-cover ${isPlaying ? 'block' : 'hidden'}`}
                 onEnded={handleVideoEnd}
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
+                onCanPlay={() => setVideoLoaded(true)}
+                onError={() => setVideoError(true)}
               />
             )}
 
             {/* Play Button Overlay - Shows when not playing */}
             {!isPlaying && (
-              <div className="absolute inset-0 flex items-center justify-center bg-background/40 backdrop-blur-[2px] transition-all">
+              <div className="absolute inset-0 flex items-center justify-center bg-background/20 transition-all">
                 <button
                   onClick={handlePlayClick}
                   className="w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-lg hover:scale-110 transition-transform glow-primary"
@@ -89,8 +109,8 @@ export function WelcomeVideoSection({ videoPath = 'Alchify_Content Gold' }: Welc
                 
                 {/* Label */}
                 <div className="absolute bottom-6 left-6">
-                  <p className="text-lg font-semibold text-foreground">Watch: How Alchify Works</p>
-                  <p className="text-sm text-muted-foreground">See the magic in 60 seconds</p>
+                  <p className="text-lg font-semibold text-white drop-shadow-lg">Watch: How Alchify Works</p>
+                  <p className="text-sm text-white/80 drop-shadow-lg">See the magic in 60 seconds</p>
                 </div>
               </div>
             )}
