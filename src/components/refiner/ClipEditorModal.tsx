@@ -14,10 +14,12 @@ import {
   X,
   Monitor,
   Pencil,
+  Save,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -35,6 +37,8 @@ interface Clip {
   renderUrl?: string;
 }
 
+type FormatType = 'tiktok' | 'reels' | 'shorts' | 'landscape' | '9:16' | '16:9' | '1:1';
+
 interface ClipEditorModalProps {
   clip: Clip;
   clipIndex: number;
@@ -42,8 +46,11 @@ interface ClipEditorModalProps {
   isOpen: boolean;
   onClose: () => void;
   onNavigate: (direction: 'prev' | 'next') => void;
+  onSaveClip?: (clip: Clip, index: number) => void;
+  onChangeFormat?: (format: FormatType) => void;
   transcriptContent?: string | null;
   mediaUrl?: string | null;
+  selectedFormat?: string | null;
 }
 
 // Calculate score grades based on the overall score
@@ -74,12 +81,25 @@ export function ClipEditorModal({
   isOpen,
   onClose,
   onNavigate,
+  onSaveClip,
+  onChangeFormat,
   transcriptContent,
   mediaUrl,
+  selectedFormat,
 }: ClipEditorModalProps) {
   const [showTranscriptOnly, setShowTranscriptOnly] = useState(false);
+  const [currentFormat, setCurrentFormat] = useState<FormatType>(
+    (selectedFormat as FormatType) || 'landscape'
+  );
   const videoRef = useRef<HTMLVideoElement>(null);
   const grades = getScoreGrades(clip.score);
+  
+  // Update format when prop changes
+  useEffect(() => {
+    if (selectedFormat) {
+      setCurrentFormat(selectedFormat as FormatType);
+    }
+  }, [selectedFormat]);
   
   // Extract transcript for clip time range
   const clipTranscript = transcriptContent || clip.hook;
@@ -120,13 +140,13 @@ export function ClipEditorModal({
             </div>
           </div>
           
-          {/* Navigation arrows */}
+          {/* Navigation arrows - wrap around to navigate through all clips */}
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="icon"
               onClick={() => onNavigate('prev')}
-              disabled={clipIndex === 0}
+              title="Previous clip"
             >
               <ChevronUp className="h-4 w-4" />
             </Button>
@@ -134,12 +154,9 @@ export function ClipEditorModal({
               variant="outline"
               size="icon"
               onClick={() => onNavigate('next')}
-              disabled={clipIndex === totalClips - 1}
+              title="Next clip"
             >
               <ChevronDown className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" onClick={onClose}>
-              <X className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -186,7 +203,15 @@ export function ClipEditorModal({
           
           {/* Center - Video Preview */}
           <div className="flex-1 p-4">
-            <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+            {/* Dynamic aspect ratio based on format */}
+            <div className={cn(
+              "relative bg-black rounded-lg overflow-hidden mx-auto",
+              currentFormat === 'landscape' || currentFormat === '16:9' 
+                ? "aspect-video w-full" 
+                : currentFormat === '1:1' 
+                  ? "aspect-square max-w-[400px]" 
+                  : "aspect-[9/16] max-w-[280px]"
+            )}>
               {/* Low-res preview badge */}
               <div className="absolute top-3 left-3 z-10 bg-black/60 text-primary text-xs px-2 py-1 rounded font-medium">
                 LOW-RES PREVIEW

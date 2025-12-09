@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useConfetti } from '@/hooks/useConfetti';
 
 interface UploadedFile {
   file: File;
@@ -57,6 +58,7 @@ export function FileUploadArea({
   const [uploading, setUploading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { celebrate } = useConfetti();
 
   const uploadToStorage = async (file: UploadedFile): Promise<UploadedFile> => {
     if (!user) throw new Error('Not authenticated');
@@ -129,6 +131,7 @@ export function FileUploadArea({
       if (uploadedFiles.length > 0) {
         onFilesSelected(uploadedFiles);
         onUploadComplete?.(uploadedFiles);
+        celebrate('first_upload');
         toast({
           title: 'Upload complete!',
           description: `${uploadedFiles.length} file(s) ready to Alchify`,
