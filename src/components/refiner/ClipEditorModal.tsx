@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Heart,
   ThumbsDown,
@@ -78,10 +78,30 @@ export function ClipEditorModal({
   mediaUrl,
 }: ClipEditorModalProps) {
   const [showTranscriptOnly, setShowTranscriptOnly] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const grades = getScoreGrades(clip.score);
   
   // Extract transcript for clip time range
   const clipTranscript = transcriptContent || clip.hook;
+  
+  // Calculate clip start and end times in seconds
+  const clipStartSeconds = timeToSeconds(clip.startTime);
+  const clipEndSeconds = timeToSeconds(clip.endTime);
+  
+  // Set video to clip start time when loaded
+  useEffect(() => {
+    if (videoRef.current && mediaUrl) {
+      videoRef.current.currentTime = clipStartSeconds;
+    }
+  }, [mediaUrl, clipStartSeconds, clip]);
+  
+  // Handle time update to stop at clip end
+  const handleTimeUpdate = () => {
+    if (videoRef.current && videoRef.current.currentTime >= clipEndSeconds) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = clipStartSeconds;
+    }
+  };
   
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
@@ -181,9 +201,16 @@ export function ClipEditorModal({
               
               {mediaUrl ? (
                 <video
+                  ref={videoRef}
                   src={mediaUrl}
                   controls
                   className="w-full h-full object-contain"
+                  onLoadedMetadata={() => {
+                    if (videoRef.current) {
+                      videoRef.current.currentTime = clipStartSeconds;
+                    }
+                  }}
+                  onTimeUpdate={handleTimeUpdate}
                 />
               ) : clip.renderUrl ? (
                 <video
