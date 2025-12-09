@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import { 
   Sparkles, 
@@ -21,7 +21,9 @@ import {
   TrendingUp,
   Film,
   Layout,
-  Settings
+  Settings,
+  Paperclip,
+  Image as ImageIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -30,10 +32,19 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { FileUploadArea } from './FileUploadArea';
+import { ProactiveTips } from './ProactiveTips';
+
+interface UploadedFile {
+  file: File;
+  preview?: string;
+  type: 'video' | 'audio' | 'image' | 'document';
+}
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  attachments?: UploadedFile[];
 }
 
 interface QuickAction {
@@ -108,6 +119,8 @@ export function RefinerAIPanel() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<UploadedFile[]>([]);
+  const [showFileUpload, setShowFileUpload] = useState(false);
   const [projectContext, setProjectContext] = useState<ProjectContext>({
     hasProject: false,
     hasTranscript: false,
@@ -296,15 +309,36 @@ export function RefinerAIPanel() {
     }
   };
 
+  const handleFilesSelected = useCallback((files: UploadedFile[]) => {
+    setSelectedFiles(prev => [...prev, ...files]);
+    setShowFileUpload(false);
+  }, []);
+
+  const handleRemoveFile = useCallback((index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+    if ((!input.trim() && selectedFiles.length === 0) || isLoading) return;
 
     const userMessage = input.trim();
+    const attachments = [...selectedFiles];
+    
+    // Build message content including file info
+    let messageContent = userMessage;
+    if (attachments.length > 0) {
+      const fileNames = attachments.map(f => f.file.name).join(', ');
+      messageContent = messageContent 
+        ? `${messageContent}\n\n[Attached files: ${fileNames}]`
+        : `I've uploaded: ${fileNames}. Please analyze and help me refine this content.`;
+    }
+
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setSelectedFiles([]);
+    setMessages(prev => [...prev, { role: 'user', content: messageContent, attachments }]);
     setIsLoading(true);
 
-    await streamChat(userMessage);
+    await streamChat(messageContent);
     setIsLoading(false);
   };
 
@@ -317,6 +351,13 @@ export function RefinerAIPanel() {
     await streamChat(action.prompt);
     setIsLoading(false);
   };
+
+  const handleTipAction = useCallback((prompt: string) => {
+    setIsOpen(true);
+    setMessages(prev => [...prev, { role: 'user', content: prompt }]);
+    setIsLoading(true);
+    streamChat(prompt).then(() => setIsLoading(false));
+  }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -368,7 +409,12 @@ export function RefinerAIPanel() {
         </div>
 
         {/* Chat Area */}
-        <ScrollArea className="h-[calc(100vh-180px)]" ref={scrollRef}>
+        <ScrollArea className={cn(
+          "transition-all",
+          selectedFiles.length > 0 || showFileUpload 
+            ? "h-[calc(100vh-280px)]" 
+            : "h-[calc(100vh-180px)]"
+        )} ref={scrollRef}>
           <div className="p-4 space-y-4">
             {messages.length === 0 ? (
               <div className="text-center py-8">
@@ -429,6 +475,29 @@ export function RefinerAIPanel() {
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-foreground"
                   )}>
+                    {/* File Attachments */}
+                    {message.attachments && message.attachments.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {message.attachments.map((file, fileIndex) => (
+                          <div
+                            key={fileIndex}
+                            className={cn(
+                              "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs",
+                              message.role === 'user' 
+                                ? "bg-primary-foreground/20" 
+                                : "bg-background/50"
+                            )}
+                          >
+                            {file.type === 'image' && file.preview ? (
+                              <img src={file.preview} alt="" className="h-4 w-4 rounded object-cover" />
+                            ) : (
+                              <Paperclip className="h-3 w-3" />
+                            )}
+                            <span className="truncate max-w-[100px]">{file.file.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <p className="text-sm whitespace-pre-wrap">{message.content || '...'}</p>
                   </div>
                 </div>
@@ -449,20 +518,53 @@ export function RefinerAIPanel() {
         </ScrollArea>
 
         {/* Input Area */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border bg-card">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border bg-card space-y-3">
+          {/* File Upload Area */}
+          {showFileUpload && (
+            <FileUploadArea
+              onFilesSelected={handleFilesSelected}
+              selectedFiles={[]}
+              onRemoveFile={() => {}}
+              compact
+            />
+          )}
+          
+          {/* Selected Files Preview */}
+          {selectedFiles.length > 0 && (
+            <FileUploadArea
+              onFilesSelected={handleFilesSelected}
+              selectedFiles={selectedFiles}
+              onRemoveFile={handleRemoveFile}
+            />
+          )}
+
           <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowFileUpload(!showFileUpload)}
+              className={cn(
+                "flex-shrink-0",
+                showFileUpload && "bg-primary/10 text-primary"
+              )}
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
             <Textarea
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask Refiner AI anything..."
+              placeholder={selectedFiles.length > 0 
+                ? "Describe what you'd like to do with these files..." 
+                : "Ask Refiner AI anything..."
+              }
               className="min-h-[44px] max-h-[120px] resize-none"
               rows={1}
             />
             <Button 
               onClick={handleSend} 
-              disabled={!input.trim() || isLoading}
+              disabled={(!input.trim() && selectedFiles.length === 0) || isLoading}
               size="icon"
               className="flex-shrink-0 bg-gradient-to-r from-primary to-accent hover:opacity-90"
             >
@@ -475,6 +577,9 @@ export function RefinerAIPanel() {
           </div>
         </div>
       </div>
+
+      {/* Proactive Tips */}
+      {!isOpen && <ProactiveTips onTipAction={handleTipAction} />}
 
       {/* Backdrop */}
       {isOpen && (
