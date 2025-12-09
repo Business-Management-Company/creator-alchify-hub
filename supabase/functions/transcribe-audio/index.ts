@@ -76,6 +76,11 @@ serve(async (req) => {
       }
       audioBlob = new Blob([bytes], { type: 'audio/wav' });
       console.log(`Pre-extracted audio size: ${audioBlob.size} bytes (${(audioBlob.size / 1024 / 1024).toFixed(2)} MB)`);
+      
+      // Check if extracted audio is still too large
+      if (audioBlob.size > MAX_FILE_SIZE) {
+        throw new Error(`Audio file is too large (${(audioBlob.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 25MB. Try using a shorter video or reducing audio quality.`);
+      }
     } else {
       // Check file size before processing
       const fileSize = project.source_file_size || 0;

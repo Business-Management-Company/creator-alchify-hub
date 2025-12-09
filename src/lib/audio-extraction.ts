@@ -7,6 +7,36 @@ export interface AudioExtractionResult {
   sizeBytes: number;
 }
 
+// Maximum file size for Whisper API (25MB)
+const MAX_WHISPER_SIZE = 25 * 1024 * 1024;
+
+// Calculate optimal sample rate based on duration to stay under 25MB
+// WAV file size = duration * sampleRate * bytesPerSample * channels + 44 (header)
+// For 25MB limit with 16-bit mono: sampleRate = (25MB - 44) / (duration * 2)
+function getOptimalSampleRate(durationSeconds: number): number {
+  // Target ~22MB to have some buffer
+  const targetSize = 22 * 1024 * 1024;
+  const bytesPerSample = 2; // 16-bit
+  const channels = 1; // mono
+  
+  const maxSampleRate = Math.floor((targetSize - 44) / (durationSeconds * bytesPerSample * channels));
+  
+  // Common speech recognition sample rates (choose the highest that fits)
+  const validRates = [8000, 11025, 12000, 16000, 22050, 24000, 44100];
+  
+  // Find the highest rate that's under our max
+  let optimalRate = 8000; // minimum fallback
+  for (const rate of validRates) {
+    if (rate <= maxSampleRate) {
+      optimalRate = rate;
+    }
+  }
+  
+  console.log(`Video duration: ${durationSeconds}s, optimal sample rate: ${optimalRate}Hz (max allowed: ${maxSampleRate}Hz)`);
+  
+  return optimalRate;
+}
+
 export async function extractAudioFromVideo(
   videoUrl: string,
   onProgress?: (progress: number) => void
@@ -19,8 +49,12 @@ export async function extractAudioFromVideo(
     
     video.onloadedmetadata = async () => {
       const duration = video.duration;
-      const sampleRate = 16000; // 16kHz is good for speech recognition
+      
+      // Calculate optimal sample rate based on duration
+      const sampleRate = getOptimalSampleRate(duration);
       const numberOfChannels = 1; // Mono is fine for transcription
+      
+      console.log(`Extracting audio: ${duration.toFixed(1)}s at ${sampleRate}Hz`);
       
       // Create an OfflineAudioContext for rendering
       const offlineContext = new OfflineAudioContext(
@@ -65,6 +99,14 @@ export async function extractAudioFromVideo(
         audioContext.close();
         
         onProgress?.(100);
+        
+        console.log(`Extracted audio: ${(wavBlob.size / 1024 / 1024).toFixed(2)}MB`);
+        
+        // Final size check
+        if (wavBlob.size > MAX_WHISPER_SIZE) {
+          reject(new Error(`Audio file is still too large (${(wavBlob.size / 1024 / 1024).toFixed(1)}MB). Video may be too long. Maximum supported duration is approximately 20 minutes.`));
+          return;
+        }
         
         resolve({
           audioBlob: wavBlob,
@@ -145,4 +187,11 @@ export function needsAudioExtraction(fileSizeBytes: number): boolean {
 // Estimate compressed audio size (rough approximation)
 export function estimateAudioSize(durationSeconds: number, bitrateKbps: number = 128): number {
   return (durationSeconds * bitrateKbps * 1000) / 8;
+}
+
+// Check if video is too long to process (over ~20 minutes at minimum quality)
+export function isVideoTooLong(durationSeconds: number): boolean {
+  // At 8kHz (minimum), we can support up to about 1562 seconds (~26 minutes)
+  // To be safe, limit to 20 minutes
+  return durationSeconds > 1200;
 }

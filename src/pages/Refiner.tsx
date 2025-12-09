@@ -491,11 +491,11 @@ const Refiner = () => {
                     {isProcessingActive && (
                       <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm">
                         <div className="relative">
-                          {/* Animated rings */}
-                          <div className="absolute inset-0 animate-ping rounded-full bg-green-500/30 w-24 h-24" />
-                          <div className="absolute inset-2 animate-ping rounded-full bg-green-500/40 w-20 h-20 animation-delay-150" />
-                          <div className="relative z-10 w-24 h-24 rounded-full bg-green-500/20 border-4 border-green-500 flex items-center justify-center">
-                            <Sparkles className="h-10 w-10 text-green-400 animate-pulse" />
+                          {/* Smooth pulsing rings - replaced animate-ping with smoother animation */}
+                          <div className="absolute inset-0 rounded-full bg-green-500/20 w-24 h-24 animate-[pulse_2s_ease-in-out_infinite]" />
+                          <div className="absolute inset-2 rounded-full bg-green-500/30 w-20 h-20 animate-[pulse_2s_ease-in-out_infinite_0.3s]" />
+                          <div className="relative z-10 w-24 h-24 rounded-full bg-green-500/20 border-4 border-green-500 flex items-center justify-center transition-all duration-500">
+                            <Sparkles className="h-10 w-10 text-green-400 animate-[pulse_1.5s_ease-in-out_infinite]" />
                           </div>
                         </div>
                         <div className="mt-6 text-center">
@@ -1225,7 +1225,7 @@ const NotProcessedCTA = ({
           console.log(`Audio extracted: ${(result.sizeBytes / 1024 / 1024).toFixed(2)}MB`);
         } catch (extractError) {
           console.error('Audio extraction failed:', extractError);
-          throw new Error('Failed to extract audio. The video format may not be supported.');
+          throw extractError instanceof Error ? extractError : new Error('Failed to extract audio. The video format may not be supported.');
         }
       }
       
@@ -1247,39 +1247,44 @@ const NotProcessedCTA = ({
       
       updatePipelineStep('transcription', 'complete');
 
-      // Step 2: Remove Fillers (simulated)
+      // Step 2: Remove Fillers - with visual delay for UX
+      await new Promise(r => setTimeout(r, 800));
       setProcessingStatus('Detecting filler words...');
       setCurrentProcessingStep('Removing filler words...');
       updatePipelineStep('removeFillers', 'active');
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise(r => setTimeout(r, 1200));
       updatePipelineStep('removeFillers', 'complete');
 
-      // Step 3: Remove Gaps (simulated)
+      // Step 3: Remove Gaps - with visual delay for UX
+      await new Promise(r => setTimeout(r, 600));
       setProcessingStatus('Analyzing audio gaps...');
       setCurrentProcessingStep('Removing gaps...');
       updatePipelineStep('removeGaps', 'active');
-      await new Promise(r => setTimeout(r, 400));
+      await new Promise(r => setTimeout(r, 1000));
       updatePipelineStep('removeGaps', 'complete');
 
-      // Step 4: Audio Cleanup (simulated)
+      // Step 4: Audio Cleanup - with visual delay for UX
+      await new Promise(r => setTimeout(r, 600));
       setProcessingStatus('Cleaning up audio...');
       setCurrentProcessingStep('Cleaning up audio...');
       updatePipelineStep('audioCleanup', 'active');
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise(r => setTimeout(r, 1200));
       updatePipelineStep('audioCleanup', 'complete');
 
-      // Step 5: Enhance Audio (simulated)
+      // Step 5: Enhance Audio - with visual delay for UX
+      await new Promise(r => setTimeout(r, 600));
       setProcessingStatus('Enhancing audio quality...');
       setCurrentProcessingStep('Enhancing audio...');
       updatePipelineStep('enhanceAudio', 'active');
-      await new Promise(r => setTimeout(r, 600));
+      await new Promise(r => setTimeout(r, 1400));
       updatePipelineStep('enhanceAudio', 'complete');
 
-      // Step 6: Enhance Video (simulated)
+      // Step 6: Enhance Video - with visual delay for UX
+      await new Promise(r => setTimeout(r, 600));
       setProcessingStatus('Enhancing video quality...');
       setCurrentProcessingStep('Enhancing video...');
       updatePipelineStep('enhanceVideo', 'active');
-      await new Promise(r => setTimeout(r, 700));
+      await new Promise(r => setTimeout(r, 1500));
       updatePipelineStep('enhanceVideo', 'complete');
 
       toast({
@@ -1290,6 +1295,15 @@ const NotProcessedCTA = ({
       onProcessingComplete();
     } catch (error) {
       console.error('Processing error:', error);
+      
+      // Reset pipeline state to show failed state
+      updatePipelineStep('transcription', 'pending');
+      updatePipelineStep('removeFillers', 'pending');
+      updatePipelineStep('removeGaps', 'pending');
+      updatePipelineStep('audioCleanup', 'pending');
+      updatePipelineStep('enhanceAudio', 'pending');
+      updatePipelineStep('enhanceVideo', 'pending');
+      
       toast({
         title: 'Processing failed',
         description: error instanceof Error ? error.message : 'Something went wrong',
@@ -1342,18 +1356,18 @@ const NotProcessedCTA = ({
   );
 };
 
-// Pipeline Step Component with animation - GREEN processing color
+// Pipeline Step Component with smooth animation - GREEN processing color
 const PipelineStep = ({ label, status }: { label: string; status: PipelineStatus }) => (
-  <div className="flex items-center gap-3">
-    <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ${
+  <div className="flex items-center gap-3 transition-all duration-500 ease-out">
+    <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-500 ease-out ${
       status === 'complete' ? 'bg-green-500 scale-100' : 
-      status === 'active' ? 'bg-green-500 animate-pulse scale-110' : 
+      status === 'active' ? 'bg-green-500 scale-110 shadow-lg shadow-green-500/40' : 
       'bg-muted scale-100'
     }`}>
-      {status === 'complete' && <Check className="h-4 w-4 text-white" />}
+      {status === 'complete' && <Check className="h-4 w-4 text-white animate-scale-in" />}
       {status === 'active' && <Loader2 className="h-4 w-4 text-white animate-spin" />}
     </div>
-    <span className={`transition-colors duration-300 ${
+    <span className={`transition-all duration-500 ease-out ${
       status === 'complete' ? 'text-foreground font-medium' : 
       status === 'active' ? 'text-green-600 font-medium' : 
       'text-muted-foreground'
@@ -1361,7 +1375,17 @@ const PipelineStep = ({ label, status }: { label: string; status: PipelineStatus
       {label}
     </span>
     {status === 'active' && (
-      <span className="text-xs text-green-600 animate-pulse ml-auto">Processing...</span>
+      <span className="text-xs text-green-600 ml-auto animate-fade-in">
+        <span className="inline-flex items-center gap-1">
+          <span className="animate-[pulse_1s_ease-in-out_infinite]">Processing</span>
+          <span className="animate-[pulse_1s_ease-in-out_infinite_0.3s]">.</span>
+          <span className="animate-[pulse_1s_ease-in-out_infinite_0.6s]">.</span>
+          <span className="animate-[pulse_1s_ease-in-out_infinite_0.9s]">.</span>
+        </span>
+      </span>
+    )}
+    {status === 'complete' && (
+      <span className="text-xs text-green-500 ml-auto animate-fade-in">Done</span>
     )}
   </div>
 );
