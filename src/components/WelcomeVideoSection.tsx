@@ -1,0 +1,144 @@
+import { useState, useRef, useEffect } from 'react';
+import { Play, Pause, Volume2, VolumeX, Maximize } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+
+interface WelcomeVideoSectionProps {
+  videoPath?: string;
+}
+
+export function WelcomeVideoSection({ videoPath = 'Alchify_Content Gold' }: WelcomeVideoSectionProps) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const [showControls, setShowControls] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Fetch video URL from storage
+  useEffect(() => {
+    const { data } = supabase.storage
+      .from('welcome-videos')
+      .getPublicUrl(videoPath);
+    
+    if (data?.publicUrl) {
+      setVideoUrl(data.publicUrl);
+    }
+  }, [videoPath]);
+
+  const handlePlayClick = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+      setShowControls(true);
+    }
+  };
+
+  const handleVideoEnd = () => {
+    setIsPlaying(false);
+    setShowControls(false);
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
+    }
+  };
+
+  const handleFullscreen = () => {
+    if (videoRef.current) {
+      if (videoRef.current.requestFullscreen) {
+        videoRef.current.requestFullscreen();
+      }
+    }
+  };
+
+  return (
+    <section className="py-16 bg-gradient-to-b from-background to-card/50">
+      <div className="container mx-auto px-4">
+        <div className="max-w-4xl mx-auto">
+          {/* Video Container */}
+          <div 
+            className="relative rounded-2xl overflow-hidden bg-card border border-border shadow-2xl group cursor-pointer"
+            onClick={!isPlaying ? handlePlayClick : undefined}
+          >
+            {/* Video Element */}
+            {videoUrl && (
+              <video
+                ref={videoRef}
+                src={videoUrl}
+                muted={isMuted}
+                playsInline
+                className="w-full aspect-video object-cover"
+                onEnded={handleVideoEnd}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+              />
+            )}
+
+            {/* Play Button Overlay - Shows when not playing */}
+            {!isPlaying && (
+              <div className="absolute inset-0 flex items-center justify-center bg-background/40 backdrop-blur-[2px] transition-all">
+                <button
+                  onClick={handlePlayClick}
+                  className="w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-lg hover:scale-110 transition-transform glow-primary"
+                >
+                  <Play className="h-8 w-8 text-primary-foreground ml-1" fill="currentColor" />
+                </button>
+                
+                {/* Label */}
+                <div className="absolute bottom-6 left-6">
+                  <p className="text-lg font-semibold text-foreground">Watch: How Alchify Works</p>
+                  <p className="text-sm text-muted-foreground">See the magic in 60 seconds</p>
+                </div>
+              </div>
+            )}
+
+            {/* Video Controls - Shows when playing */}
+            {isPlaying && showControls && (
+              <div 
+                className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handlePlayClick}
+                    className="text-foreground hover:bg-foreground/20"
+                  >
+                    {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsMuted(!isMuted)}
+                    className="text-foreground hover:bg-foreground/20"
+                  >
+                    {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                  </Button>
+                  
+                  <div className="flex-1" />
+                  
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleFullscreen}
+                    className="text-foreground hover:bg-foreground/20"
+                  >
+                    <Maximize className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Decorative glow */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-accent/20 to-primary/20 rounded-2xl blur-xl -z-10 opacity-50" />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}

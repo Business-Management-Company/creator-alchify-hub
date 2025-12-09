@@ -6,7 +6,7 @@ import HowItWorksSection from "@/components/HowItWorksSection";
 import CreatorsSection from "@/components/CreatorsSection";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
-import { WelcomeVideoModal } from "@/components/WelcomeVideoModal";
+import { WelcomeVideoSection } from "@/components/WelcomeVideoSection";
 
 const Index = () => {
   return (
@@ -22,6 +22,7 @@ const Index = () => {
         <Navbar />
         <main>
           <HeroSection />
+          <WelcomeVideoSection videoPath="Alchify_Content Gold" />
           <FeaturesSection />
           <HowItWorksSection />
           <CreatorsSection />
@@ -29,9 +30,6 @@ const Index = () => {
         </main>
         <Footer />
       </div>
-      
-      {/* Welcome video popup - shows after 5 seconds for first-time visitors */}
-      <WelcomeVideoModal delay={5000} videoPath="Alchify_Content Gold" />
     </>
   );
 };
