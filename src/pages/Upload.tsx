@@ -175,6 +175,14 @@ const Upload = () => {
     setUploadError(null);
     
     try {
+      // Check if this is user's first project
+      const { count: existingCount } = await supabase
+        .from('projects')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+      
+      const isFirstUpload = (existingCount || 0) === 0;
+      
       // Generate unique file path
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
@@ -255,9 +263,13 @@ const Upload = () => {
       
       setUploadProgress(100);
       
-      // Navigate to refiner
+      // Navigate to refiner (or dashboard with celebration for first upload)
       setTimeout(() => {
-        navigate(`/refiner/${project.id}`);
+        if (isFirstUpload) {
+          navigate(`/dashboard?celebration=first-upload`);
+        } else {
+          navigate(`/refiner/${project.id}`);
+        }
       }, 500);
       
     } catch (error) {

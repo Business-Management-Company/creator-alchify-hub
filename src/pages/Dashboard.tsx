@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { 
   Upload, 
@@ -12,13 +12,15 @@ import {
   BarChart3,
   Video,
   Music,
-  Loader2
+  Loader2,
+  PartyPopper
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/layout/AppLayout';
 import { UsageIndicator } from '@/components/UsageIndicator';
+import confetti from 'canvas-confetti';
 
 interface Project {
   id: string;
@@ -31,9 +33,12 @@ interface Project {
 const Dashboard = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
   const [projectCount, setProjectCount] = useState(0);
   const [loadingProjects, setLoadingProjects] = useState(true);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationMessage, setCelebrationMessage] = useState('');
 
   useEffect(() => {
     if (!loading && !user) {
@@ -46,6 +51,66 @@ const Dashboard = () => {
       fetchRecentProjects();
     }
   }, [user]);
+
+  // Check for celebration triggers from URL params
+  useEffect(() => {
+    const celebration = searchParams.get('celebration');
+    if (celebration === 'first-upload') {
+      triggerCelebration('Congrats! You uploaded your first project! 🎉');
+      // Remove the param after showing
+      searchParams.delete('celebration');
+      setSearchParams(searchParams, { replace: true });
+    } else if (celebration === 'first-clip') {
+      triggerCelebration('Amazing! Your first clip is ready! 🎬');
+      searchParams.delete('celebration');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams]);
+
+  const triggerCelebration = (message: string) => {
+    setCelebrationMessage(message);
+    setShowCelebration(true);
+    
+    // Fire confetti
+    const duration = 3000;
+    const end = Date.now() + duration;
+
+    const colors = ['#f59e0b', '#8b5cf6', '#22c55e', '#3b82f6', '#ec4899'];
+
+    (function frame() {
+      confetti({
+        particleCount: 3,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0, y: 0.7 },
+        colors: colors
+      });
+      confetti({
+        particleCount: 3,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1, y: 0.7 },
+        colors: colors
+      });
+
+      if (Date.now() < end) {
+        requestAnimationFrame(frame);
+      }
+    }());
+
+    // Also fire a burst from center
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: colors
+    });
+
+    // Hide celebration message after delay
+    setTimeout(() => {
+      setShowCelebration(false);
+    }, 5000);
+  };
 
   const fetchRecentProjects = async () => {
     try {
@@ -100,6 +165,17 @@ const Dashboard = () => {
       </Helmet>
       
       <AppLayout>
+        {/* Celebration Banner */}
+        {showCelebration && (
+          <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
+            <div className="bg-gradient-to-r from-primary via-accent to-primary text-primary-foreground px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-3">
+              <PartyPopper className="h-6 w-6 animate-bounce" />
+              <span className="text-lg font-bold">{celebrationMessage}</span>
+              <PartyPopper className="h-6 w-6 animate-bounce" />
+            </div>
+          </div>
+        )}
+
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">
@@ -159,28 +235,27 @@ const Dashboard = () => {
           </div>
         )}
         
-        {/* Main Cards */}
-        <div className="grid md:grid-cols-3 gap-6 mb-6">
-          {/* Upload CTA - Enhanced visual design */}
+        {/* Unified Upload + Recent Projects Section */}
+        <div className="bg-gradient-to-br from-card via-card to-card/50 border border-border hover:border-primary/20 rounded-2xl p-6 transition-all duration-300 shadow-lg shadow-background/50 mb-6">
+          {/* Upload CTA at top */}
           <Link 
             to="/upload"
-            className="md:col-span-2 group relative overflow-hidden rounded-2xl border-2 border-dashed border-primary/30 hover:border-primary/60 transition-all duration-300"
+            className="group relative overflow-hidden rounded-xl border-2 border-dashed border-primary/30 hover:border-primary/60 transition-all duration-300 block mb-6"
           >
             {/* Animated gradient background */}
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-accent/5 to-transparent" />
             <div className="absolute top-0 right-0 w-72 h-72 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:bg-primary/30 transition-colors duration-500" />
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-accent/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3 group-hover:bg-accent/30 transition-colors duration-500" />
             
             {/* Content */}
-            <div className="relative z-10 p-6 flex items-center gap-6">
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/10 border border-primary/20 group-hover:scale-110 transition-transform duration-300 shrink-0">
-                <Upload className="h-8 w-8 text-primary" />
+            <div className="relative z-10 p-5 flex items-center gap-5">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 border border-primary/20 group-hover:scale-110 transition-transform duration-300 shrink-0">
+                <Upload className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-xl font-bold text-foreground mb-1 group-hover:text-primary transition-colors">
+                <h2 className="text-lg font-bold text-foreground mb-0.5 group-hover:text-primary transition-colors">
                   Upload New Content
                 </h2>
-                <p className="text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Drop raw video or audio files to transcribe, clean up, and create clips.
                 </p>
               </div>
@@ -193,66 +268,58 @@ const Dashboard = () => {
                 <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
             </div>
-            
-            {/* Subtle pattern overlay */}
-            <div className="absolute inset-0 opacity-5" style={{
-              backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)',
-              backgroundSize: '24px 24px'
-            }} />
           </Link>
           
-          {/* Recent Projects - Enhanced card */}
-          <div className="bg-gradient-to-br from-card via-card to-card/50 border border-border hover:border-primary/20 rounded-2xl p-6 transition-all duration-300 shadow-lg shadow-background/50">
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <FolderOpen className="h-5 w-5 text-primary" />
-                </div>
-                <h3 className="font-semibold text-foreground">Recent Projects</h3>
+          {/* Recent Projects below */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <FolderOpen className="h-5 w-5 text-primary" />
               </div>
-              <Button variant="ghost" size="sm" className="text-primary hover:text-primary hover:bg-primary/10 font-medium" asChild>
-                <Link to="/projects">View All</Link>
-              </Button>
+              <h3 className="font-semibold text-foreground">Recent Projects</h3>
             </div>
-            
-            {loadingProjects ? (
-              <div className="flex items-center justify-center h-48">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : recentProjects.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-48 text-center bg-muted/20 rounded-xl border border-dashed border-border">
-                <div className="p-3 rounded-full bg-muted/50 mb-3">
-                  <FolderOpen className="h-8 w-8 text-muted-foreground/50" />
-                </div>
-                <p className="text-muted-foreground text-sm font-medium">No projects yet</p>
-                <p className="text-muted-foreground/70 text-xs">Upload content to get started</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {recentProjects.slice(0, 4).map((project, index) => (
-                  <Link
-                    key={project.id}
-                    to={`/refiner/${project.id}`}
-                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-primary/5 border border-transparent hover:border-primary/20 transition-all duration-200 group/item animate-fade-in"
-                    style={{ animationDelay: `${index * 50}ms` }}
-                  >
-                    <div className="p-2 rounded-lg bg-gradient-to-br from-primary/15 to-accent/10 group-hover/item:from-primary/25 transition-colors">
-                      {project.source_file_type === 'video' ? (
-                        <Video className="h-4 w-4 text-primary" />
-                      ) : (
-                        <Music className="h-4 w-4 text-primary" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate group-hover/item:text-primary transition-colors">{project.title}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(project.created_at)}</p>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover/item:opacity-100 group-hover/item:translate-x-1 transition-all" />
-                  </Link>
-                ))}
-              </div>
-            )}
+            <Button variant="ghost" size="sm" className="text-primary hover:text-primary hover:bg-primary/10 font-medium" asChild>
+              <Link to="/projects">View All</Link>
+            </Button>
           </div>
+          
+          {loadingProjects ? (
+            <div className="flex items-center justify-center h-32">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : recentProjects.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-32 text-center bg-muted/20 rounded-xl border border-dashed border-border">
+              <div className="p-3 rounded-full bg-muted/50 mb-3">
+                <FolderOpen className="h-8 w-8 text-muted-foreground/50" />
+              </div>
+              <p className="text-muted-foreground text-sm font-medium">No projects yet</p>
+              <p className="text-muted-foreground/70 text-xs">Upload content to get started</p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-2">
+              {recentProjects.slice(0, 6).map((project, index) => (
+                <Link
+                  key={project.id}
+                  to={`/refiner/${project.id}`}
+                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-primary/5 border border-transparent hover:border-primary/20 transition-all duration-200 group/item animate-fade-in"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <div className="p-2 rounded-lg bg-gradient-to-br from-primary/15 to-accent/10 group-hover/item:from-primary/25 transition-colors">
+                    {project.source_file_type === 'video' ? (
+                      <Video className="h-4 w-4 text-primary" />
+                    ) : (
+                      <Music className="h-4 w-4 text-primary" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate group-hover/item:text-primary transition-colors">{project.title}</p>
+                    <p className="text-xs text-muted-foreground">{formatDate(project.created_at)}</p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover/item:opacity-100 group-hover/item:translate-x-1 transition-all" />
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
         
         {/* Usage & Revive Section */}
