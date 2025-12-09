@@ -82,8 +82,39 @@ function timeToSeconds(time: string): number {
   return parts[0] * 3600 + parts[1] * 60 + parts[2];
 }
 
-// Parse transcript to get caption segments for a specific time range
-// Now uses word-level timing from Whisper for accurate sync
+// Extract individual words with timing for Creatomate's word-by-word animation
+function extractWordsForClip(
+  startTime: number, 
+  endTime: number,
+  segments?: any[] // Segments with word-level timing from database
+): { word: string; start: number; end: number }[] {
+  if (!segments || segments.length === 0) {
+    console.log('No word-level segments available');
+    return [];
+  }
+
+  const words: { word: string; start: number; end: number }[] = [];
+  
+  for (const segment of segments) {
+    if (!segment.words) continue;
+    
+    for (const wordData of segment.words) {
+      // Skip words outside our clip range
+      if (wordData.end < startTime || wordData.start > endTime) continue;
+      
+      words.push({
+        word: wordData.word.trim(),
+        start: wordData.start,
+        end: wordData.end,
+      });
+    }
+  }
+  
+  console.log(`Extracted ${words.length} words for clip (${startTime}s - ${endTime}s)`);
+  return words;
+}
+
+// Legacy: Parse transcript to get caption segments for a specific time range
 function extractCaptionsForClip(
   transcriptContent: string, 
   startTime: number, 
@@ -335,38 +366,58 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
 
     toast({
       title: 'Render started!',
-      description: `Creating your ${platform} clip with animated captions...`,
+      description: `Creating your ${platform} clip with animated word-by-word captions...`,
     });
 
     try {
-      // If we have a media URL, try real rendering
+      // If we have a media URL, try real rendering with Creatomate
       if (mediaUrl) {
         const startTime = timeToSeconds(clip.startTime);
         const endTime = timeToSeconds(clip.endTime);
 
-        const captions = transcriptContent 
-          ? extractCaptionsForClip(transcriptContent, startTime, endTime, transcriptSegments || undefined)
-          : [];
+        // Extract word-level timing for Creatomate's animated captions
+        const words = extractWordsForClip(startTime, endTime, transcriptSegments || undefined);
+        
+        // Map caption size to font size
+        const fontSizeMap = { small: 60, medium: 80, large: 100 };
+        const fontSize = fontSizeMap[captionStyle.size] || 80;
 
-        const { data, error } = await supabase.functions.invoke('render-clip', {
+        console.log('Rendering with Creatomate:', { 
+          platform, 
+          startTime, 
+          endTime, 
+          wordCount: words.length,
+          captionStyle 
+        });
+
+        const { data, error } = await supabase.functions.invoke('render-creatomate', {
           body: {
             action: 'render',
             videoUrl: mediaUrl,
+            words,
+            platform: platform as 'tiktok' | 'reels' | 'shorts' | 'landscape',
             startTime,
             endTime,
-            title: clip.title,
-            platform: platform as 'tiktok' | 'reels' | 'shorts',
-            captions,
-            captionStyle,
+            captionStyle: {
+              fontFamily: 'Montserrat',
+              fontSize,
+              textColor: captionStyle.color,
+              highlightColor: '#FFD700', // Gold highlight for active word
+              backgroundColor: captionStyle.backgroundColor,
+              position: captionStyle.position,
+            },
           }
         });
 
         if (!error && !data?.error && data?.renderId) {
+          console.log('Creatomate render started:', data);
           setClips(prev => prev.map((c, i) => 
             i === index ? { ...c, renderId: data.renderId } : c
           ));
           pollRenderStatus(index, data.renderId);
           return;
+        } else {
+          console.error('Creatomate render failed:', error || data?.error);
         }
       }
 
@@ -377,7 +428,7 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
         i === index ? { 
           ...c, 
           renderStatus: 'done' as const,
-          renderUrl: 'https://shotstack-api-stage-output.s3.ap-southeast-2.amazonaws.com/demo/demo-clip.mp4'
+          renderUrl: 'https://creatomate.com/files/assets/b5a6e200-b7e3-4e67-8a4e-c213c0f0da05.mp4'
         } : c
       ));
 
@@ -394,7 +445,7 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
         i === index ? { 
           ...c, 
           renderStatus: 'done' as const,
-          renderUrl: 'https://shotstack-api-stage-output.s3.ap-southeast-2.amazonaws.com/demo/demo-clip.mp4'
+          renderUrl: 'https://creatomate.com/files/assets/b5a6e200-b7e3-4e67-8a4e-c213c0f0da05.mp4'
         } : c
       ));
       toast({
@@ -416,7 +467,8 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
 
     const checkStatus = async () => {
       try {
-        const { data, error } = await supabase.functions.invoke('render-clip', {
+        // Use Creatomate for status polling
+        const { data, error } = await supabase.functions.invoke('render-creatomate', {
           body: { action: 'status', renderId }
         });
 
@@ -424,13 +476,21 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
           throw new Error(error?.message || data?.error);
         }
 
-        if (data.status === 'done' && data.url) {
+        console.log('Creatomate status:', data);
+
+        // Creatomate uses 'succeeded' for completion
+        if ((data.status === 'succeeded' || data.status === 'done') && data.url) {
           setClips(prev => prev.map((c, i) => 
             i === index ? { ...c, renderStatus: 'done' as const, renderUrl: data.url } : c
           ));
+          setRenderingClips(prev => {
+            const next = new Set(prev);
+            next.delete(index);
+            return next;
+          });
           toast({
             title: 'Clip ready!',
-            description: 'Your video clip with captions is ready to download.',
+            description: 'Your video clip with animated captions is ready to download.',
           });
           return;
         }
@@ -439,9 +499,14 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
           setClips(prev => prev.map((c, i) => 
             i === index ? { ...c, renderStatus: 'failed' as const } : c
           ));
+          setRenderingClips(prev => {
+            const next = new Set(prev);
+            next.delete(index);
+            return next;
+          });
           toast({
             title: 'Render failed',
-            description: 'The video render failed. Please try again.',
+            description: data.error_message || 'The video render failed. Please try again.',
             variant: 'destructive',
           });
           return;
@@ -538,7 +603,7 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
               className="w-full rounded-lg aspect-[9/16] max-h-[70vh] object-contain bg-black"
             />
             <p className="text-xs text-muted-foreground mt-2 text-center">
-              Note: Shotstack watermark appears on free tier renders
+              Rendered with Creatomate • Animated word-by-word captions
             </p>
           </div>
         </div>
