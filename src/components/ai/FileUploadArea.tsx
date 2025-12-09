@@ -1,11 +1,17 @@
 import { useCallback, useState } from 'react';
-import { Upload, X, FileVideo, FileAudio, Image, File, Loader2 } from 'lucide-react';
+import { Upload, X, FileVideo, FileAudio, Image, File, Loader2, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface UploadedFile {
   file: File;
   preview?: string;
   type: 'video' | 'audio' | 'image' | 'document';
+  uploadProgress?: number;
+  uploadedUrl?: string;
+  projectId?: string;
 }
 
 interface FileUploadAreaProps {
@@ -14,6 +20,8 @@ interface FileUploadAreaProps {
   onRemoveFile: (index: number) => void;
   isUploading?: boolean;
   compact?: boolean;
+  autoUpload?: boolean;
+  onUploadComplete?: (files: UploadedFile[]) => void;
 }
 
 const getFileType = (file: File): UploadedFile['type'] => {
@@ -42,8 +50,94 @@ export function FileUploadArea({
   onRemoveFile,
   isUploading = false,
   compact = false,
+  autoUpload = false,
+  onUploadComplete,
 }: FileUploadAreaProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  const uploadToStorage = async (file: UploadedFile): Promise<UploadedFile> => {
+    if (!user) throw new Error('Not authenticated');
+
+    const fileExt = file.file.name.split('.').pop();
+    const fileName = `${crypto.randomUUID()}.${fileExt}`;
+    const filePath = `${user.id}/${fileName}`;
+
+    // Upload to storage
+    const { error: uploadError } = await supabase.storage
+      .from('media-uploads')
+      .upload(filePath, file.file);
+
+    if (uploadError) throw uploadError;
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('media-uploads')
+      .getPublicUrl(filePath);
+
+    // Create project
+    const { data: project, error: projectError } = await supabase
+      .from('projects')
+      .insert({
+        user_id: user.id,
+        title: file.file.name.replace(/\.[^/.]+$/, ''),
+        source_file_url: urlData.publicUrl,
+        source_file_name: file.file.name,
+        source_file_size: file.file.size,
+        source_file_type: file.type,
+        status: 'uploaded',
+      })
+      .select()
+      .single();
+
+    if (projectError) throw projectError;
+
+    return {
+      ...file,
+      uploadedUrl: urlData.publicUrl,
+      projectId: project.id,
+    };
+  };
+
+  const handleFilesWithUpload = async (files: UploadedFile[]) => {
+    if (!autoUpload) {
+      onFilesSelected(files);
+      return;
+    }
+
+    setUploading(true);
+    
+    try {
+      const uploadedFiles: UploadedFile[] = [];
+      
+      for (const file of files) {
+        try {
+          const uploaded = await uploadToStorage(file);
+          uploadedFiles.push(uploaded);
+        } catch (error) {
+          console.error('Upload error:', error);
+          toast({
+            title: 'Upload failed',
+            description: `Failed to upload ${file.file.name}`,
+            variant: 'destructive',
+          });
+        }
+      }
+
+      if (uploadedFiles.length > 0) {
+        onFilesSelected(uploadedFiles);
+        onUploadComplete?.(uploadedFiles);
+        toast({
+          title: 'Upload complete!',
+          description: `${uploadedFiles.length} file(s) ready to Alchify`,
+        });
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -57,9 +151,9 @@ export function FileUploadArea({
         preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined,
       }));
 
-      onFilesSelected(uploadedFiles);
+      handleFilesWithUpload(uploadedFiles);
     },
-    [onFilesSelected]
+    [onFilesSelected, autoUpload]
   );
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -81,9 +175,21 @@ export function FileUploadArea({
       preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined,
     }));
 
-    onFilesSelected(uploadedFiles);
+    handleFilesWithUpload(uploadedFiles);
     e.target.value = ''; // Reset input
   };
+
+  if (uploading) {
+    return (
+      <div className={cn(
+        "flex items-center justify-center gap-3 p-4 rounded-lg",
+        "bg-primary/5 border-2 border-primary/20"
+      )}>
+        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+        <span className="text-sm font-medium">Uploading and creating project...</span>
+      </div>
+    );
+  }
 
   if (selectedFiles.length > 0) {
     return (
@@ -93,7 +199,9 @@ export function FileUploadArea({
             key={index}
             className={cn(
               "flex items-center gap-3 p-2 rounded-lg",
-              "bg-muted/50 border border-border"
+              uploadedFile.uploadedUrl 
+                ? "bg-green-500/10 border border-green-500/30" 
+                : "bg-muted/50 border border-border"
             )}
           >
             {uploadedFile.preview ? (
@@ -113,9 +221,14 @@ export function FileUploadArea({
               </p>
               <p className="text-xs text-muted-foreground">
                 {(uploadedFile.file.size / 1024 / 1024).toFixed(2)} MB
+                {uploadedFile.uploadedUrl && (
+                  <span className="text-green-600 ml-2">• Uploaded</span>
+                )}
               </p>
             </div>
-            {isUploading ? (
+            {uploadedFile.uploadedUrl ? (
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+            ) : isUploading ? (
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
             ) : (
               <button

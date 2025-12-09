@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { 
   Sparkles, 
   X, 
@@ -41,6 +41,8 @@ interface UploadedFile {
   file: File;
   preview?: string;
   type: 'video' | 'audio' | 'image' | 'document';
+  uploadedUrl?: string;
+  projectId?: string;
 }
 
 // Detect actionable suggestions in AI responses - more aggressive detection
@@ -103,13 +105,23 @@ interface QuickPrompt {
 const followUpPrompts: QuickPrompt[] = [
   { label: 'Alchify it', icon: Wand2, prompt: 'Alchify this content - apply full refinement with transcription, audio cleanup, and filler word removal' },
   { label: 'Transcript only', icon: FileText, prompt: 'Just generate a transcript from this content without other processing' },
-  { label: 'Instagram Story', icon: ImageIcon, prompt: 'Optimize this content for Instagram Stories - vertical 9:16 format with captions' },
+  { label: 'Create clips', icon: Scissors, prompt: 'Create viral clips from this content for TikTok and Instagram' },
+];
+
+// Follow-up prompts specifically for after upload
+const postUploadPrompts: QuickPrompt[] = [
+  { label: '✨ Alchify Now', icon: Wand2, prompt: 'Start Alchifying my uploaded content now - transcribe, clean audio, remove filler words' },
+  { label: 'Just transcribe', icon: FileText, prompt: 'Just transcribe my uploaded content without other processing' },
+  { label: 'Create TikTok clips', icon: Scissors, prompt: 'After transcribing, create viral TikTok clips with animated captions' },
+  { label: 'What can you do?', icon: Sparkles, prompt: 'What refinement options are available for my uploaded content?' },
 ];
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   attachments?: UploadedFile[];
+  isUploadConfirmation?: boolean;
+  uploadedProjectId?: string;
 }
 
 interface QuickAction {
@@ -187,6 +199,8 @@ export function RefinerAIPanel() {
   const [selectedFiles, setSelectedFiles] = useState<UploadedFile[]>([]);
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [highlightTargets, setHighlightTargets] = useState<ReturnType<typeof detectUIReferences>>([]);
+  const [justUploaded, setJustUploaded] = useState(false);
+  const [lastUploadedProjectId, setLastUploadedProjectId] = useState<string | null>(null);
   const [projectContext, setProjectContext] = useState<ProjectContext>({
     hasProject: false,
     hasTranscript: false,
@@ -196,6 +210,7 @@ export function RefinerAIPanel() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const location = useLocation();
   const params = useParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -388,6 +403,28 @@ export function RefinerAIPanel() {
     setShowFileUpload(false);
   }, []);
 
+  const handleUploadComplete = useCallback((files: UploadedFile[]) => {
+    // Files have been uploaded and projects created
+    const uploadedWithProjects = files.filter(f => f.projectId);
+    if (uploadedWithProjects.length > 0) {
+      const projectId = uploadedWithProjects[0].projectId;
+      setLastUploadedProjectId(projectId || null);
+      setJustUploaded(true);
+      
+      const fileNames = files.map(f => f.file.name).join(', ');
+      
+      // Add upload confirmation message
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: `✅ **Upload complete!** I've received your file: **${fileNames}**\n\nYour content is now ready to be refined. What would you like me to do?\n\n• **Alchify it** - Full refinement with transcription, audio cleanup, and filler removal\n• **Transcribe only** - Generate a transcript without other processing\n• **Create clips** - Generate viral clips for TikTok, Instagram, and YouTube\n\nOr tell me what specific refinement you need!`,
+        isUploadConfirmation: true,
+        uploadedProjectId: projectId,
+      }]);
+    }
+    setSelectedFiles([]);
+    setShowFileUpload(false);
+  }, []);
+
   const handleRemoveFile = useCallback((index: number) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   }, []);
@@ -401,12 +438,24 @@ export function RefinerAIPanel() {
     // Build message content including file info
     let messageContent = userMessage;
     if (attachments.length > 0) {
-      const fileNames = attachments.map(f => f.file.name).join(', ');
-      messageContent = messageContent 
-        ? `${messageContent}\n\n[Attached files: ${fileNames}]`
-        : `I've uploaded: ${fileNames}. Please analyze and help me refine this content.`;
+      const uploadedFiles = attachments.filter(f => f.uploadedUrl);
+      if (uploadedFiles.length > 0) {
+        // Files were already uploaded
+        const fileNames = uploadedFiles.map(f => f.file.name).join(', ');
+        messageContent = messageContent 
+          ? `${messageContent}\n\n[Uploaded files: ${fileNames}]`
+          : `I've uploaded ${fileNames}. What would you like me to do with this content?`;
+      } else {
+        // Files not yet uploaded - just referencing
+        const fileNames = attachments.map(f => f.file.name).join(', ');
+        messageContent = messageContent 
+          ? `${messageContent}\n\n[Attached files: ${fileNames}]`
+          : `I want to work with: ${fileNames}. Please help me refine this content.`;
+      }
     }
 
+    // Clear justUploaded if user is asking a new question
+    setJustUploaded(false);
     setInput('');
     setSelectedFiles([]);
     setMessages(prev => [...prev, { role: 'user', content: messageContent, attachments }]);
@@ -419,6 +468,23 @@ export function RefinerAIPanel() {
   const handleQuickAction = async (action: QuickAction) => {
     if (isLoading) return;
     
+    // If we just uploaded and user clicks Alchify, navigate to Refiner
+    if (justUploaded && lastUploadedProjectId && action.prompt.toLowerCase().includes('alchify')) {
+      setMessages(prev => [...prev, { role: 'user', content: action.prompt }]);
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: `🚀 **Starting Alchify process!** Taking you to the Refiner Studio where I'll transcribe your content, clean up the audio, remove filler words, and prepare it for distribution.\n\nOpening Refiner Studio...`
+      }]);
+      
+      // Navigate to refiner after brief delay
+      setTimeout(() => {
+        navigate(`/refiner/${lastUploadedProjectId}`);
+        setIsOpen(false);
+      }, 1500);
+      return;
+    }
+    
+    setJustUploaded(false);
     setMessages(prev => [...prev, { role: 'user', content: action.prompt }]);
     setIsLoading(true);
     
@@ -590,16 +656,21 @@ export function RefinerAIPanel() {
                           ))}
                         </div>
                         
-                        {/* Quick follow-up prompts */}
+                        {/* Quick follow-up prompts - use post-upload prompts if this was an upload confirmation */}
                         {index === messages.length - 1 && !isLoading && (
                           <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border/50">
-                            {followUpPrompts.map((prompt) => (
+                            {(message.isUploadConfirmation ? postUploadPrompts : followUpPrompts).map((prompt) => (
                               <button
                                 key={prompt.label}
                                 onClick={() => handleQuickAction({ ...prompt, category: 'general' })}
-                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium bg-background/80 hover:bg-background border border-border/50 hover:border-primary/50 transition-colors"
+                                className={cn(
+                                  "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium transition-colors",
+                                  prompt.label.includes('Alchify')
+                                    ? "bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90"
+                                    : "bg-background/80 hover:bg-background border border-border/50 hover:border-primary/50"
+                                )}
                               >
-                                <prompt.icon className="h-3 w-3 text-primary" />
+                                <prompt.icon className={cn("h-3 w-3", prompt.label.includes('Alchify') ? "" : "text-primary")} />
                                 {prompt.label}
                               </button>
                             ))}
@@ -634,6 +705,8 @@ export function RefinerAIPanel() {
               selectedFiles={[]}
               onRemoveFile={() => {}}
               compact
+              autoUpload
+              onUploadComplete={handleUploadComplete}
             />
           )}
           
@@ -643,6 +716,8 @@ export function RefinerAIPanel() {
               onFilesSelected={handleFilesSelected}
               selectedFiles={selectedFiles}
               onRemoveFile={handleRemoveFile}
+              autoUpload
+              onUploadComplete={handleUploadComplete}
             />
           )}
 
