@@ -8,7 +8,7 @@ interface WelcomeVideoSectionProps {
   videoPath?: string;
 }
 
-export function WelcomeVideoSection({ videoPath = 'Alchify_ Content Gold.mp4' }: WelcomeVideoSectionProps) {
+export function WelcomeVideoSection({ videoPath = 'alchify-welcome.mp4' }: WelcomeVideoSectionProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [showControls, setShowControls] = useState(false);
