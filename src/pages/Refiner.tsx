@@ -159,6 +159,9 @@ const Refiner = () => {
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const [isProcessingActive, setIsProcessingActive] = useState(false);
   const [currentProcessingStep, setCurrentProcessingStep] = useState('');
+  const [isGeneratingClips, setIsGeneratingClips] = useState(false);
+  const [generatingClipProgress, setGeneratingClipProgress] = useState<number[]>([0, 0, 0, 0, 0]);
+  const [clipsReady, setClipsReady] = useState(false);
   const [pipelineState, setPipelineState] = useState<PipelineState>({
     transcription: 'pending',
     removeFillers: 'pending',
@@ -652,17 +655,111 @@ const Refiner = () => {
 
         {/* Tab Content - Clips - Use hidden instead of conditional render to preserve state */}
         <div className={`mt-3 space-y-4 ${activeTab === 'clips' ? '' : 'hidden'}`}>
-          {project && transcript ? (
+          {/* Generating Clips View - Phone Mockups */}
+          {isGeneratingClips && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+                  Generating Clips...
+                </CardTitle>
+                <CardDescription>
+                  AI is analyzing your content and creating {selectedFormat || '9:16'} clips
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-center gap-4 py-6">
+                  {[
+                    { title: 'Opening Hook', score: 96 },
+                    { title: 'Key Insight', score: 92 },
+                    { title: 'Best Quote', score: 89 },
+                    { title: 'Call to Action', score: 85 },
+                    { title: 'Viral Moment', score: 94 },
+                  ].map((clip, index) => (
+                    <div key={index} className="flex flex-col items-center gap-2">
+                      {/* Phone Mockup */}
+                      <div 
+                        className={`relative bg-card border-4 border-foreground/20 rounded-[2rem] overflow-hidden shadow-xl ${
+                          selectedFormat === '1:1' ? 'w-28 h-28' :
+                          selectedFormat === '16:9' ? 'w-36 h-20' :
+                          'w-20 h-36'
+                        }`}
+                      >
+                        {/* Screen content */}
+                        <div className="absolute inset-2 bg-muted rounded-xl overflow-hidden">
+                          {generatingClipProgress[index] < 100 ? (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                              <div className="relative w-10 h-10">
+                                <svg className="w-10 h-10 transform -rotate-90">
+                                  <circle
+                                    cx="20"
+                                    cy="20"
+                                    r="16"
+                                    stroke="currentColor"
+                                    strokeWidth="3"
+                                    fill="transparent"
+                                    className="text-muted-foreground/20"
+                                  />
+                                  <circle
+                                    cx="20"
+                                    cy="20"
+                                    r="16"
+                                    stroke="currentColor"
+                                    strokeWidth="3"
+                                    fill="transparent"
+                                    strokeDasharray={100}
+                                    strokeDashoffset={100 - generatingClipProgress[index]}
+                                    className="text-primary transition-all duration-200"
+                                  />
+                                </svg>
+                                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium">
+                                  {Math.round(generatingClipProgress[index])}%
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5 flex flex-col items-center justify-center animate-fade-in">
+                              <CheckCircle className="h-8 w-8 text-green-500 mb-1" />
+                              <span className="text-xs font-bold text-green-600">{clip.score}</span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Notch (for vertical formats) */}
+                        {selectedFormat !== '16:9' && selectedFormat !== '1:1' && (
+                          <div className="absolute top-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-foreground/20 rounded-full" />
+                        )}
+                      </div>
+                      
+                      {/* Label */}
+                      <div className="text-center">
+                        <p className="text-xs font-medium text-foreground truncate w-20">{clip.title}</p>
+                        {generatingClipProgress[index] >= 100 && (
+                          <p className="text-xs text-muted-foreground">Score: {clip.score}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* Clips Ready or ClipGenerator */}
+          {!isGeneratingClips && project && transcript ? (
             <ClipGenerator 
               projectId={project.id} 
               transcriptContent={transcript.content}
               transcriptSegments={transcript.segments as any[] | null}
               mediaUrl={mediaUrl}
+              selectedFormat={selectedFormat}
+              autoGenerate={clipsReady}
               onClipGenerated={() => {
                 console.log('Clips generated successfully');
+                setClipsReady(false);
               }}
             />
-          ) : project ? (
+          ) : !isGeneratingClips && project ? (
             <Card>
               <CardContent className="py-12">
                 <div className="text-center text-muted-foreground">
@@ -972,9 +1069,38 @@ const Refiner = () => {
                 onClick={() => {
                   setShowFormatDialog(false);
                   setActiveTab('clips');
+                  setIsGeneratingClips(true);
+                  setClipsReady(false);
+                  setGeneratingClipProgress([0, 0, 0, 0, 0]);
                   toast({
                     title: `${selectedFormat} format selected`,
                     description: 'AI is generating clip suggestions...',
+                  });
+                  
+                  // Simulate clip generation progress
+                  const progressIntervals: NodeJS.Timeout[] = [];
+                  [0, 1, 2, 3, 4].forEach((index) => {
+                    const startDelay = index * 400;
+                    setTimeout(() => {
+                      const interval = setInterval(() => {
+                        setGeneratingClipProgress(prev => {
+                          const newProgress = [...prev];
+                          if (newProgress[index] < 100) {
+                            newProgress[index] = Math.min(newProgress[index] + Math.random() * 15 + 5, 100);
+                          }
+                          // Check if all complete
+                          if (newProgress.every(p => p >= 100)) {
+                            progressIntervals.forEach(i => clearInterval(i));
+                            setTimeout(() => {
+                              setIsGeneratingClips(false);
+                              setClipsReady(true);
+                            }, 500);
+                          }
+                          return newProgress;
+                        });
+                      }, 200);
+                      progressIntervals.push(interval);
+                    }, startDelay);
                   });
                 }}
               >

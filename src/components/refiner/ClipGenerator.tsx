@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Scissors, 
   Loader2, 
@@ -56,6 +56,8 @@ interface ClipGeneratorProps {
   transcriptContent: string | null;
   transcriptSegments?: any[] | null; // Segments with word-level timing
   mediaUrl?: string | null;
+  selectedFormat?: string | null;
+  autoGenerate?: boolean;
   onClipGenerated?: () => void;
 }
 
@@ -211,7 +213,7 @@ function extractCaptionsForClip(
   return captionSegments;
 }
 
-export function ClipGenerator({ projectId, transcriptContent, transcriptSegments, mediaUrl, onClipGenerated }: ClipGeneratorProps) {
+export function ClipGenerator({ projectId, transcriptContent, transcriptSegments, mediaUrl, selectedFormat, autoGenerate, onClipGenerated }: ClipGeneratorProps) {
   const [clips, setClips] = useState<Clip[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [renderingClips, setRenderingClips] = useState<Set<number>>(new Set());
@@ -225,6 +227,13 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
     animation: 'pop',
   });
   const { toast } = useToast();
+
+  // Auto-generate clips when autoGenerate prop is true
+  useEffect(() => {
+    if (autoGenerate && transcriptContent && clips.length === 0 && !isGenerating) {
+      generateClips();
+    }
+  }, [autoGenerate, transcriptContent]);
 
   const generateClips = async () => {
     if (!transcriptContent) {
