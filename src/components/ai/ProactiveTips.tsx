@@ -193,28 +193,28 @@ export function ProactiveTips({ onTipAction }: ProactiveTipsProps) {
     <div
       className={cn(
         "fixed bottom-24 right-6 z-40 max-w-xs",
-        "bg-card border border-border rounded-xl shadow-lg",
+        "bg-primary text-primary-foreground rounded-xl shadow-lg",
         "animate-in slide-in-from-bottom-5 fade-in duration-300"
       )}
     >
       <div className="p-4">
         <div className="flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-primary/10 text-primary flex-shrink-0">
+          <div className="p-2 rounded-lg bg-primary-foreground/20 text-primary-foreground flex-shrink-0">
             <Icon className="h-5 w-5" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
-              <h4 className="font-medium text-foreground text-sm">
+              <h4 className="font-medium text-primary-foreground text-sm">
                 {currentTip.title}
               </h4>
               <button
                 onClick={handleDismiss}
-                className="p-1 hover:bg-muted rounded-md transition-colors flex-shrink-0"
+                className="p-1 hover:bg-primary-foreground/20 rounded-md transition-colors flex-shrink-0"
               >
-                <X className="h-4 w-4 text-muted-foreground" />
+                <X className="h-4 w-4 text-primary-foreground/80" />
               </button>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-primary-foreground/80 mt-1">
               {currentTip.description}
             </p>
             {currentTip.action && (
@@ -222,7 +222,7 @@ export function ProactiveTips({ onTipAction }: ProactiveTipsProps) {
                 onClick={handleAction}
                 className={cn(
                   "mt-3 flex items-center gap-1.5 text-xs font-medium",
-                  "text-primary hover:text-primary/80 transition-colors"
+                  "text-primary-foreground hover:text-primary-foreground/90 transition-colors"
                 )}
               >
                 <Sparkles className="h-3.5 w-3.5" />
