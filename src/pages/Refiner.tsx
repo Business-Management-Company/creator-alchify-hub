@@ -177,11 +177,13 @@ const Refiner = () => {
         }
       }
       
-      // Fetch transcript if exists
+      // Fetch transcript if exists - get the most recent one
       const { data: transcriptData } = await supabase
         .from('transcripts')
         .select('*')
         .eq('project_id', projectId)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
       
       if (transcriptData) {
