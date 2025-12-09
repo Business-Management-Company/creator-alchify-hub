@@ -17,7 +17,8 @@ import {
   CreditCard,
   Server,
   Library,
-  Presentation
+  Presentation,
+  Contact
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -54,6 +55,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Server,
   Library,
   Presentation,
+  Contact,
 };
 
 const navItems = [
@@ -75,6 +77,7 @@ const secondaryItems = [
 const adminItems = [
   { id: 'admin', label: 'Admin Dashboard', icon: 'Shield', path: '/admin' },
   { id: 'admin-users', label: 'Manage Users', icon: 'Users', path: '/admin/users' },
+  { id: 'admin-contacts', label: 'Contacts', icon: 'Contact', path: '/admin/contacts' },
   { id: 'admin-content', label: 'Content', icon: 'FileText', path: '/admin/content' },
   { id: 'admin-analytics', label: 'Analytics', icon: 'TrendingUp', path: '/admin/analytics' },
   { id: 'admin-tech', label: 'Tech Stack', icon: 'Server', path: '/admin/tech-stack' },

@@ -11,6 +11,7 @@ import { Download, Save, Share2, ChevronDown, Plus, Trash2, Clock, Star } from '
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { ShareVTODialog } from './ShareVTODialog';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -43,6 +44,7 @@ export const VTOExportControls = ({
 }: VTOExportControlsProps) => {
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   // Default versions if none provided
   const versions: SavedVersion[] = savedVersions.length > 0 ? savedVersions : [
@@ -354,10 +356,17 @@ export const VTOExportControls = ({
         <Download className="h-4 w-4" />
         {isExporting ? 'Generating...' : 'Download'}
       </Button>
-      <Button onClick={handleShare} variant="outline" className="gap-2">
+      <Button onClick={() => setShareDialogOpen(true)} variant="outline" className="gap-2">
         <Share2 className="h-4 w-4" />
         Share
       </Button>
+
+      {/* Share Dialog */}
+      <ShareVTODialog
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        versionName={currentVersion?.name}
+      />
     </div>
   );
 };
