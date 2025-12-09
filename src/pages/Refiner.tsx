@@ -53,6 +53,7 @@ import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/layout/AppLayout';
 import { ClipGenerator } from '@/components/refiner/ClipGenerator';
 import { CaptionEditor } from '@/components/refiner/CaptionEditor';
+import { TranscriptSheet } from '@/components/refiner/TranscriptSheet';
 import { extractAudioFromVideo, needsAudioExtraction } from '@/lib/audio-extraction';
 import VideoThumbnail from '@/components/VideoThumbnail';
 
@@ -170,6 +171,7 @@ const Refiner = () => {
     enhanceAudio: 'pending',
     enhanceVideo: 'pending',
   });
+  const [showTranscriptSheet, setShowTranscriptSheet] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -347,7 +349,10 @@ const Refiner = () => {
       };
       setProcessingResults(newProcessingResults);
       
-      // Show tooltip to prompt clips creation
+      // Auto-generate clips immediately after processing completes
+      // Set default format and trigger clip generation
+      setSelectedFormat('9:16');
+      setClipsReady(true);
       setShowClipsTooltip(true);
       
       // Save to cache
@@ -1014,6 +1019,15 @@ const Refiner = () => {
 
                 {/* Right - Actions */}
                 <div className="flex items-center gap-4">
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    disabled={!isProcessingComplete}
+                    onClick={() => setShowTranscriptSheet(true)}
+                  >
+                    <FileText className="mr-2 h-5 w-5" />
+                    Transcript
+                  </Button>
                   <Button size="lg" variant="outline" disabled={!isProcessingComplete}>
                     <Share2 className="mr-2 h-5 w-5" />
                     Share
@@ -1027,6 +1041,16 @@ const Refiner = () => {
             </div>
           </div>
         )}
+
+        {/* Transcript Sheet */}
+        <TranscriptSheet
+          isOpen={showTranscriptSheet}
+          onClose={() => setShowTranscriptSheet(false)}
+          content={transcript?.content || null}
+          wordCount={transcript?.word_count || null}
+          segments={transcript?.segments as any[] | null}
+          avgConfidence={transcript?.avg_confidence || null}
+        />
 
         {/* Bottom spacer for fixed bar */}
         {project && <div className="h-20" />}

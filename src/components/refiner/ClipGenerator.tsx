@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/popover";
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { ClipEditorModal } from './ClipEditorModal';
 
 interface Clip {
   title: string;
@@ -270,6 +271,7 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
   const [renderingClips, setRenderingClips] = useState<Set<number>>(new Set());
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [hasAutoRendered, setHasAutoRendered] = useState(false);
+  const [selectedClipIndex, setSelectedClipIndex] = useState<number | null>(null);
   const [captionStyle, setCaptionStyle] = useState<CaptionStyle>({
     font: 'Montserrat ExtraBold',
     color: '#FFFFFF',
@@ -657,7 +659,27 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
 
   return (
     <div className="bg-card/50 border border-border rounded-xl p-6">
-      {/* Video Preview Modal */}
+      {/* Clip Editor Modal */}
+      {selectedClipIndex !== null && clips[selectedClipIndex] && (
+        <ClipEditorModal
+          clip={clips[selectedClipIndex]}
+          clipIndex={selectedClipIndex}
+          totalClips={clips.length}
+          isOpen={selectedClipIndex !== null}
+          onClose={() => setSelectedClipIndex(null)}
+          onNavigate={(direction) => {
+            if (direction === 'prev' && selectedClipIndex > 0) {
+              setSelectedClipIndex(selectedClipIndex - 1);
+            } else if (direction === 'next' && selectedClipIndex < clips.length - 1) {
+              setSelectedClipIndex(selectedClipIndex + 1);
+            }
+          }}
+          transcriptContent={transcriptContent}
+          mediaUrl={mediaUrl}
+        />
+      )}
+
+      {/* Video Preview Modal (legacy) */}
       {previewUrl && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
           <div className="relative bg-card rounded-xl p-4 max-w-md w-full mx-4">
@@ -813,9 +835,10 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
               'w-44 aspect-[9/16]'
             }`}
             onClick={() => {
-              if (clip.renderStatus === 'done' && clip.renderUrl) {
-                setPreviewUrl(clip.renderUrl);
-              } else if (clip.renderStatus === 'idle') {
+              // Open the clip editor modal
+              setSelectedClipIndex(index);
+              // Start rendering if not started
+              if (clip.renderStatus === 'idle') {
                 renderClip(index, clip.platforms[0] || 'tiktok');
               }
             }}
