@@ -4,8 +4,6 @@ import { Helmet } from 'react-helmet-async';
 import { 
   FolderOpen, 
   Plus, 
-  Video, 
-  Music, 
   Clock, 
   Loader2,
   MoreVertical,
@@ -35,12 +33,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/layout/AppLayout';
+import VideoThumbnail from '@/components/VideoThumbnail';
 
 interface Project {
   id: string;
   title: string;
   description: string | null;
   status: string;
+  source_file_url: string | null;
   source_file_type: string | null;
   source_file_size: number | null;
   created_at: string;
@@ -201,12 +201,13 @@ const Projects = () => {
                 className="bg-card border border-border rounded-xl overflow-hidden hover:border-primary/40 transition-all duration-200 group"
               >
                 {/* Thumbnail area */}
-                <div className="aspect-[16/9] h-32 bg-muted/30 flex items-center justify-center relative">
-                  {project.source_file_type === 'video' ? (
-                    <Video className="h-10 w-10 text-muted-foreground/40" />
-                  ) : (
-                    <Music className="h-10 w-10 text-muted-foreground/40" />
-                  )}
+                <div className="aspect-[16/9] h-32 bg-muted/30 flex items-center justify-center relative overflow-hidden">
+                  <VideoThumbnail
+                    sourceFileUrl={project.source_file_url}
+                    sourceFileType={project.source_file_type}
+                    className="w-full h-full"
+                    showControls={false}
+                  />
                   <div className="absolute top-3 right-3">
                     <Badge variant={statusConfig[project.status]?.variant || 'secondary'}>
                       {statusConfig[project.status]?.label || project.status}
