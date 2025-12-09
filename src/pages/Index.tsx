@@ -6,6 +6,7 @@ import HowItWorksSection from "@/components/HowItWorksSection";
 import CreatorsSection from "@/components/CreatorsSection";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
+import { WelcomeVideoModal } from "@/components/WelcomeVideoModal";
 
 const Index = () => {
   return (
@@ -28,6 +29,9 @@ const Index = () => {
         </main>
         <Footer />
       </div>
+      
+      {/* Welcome video popup - shows after 5 seconds for first-time visitors */}
+      <WelcomeVideoModal delay={5000} videoPath="welcome.mp4" />
     </>
   );
 };
