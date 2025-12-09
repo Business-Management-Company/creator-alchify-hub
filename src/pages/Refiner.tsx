@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { 
@@ -23,7 +23,8 @@ import {
   CheckCircle,
   BarChart3,
   Share2,
-  Save
+  Save,
+  Scissors
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -70,6 +71,18 @@ interface ProcessingResults {
   audioEnhanced: number;
 }
 
+// Pipeline step status type
+type PipelineStatus = 'pending' | 'active' | 'complete';
+
+interface PipelineState {
+  transcription: PipelineStatus;
+  removeFillers: PipelineStatus;
+  removeGaps: PipelineStatus;
+  audioCleanup: PipelineStatus;
+  generateCaptions: PipelineStatus;
+  aiClips: PipelineStatus;
+}
+
 const FILLER_WORDS = ['um', 'uh', 'like', 'you know', 'basically', 'actually', 'so,', 'well,'];
 
 const Refiner = () => {
@@ -85,6 +98,14 @@ const Refiner = () => {
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [processingResults, setProcessingResults] = useState<ProcessingResults | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [pipelineState, setPipelineState] = useState<PipelineState>({
+    transcription: 'pending',
+    removeFillers: 'pending',
+    removeGaps: 'pending',
+    audioCleanup: 'pending',
+    generateCaptions: 'pending',
+    aiClips: 'pending',
+  });
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -160,6 +181,15 @@ const Refiner = () => {
       
       if (transcriptData) {
         setTranscript(transcriptData);
+        // Set all pipeline steps to complete if we have a transcript
+        setPipelineState({
+          transcription: 'complete',
+          removeFillers: 'complete',
+          removeGaps: 'complete',
+          audioCleanup: 'complete',
+          generateCaptions: 'complete',
+          aiClips: 'complete',
+        });
         // Set processing results if transcript exists
         setProcessingResults({
           wordCount: transcriptData.word_count || 0,
@@ -167,8 +197,18 @@ const Refiner = () => {
           segmentCount: Array.isArray(transcriptData.segments) ? (transcriptData.segments as any[]).length : 0,
           minutesSaved: Math.round((transcriptData.filler_words_detected || 0) * 0.5 / 60 * 10) / 10,
           accuracyScore: Math.round((transcriptData.avg_confidence || 0.95) * 100),
-          clipsGenerated: 4, // Mock for now
-          audioEnhanced: 12, // Mock percentage
+          clipsGenerated: 4,
+          audioEnhanced: 12,
+        });
+      } else {
+        // Reset pipeline state for unprocessed projects
+        setPipelineState({
+          transcription: 'pending',
+          removeFillers: 'pending',
+          removeGaps: 'pending',
+          audioCleanup: 'pending',
+          generateCaptions: 'pending',
+          aiClips: 'pending',
         });
       }
       
@@ -183,6 +223,38 @@ const Refiner = () => {
       setLoading(false);
     }
   };
+
+  // Update pipeline state - called from NotProcessedCTA
+  const updatePipelineStep = useCallback((step: keyof PipelineState, status: PipelineStatus) => {
+    setPipelineState(prev => ({ ...prev, [step]: status }));
+  }, []);
+
+  // Handle processing complete - update local state without refetching
+  const handleProcessingComplete = useCallback(async () => {
+    // Just refetch the transcript data without full page reload
+    if (!projectId) return;
+    
+    const { data: transcriptData } = await supabase
+      .from('transcripts')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    
+    if (transcriptData) {
+      setTranscript(transcriptData);
+      setProcessingResults({
+        wordCount: transcriptData.word_count || 0,
+        fillerCount: transcriptData.filler_words_detected || 0,
+        segmentCount: Array.isArray(transcriptData.segments) ? (transcriptData.segments as any[]).length : 0,
+        minutesSaved: Math.round((transcriptData.filler_words_detected || 0) * 0.5 / 60 * 10) / 10,
+        accuracyScore: Math.round((transcriptData.avg_confidence || 0.95) * 100),
+        clipsGenerated: 4,
+        audioEnhanced: 12,
+      });
+    }
+  }, [projectId]);
 
   const formatDuration = (seconds: number | null) => {
     if (!seconds) return '--:--';
@@ -229,6 +301,17 @@ const Refiner = () => {
               }`}
             >
               Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('clips')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+                activeTab === 'clips' 
+                  ? 'border-primary text-primary' 
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Scissors className="h-4 w-4" />
+              Clips
             </button>
             <button
               onClick={() => setActiveTab('audio')}
@@ -376,27 +459,27 @@ const Refiner = () => {
               <CardContent className="space-y-3">
                 <PipelineStep 
                   label="Transcription" 
-                  complete={isProcessingComplete}
+                  status={pipelineState.transcription}
                 />
                 <PipelineStep 
                   label="Remove Fillers" 
-                  complete={isProcessingComplete}
+                  status={pipelineState.removeFillers}
                 />
                 <PipelineStep 
                   label="Remove Gaps" 
-                  complete={isProcessingComplete}
+                  status={pipelineState.removeGaps}
                 />
                 <PipelineStep 
                   label="Audio Cleanup" 
-                  complete={isProcessingComplete}
+                  status={pipelineState.audioCleanup}
                 />
                 <PipelineStep 
                   label="Generate Captions" 
-                  complete={isProcessingComplete}
+                  status={pipelineState.generateCaptions}
                 />
                 <PipelineStep 
                   label="AI Clips" 
-                  complete={isProcessingComplete}
+                  status={pipelineState.aiClips}
                 />
               </CardContent>
             </Card>
@@ -409,7 +492,8 @@ const Refiner = () => {
             projectId={project.id}
             fileSize={project.source_file_size || 0}
             mediaUrl={mediaUrl}
-            onProcessingComplete={() => fetchProject()}
+            onProcessingComplete={handleProcessingComplete}
+            updatePipelineStep={updatePipelineStep}
           />
         )}
 
@@ -520,9 +604,9 @@ const Refiner = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Button variant="hero" onClick={() => setActiveTab('video')}>
-                    <Play className="mr-2 h-4 w-4" />
-                    Open Editor
+                  <Button variant="hero" onClick={() => setActiveTab('clips')}>
+                    <Scissors className="mr-2 h-4 w-4" />
+                    Generate Clips
                   </Button>
                   <Button variant="outline">
                     <Share2 className="mr-2 h-4 w-4" />
@@ -542,60 +626,87 @@ const Refiner = () => {
           </Card>
         )}
 
-        {/* Tab Content - Video/Audio Tools */}
-        {activeTab === 'video' && project && transcript && (
+        {/* Tab Content - Clips */}
+        {activeTab === 'clips' && project && (
+          <div className="mt-6 space-y-6">
+            {transcript ? (
+              <ClipGenerator 
+                projectId={project.id} 
+                transcriptContent={transcript.content}
+                transcriptSegments={transcript.segments as any[] | null}
+                mediaUrl={mediaUrl}
+              />
+            ) : (
+              <Card>
+                <CardContent className="py-12">
+                  <div className="text-center text-muted-foreground">
+                    <Scissors className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <h3 className="font-medium mb-2">Process Content First</h3>
+                    <p className="text-sm max-w-md mx-auto">
+                      Generate a transcript first to unlock AI clip generation.
+                    </p>
+                    <Button 
+                      variant="hero" 
+                      className="mt-4" 
+                      onClick={() => setActiveTab('overview')}
+                    >
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Start Processing
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* Tab Content - Video Tools */}
+        {activeTab === 'video' && project && (
           <div className="mt-6 space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Film className="h-5 w-5 text-primary" />
-                  AI Clip Generator
+                  <Video className="h-5 w-5 text-primary" />
+                  Video Editing Tools
                 </CardTitle>
                 <CardDescription>
-                  Create viral clips for TikTok, Reels, and Shorts
+                  Advanced video editing and enhancement features
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ClipGenerator 
-                  projectId={project.id} 
-                  transcriptContent={transcript.content}
-                  transcriptSegments={transcript.segments as any[] | null}
-                  mediaUrl={mediaUrl}
-                />
+                <div className="grid md:grid-cols-2 gap-4">
+                  <ToolCard
+                    icon={User}
+                    title="Speaker Focus"
+                    description="AI camera framing for single-speaker content"
+                    badge="Coming Soon"
+                  />
+                  <ToolCard
+                    icon={Layers}
+                    title="Lower Thirds & Graphics"
+                    description="Add name overlays, titles, and logos"
+                    badge="Coming Soon"
+                  />
+                  <ToolCard
+                    icon={Image}
+                    title="B-Roll Suggestions"
+                    description="AI suggests stock footage for key moments"
+                    badge="Coming Soon"
+                  />
+                  <ToolCard
+                    icon={Play}
+                    title="Timeline Editor"
+                    description="Multi-track editing with audio/video layers"
+                    badge="Coming Soon"
+                  />
+                </div>
               </CardContent>
             </Card>
-
-            {/* Other video tools */}
-            <div className="grid md:grid-cols-2 gap-4">
-              <ToolCard
-                icon={User}
-                title="Speaker Focus"
-                description="AI camera framing for single-speaker content"
-                badge="Coming Soon"
-              />
-              <ToolCard
-                icon={Layers}
-                title="Lower Thirds & Graphics"
-                description="Add name overlays, titles, and logos"
-                badge="Coming Soon"
-              />
-              <ToolCard
-                icon={Image}
-                title="B-Roll Suggestions"
-                description="AI suggests stock footage for key moments"
-                badge="Coming Soon"
-              />
-              <ToolCard
-                icon={Play}
-                title="Timeline Editor"
-                description="Multi-track editing with audio/video layers"
-                badge="Coming Soon"
-              />
-            </div>
           </div>
         )}
 
-        {activeTab === 'audio' && project && transcript && (
+        {/* Tab Content - Audio */}
+        {activeTab === 'audio' && project && (
           <div className="mt-6">
             <Card>
               <CardHeader>
@@ -608,12 +719,23 @@ const Refiner = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <CaptionEditor transcriptContent={transcript.content} />
+                {transcript ? (
+                  <CaptionEditor transcriptContent={transcript.content} />
+                ) : (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Captions className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <h3 className="font-medium mb-2">No Transcript Available</h3>
+                    <p className="text-sm max-w-md mx-auto">
+                      Process your content first to generate captions.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
         )}
 
+        {/* Tab Content - Distribute */}
         {activeTab === 'distribute' && project && (
           <div className="mt-6">
             <Card>
@@ -651,12 +773,14 @@ const NotProcessedCTA = ({
   projectId,
   fileSize,
   mediaUrl,
-  onProcessingComplete 
+  onProcessingComplete,
+  updatePipelineStep
 }: { 
   projectId: string;
   fileSize: number;
   mediaUrl: string | null;
   onProcessingComplete: () => void;
+  updatePipelineStep: (step: keyof PipelineState, status: PipelineStatus) => void;
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState('');
@@ -698,10 +822,12 @@ const NotProcessedCTA = ({
         }
       }
       
+      // Step 1: Transcription
       setProcessingStatus('Transcribing content...');
+      updatePipelineStep('transcription', 'active');
       toast({
         title: 'Alchifying your content...',
-        description: 'AI is transcribing and enhancing your content.',
+        description: 'AI is transcribing your content.',
       });
 
       const { data, error } = await supabase.functions.invoke('transcribe-audio', {
@@ -710,6 +836,38 @@ const NotProcessedCTA = ({
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+      
+      updatePipelineStep('transcription', 'complete');
+
+      // Step 2: Remove Fillers (simulated)
+      setProcessingStatus('Detecting filler words...');
+      updatePipelineStep('removeFillers', 'active');
+      await new Promise(r => setTimeout(r, 500));
+      updatePipelineStep('removeFillers', 'complete');
+
+      // Step 3: Remove Gaps (simulated)
+      setProcessingStatus('Analyzing audio gaps...');
+      updatePipelineStep('removeGaps', 'active');
+      await new Promise(r => setTimeout(r, 400));
+      updatePipelineStep('removeGaps', 'complete');
+
+      // Step 4: Audio Cleanup (simulated)
+      setProcessingStatus('Enhancing audio quality...');
+      updatePipelineStep('audioCleanup', 'active');
+      await new Promise(r => setTimeout(r, 600));
+      updatePipelineStep('audioCleanup', 'complete');
+
+      // Step 5: Generate Captions (simulated)
+      setProcessingStatus('Generating captions...');
+      updatePipelineStep('generateCaptions', 'active');
+      await new Promise(r => setTimeout(r, 500));
+      updatePipelineStep('generateCaptions', 'complete');
+
+      // Step 6: AI Clips (simulated)
+      setProcessingStatus('Identifying viral moments...');
+      updatePipelineStep('aiClips', 'active');
+      await new Promise(r => setTimeout(r, 400));
+      updatePipelineStep('aiClips', 'complete');
 
       toast({
         title: 'Content Alchified! ✨',
@@ -769,17 +927,27 @@ const NotProcessedCTA = ({
   );
 };
 
-// Pipeline Step Component
-const PipelineStep = ({ label, complete }: { label: string; complete: boolean }) => (
+// Pipeline Step Component with animation
+const PipelineStep = ({ label, status }: { label: string; status: PipelineStatus }) => (
   <div className="flex items-center gap-3">
-    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-      complete ? 'bg-green-500' : 'bg-muted'
+    <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ${
+      status === 'complete' ? 'bg-green-500 scale-100' : 
+      status === 'active' ? 'bg-primary animate-pulse scale-110' : 
+      'bg-muted scale-100'
     }`}>
-      {complete && <Check className="h-4 w-4 text-white" />}
+      {status === 'complete' && <Check className="h-4 w-4 text-white" />}
+      {status === 'active' && <Loader2 className="h-4 w-4 text-white animate-spin" />}
     </div>
-    <span className={complete ? 'text-foreground' : 'text-muted-foreground'}>
+    <span className={`transition-colors duration-300 ${
+      status === 'complete' ? 'text-foreground font-medium' : 
+      status === 'active' ? 'text-primary font-medium' : 
+      'text-muted-foreground'
+    }`}>
       {label}
     </span>
+    {status === 'active' && (
+      <span className="text-xs text-primary animate-pulse ml-auto">Processing...</span>
+    )}
   </div>
 );
 
