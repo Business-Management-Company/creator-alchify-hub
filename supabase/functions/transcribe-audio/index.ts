@@ -111,7 +111,16 @@ serve(async (req) => {
       } else if (contentType.includes('video/')) {
         extension = contentType.split('/')[1].split(';')[0];
       }
-      if (extension === 'webm') extension = 'webm';
+      
+      // Map unsupported formats to supported Whisper formats
+      // Whisper supports: flac, m4a, mp3, mp4, mpeg, mpga, oga, ogg, wav, webm
+      const formatMap: Record<string, string> = {
+        'quicktime': 'mp4',  // .mov files
+        'x-m4a': 'm4a',
+        'x-wav': 'wav',
+        'mpeg4': 'mp4',
+      };
+      extension = formatMap[extension] || extension;
       
       console.log(`Content type: ${contentType}, extension: ${extension}`);
 
