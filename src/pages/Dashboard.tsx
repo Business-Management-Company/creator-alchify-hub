@@ -160,27 +160,29 @@ const Dashboard = () => {
         )}
         
         {/* Main Cards */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
-          {/* Upload CTA */}
+        <div className="grid md:grid-cols-3 gap-4 mb-6">
+          {/* Upload CTA - Compact horizontal layout */}
           <Link 
             to="/upload"
-            className="md:col-span-2 bg-gradient-to-br from-primary/20 via-card to-card border border-primary/20 rounded-2xl p-8 relative overflow-hidden group cursor-pointer hover:border-primary/40 transition-colors"
+            className="md:col-span-2 bg-gradient-to-r from-primary/20 via-card to-card border border-primary/20 rounded-xl p-4 relative overflow-hidden group cursor-pointer hover:border-primary/40 transition-colors"
           >
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-            <div className="relative z-10">
-              <div className="p-3 rounded-xl bg-primary/20 w-fit mb-4">
-                <Upload className="h-8 w-8 text-primary" />
+            <div className="absolute top-0 right-0 w-48 h-48 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <div className="relative z-10 flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-primary/20 shrink-0">
+                <Upload className="h-6 w-6 text-primary" />
               </div>
-              <h2 className="text-2xl font-bold text-foreground mb-2">
-                Upload New Content
-              </h2>
-              <p className="text-muted-foreground mb-6 max-w-md">
-                Drop your raw video or audio files here. We'll transcribe, clean up, and help you create polished clips for any platform.
-              </p>
-              <div className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium h-10 px-4 py-2 bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90 group-hover:glow-primary transition-shadow pointer-events-none">
-                <Plus className="mr-2 h-4 w-4" />
-                Upload Now
-                <ArrowRight className="ml-2 h-4 w-4" />
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg font-bold text-foreground">
+                  Upload New Content
+                </h2>
+                <p className="text-sm text-muted-foreground line-clamp-1">
+                  Drop raw video or audio files to transcribe, clean up, and create clips.
+                </p>
+              </div>
+              <div className="shrink-0 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium h-10 px-4 py-2 bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90 group-hover:glow-primary transition-shadow pointer-events-none">
+                <Plus className="h-4 w-4" />
+                Upload
+                <ArrowRight className="h-4 w-4" />
               </div>
             </div>
           </Link>
