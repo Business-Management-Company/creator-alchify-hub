@@ -527,39 +527,40 @@ const Refiner = () => {
         )}
 
 
-        {/* Tab Content - Clips */}
-        {activeTab === 'clips' && project && (
-          <div className="mt-3 space-y-4">
-            {transcript ? (
-              <ClipGenerator 
-                projectId={project.id} 
-                transcriptContent={transcript.content}
-                transcriptSegments={transcript.segments as any[] | null}
-                mediaUrl={mediaUrl}
-              />
-            ) : (
-              <Card>
-                <CardContent className="py-12">
-                  <div className="text-center text-muted-foreground">
-                    <Scissors className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <h3 className="font-medium mb-2">Process Content First</h3>
-                    <p className="text-sm max-w-md mx-auto">
-                      Generate a transcript first to unlock AI clip generation.
-                    </p>
-                    <Button 
-                      variant="hero" 
-                      className="mt-4" 
-                      onClick={() => setActiveTab('overview')}
-                    >
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Start Processing
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
+        {/* Tab Content - Clips - Use hidden instead of conditional render to preserve state */}
+        <div className={`mt-3 space-y-4 ${activeTab === 'clips' ? '' : 'hidden'}`}>
+          {project && transcript ? (
+            <ClipGenerator 
+              projectId={project.id} 
+              transcriptContent={transcript.content}
+              transcriptSegments={transcript.segments as any[] | null}
+              mediaUrl={mediaUrl}
+              onClipGenerated={() => {
+                console.log('Clips generated successfully');
+              }}
+            />
+          ) : project ? (
+            <Card>
+              <CardContent className="py-12">
+                <div className="text-center text-muted-foreground">
+                  <Scissors className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <h3 className="font-medium mb-2">Process Content First</h3>
+                  <p className="text-sm max-w-md mx-auto">
+                    Generate a transcript first to unlock AI clip generation.
+                  </p>
+                  <Button 
+                    variant="hero" 
+                    className="mt-4" 
+                    onClick={() => setActiveTab('overview')}
+                  >
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Start Processing
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
 
         {/* Tab Content - Video Tools */}
         {activeTab === 'video' && project && (
