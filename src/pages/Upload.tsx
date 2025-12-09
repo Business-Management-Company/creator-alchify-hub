@@ -199,7 +199,7 @@ const Upload = () => {
           source_file_name: file.name,
           source_file_type: getFileType(file.type),
           source_file_size: file.size,
-          status: 'processing',
+          status: 'alchifying',
         })
         .select()
         .single();
