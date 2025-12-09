@@ -735,79 +735,111 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
         </div>
       </div>
 
-      <div className="space-y-3 max-h-[400px] overflow-y-auto">
+      {/* Horizontal scrollable clip cards */}
+      <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2">
         {clips.map((clip, index) => (
           <div
             key={index}
-            className="p-4 bg-background/50 rounded-lg border border-border hover:border-primary/30 transition-colors"
+            className={`flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all cursor-pointer hover:border-primary/50 hover:shadow-lg group ${
+              clip.renderStatus === 'done' ? 'border-green-500/50' : 'border-border'
+            } ${
+              selectedFormat === '1:1' ? 'w-56 aspect-square' :
+              selectedFormat === '16:9' ? 'w-72 aspect-video' :
+              'w-44 aspect-[9/16]'
+            }`}
+            onClick={() => {
+              if (clip.renderStatus === 'done' && clip.renderUrl) {
+                setPreviewUrl(clip.renderUrl);
+              } else if (clip.renderStatus === 'idle') {
+                renderClip(index, clip.platforms[0] || 'tiktok');
+              }
+            }}
           >
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <h4 className="font-medium text-foreground">{clip.title}</h4>
-                {getStatusIcon(clip.renderStatus)}
+            <div className="relative w-full h-full bg-gradient-to-br from-muted to-muted/50">
+              {/* Time badge */}
+              <div className="absolute top-2 right-2 z-10 bg-black/60 text-white text-xs px-2 py-0.5 rounded flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {clip.startTime} - {clip.endTime}
               </div>
-              <div className={`flex items-center gap-1 ${getScoreColor(clip.score)}`}>
-                <TrendingUp className="h-3 w-3" />
-                <span className="text-sm font-medium">{clip.score}/10</span>
+              
+              {/* Score badge */}
+              <div className={`absolute top-2 left-2 z-10 text-sm font-bold px-2 py-0.5 rounded ${getScoreColor(clip.score)} bg-black/40`}>
+                {clip.score * 10}
               </div>
-            </div>
 
-            <p className="text-sm text-muted-foreground mb-3">{clip.hook}</p>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Clock className="h-3 w-3" />
-                  {clip.startTime} - {clip.endTime}
+              {/* Content based on render status */}
+              {clip.renderStatus === 'rendering' ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm">
+                  <Loader2 className="h-10 w-10 text-primary animate-spin mb-2" />
+                  <span className="text-white text-sm font-medium">Rendering...</span>
                 </div>
-                <div className="flex gap-1">
+              ) : clip.renderStatus === 'done' && clip.renderUrl ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
+                  <div className="p-4 rounded-full bg-white/20 backdrop-blur-sm group-hover:bg-white/30 transition-colors">
+                    <Play className="h-8 w-8 text-white fill-white" />
+                  </div>
+                </div>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
+                  <div className="text-center p-4">
+                    <Video className="h-8 w-8 text-white/80 mx-auto mb-2 group-hover:scale-110 transition-transform" />
+                    <span className="text-white text-xs font-medium">Click to render</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Caption overlay simulation */}
+              <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
+                {/* Simulated caption text */}
+                <div className="mb-2">
+                  <span className="inline-block bg-primary/90 text-primary-foreground text-xs px-2 py-0.5 rounded font-bold uppercase">
+                    {clip.hook.split(' ').slice(0, 2).join(' ')}
+                  </span>
+                </div>
+                
+                {/* Clip title */}
+                <p className="text-white text-sm font-semibold line-clamp-2 mb-2">{clip.title}</p>
+                
+                {/* Platform badges */}
+                <div className="flex gap-1 flex-wrap">
                   {clip.platforms.map((platform) => (
                     <span
                       key={platform}
-                      className={`text-xs px-2 py-0.5 rounded-full border ${platformColors[platform] || 'bg-muted text-muted-foreground'}`}
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full border ${platformColors[platform] || 'bg-muted text-muted-foreground'}`}
                     >
                       {platform}
                     </span>
                   ))}
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2">
-                {clip.renderStatus === 'done' && clip.renderUrl ? (
-                  <>
+                {/* Action buttons */}
+                {clip.renderStatus === 'done' && clip.renderUrl && (
+                  <div className="flex gap-2 mt-2 pt-2 border-t border-white/20">
                     <Button 
-                      variant="outline" 
+                      variant="ghost" 
                       size="sm"
-                      onClick={() => setPreviewUrl(clip.renderUrl!)}
+                      className="h-7 text-xs text-white hover:bg-white/20 flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewUrl(clip.renderUrl!);
+                      }}
                     >
                       <Play className="mr-1 h-3 w-3" />
                       Preview
                     </Button>
                     <Button 
-                      variant="default" 
+                      variant="ghost" 
                       size="sm"
-                      onClick={() => window.open(clip.renderUrl, '_blank')}
+                      className="h-7 text-xs text-white hover:bg-white/20 flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(clip.renderUrl, '_blank');
+                      }}
                     >
                       <Download className="mr-1 h-3 w-3" />
                       Download
                     </Button>
-                  </>
-                ) : clip.renderStatus === 'rendering' ? (
-                  <Button variant="ghost" size="sm" disabled>
-                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                    Rendering...
-                  </Button>
-                ) : (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="text-primary"
-                    onClick={() => renderClip(index, clip.platforms[0] || 'tiktok')}
-                    disabled={!mediaUrl || renderingClips.has(index)}
-                  >
-                    <Video className="mr-1 h-3 w-3" />
-                    Create Clip
-                  </Button>
+                  </div>
                 )}
               </div>
             </div>
