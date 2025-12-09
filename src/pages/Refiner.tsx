@@ -83,6 +83,45 @@ interface PipelineState {
 
 const FILLER_WORDS = ['um', 'uh', 'like', 'you know', 'basically', 'actually', 'so,', 'well,'];
 
+// Cache helper functions
+const getCacheKey = (projectId: string) => `refiner_cache_${projectId}`;
+
+interface CachedData {
+  transcript: Transcript | null;
+  processingResults: ProcessingResults | null;
+  pipelineState: PipelineState;
+  cachedAt: number;
+}
+
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+const loadFromCache = (projectId: string): CachedData | null => {
+  try {
+    const cached = localStorage.getItem(getCacheKey(projectId));
+    if (!cached) return null;
+    const data = JSON.parse(cached) as CachedData;
+    // Check if cache is still valid
+    if (Date.now() - data.cachedAt > CACHE_DURATION) {
+      localStorage.removeItem(getCacheKey(projectId));
+      return null;
+    }
+    return data;
+  } catch {
+    return null;
+  }
+};
+
+const saveToCache = (projectId: string, data: Omit<CachedData, 'cachedAt'>) => {
+  try {
+    localStorage.setItem(getCacheKey(projectId), JSON.stringify({
+      ...data,
+      cachedAt: Date.now(),
+    }));
+  } catch {
+    // Ignore storage errors
+  }
+};
+
 const Refiner = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const { user, loading: authLoading } = useAuth();
@@ -113,7 +152,14 @@ const Refiner = () => {
     if (user) {
       fetchProjects();
       if (projectId) {
-        fetchProject();
+        // Try to load from cache first
+        const cached = loadFromCache(projectId);
+        if (cached) {
+          setTranscript(cached.transcript);
+          setProcessingResults(cached.processingResults);
+          setPipelineState(cached.pipelineState);
+        }
+        fetchProject(!!cached);
       }
     }
   }, [user, projectId]);
@@ -133,9 +179,12 @@ const Refiner = () => {
     }
   };
 
-  const fetchProject = async () => {
+  const fetchProject = async (hasCachedData: boolean = false) => {
     try {
-      setLoading(true);
+      // Only show loading if we don't have cached data
+      if (!hasCachedData) {
+        setLoading(true);
+      }
       const { data: projectData, error: projectError } = await supabase
         .from('projects')
         .select('*')
@@ -177,15 +226,14 @@ const Refiner = () => {
       
       if (transcriptData) {
         setTranscript(transcriptData);
-        // Set all pipeline steps to complete if we have a transcript
-        setPipelineState({
+        const newPipelineState: PipelineState = {
           transcription: 'complete',
           removeFillers: 'complete',
           removeGaps: 'complete',
           audioCleanup: 'complete',
-        });
-        // Set processing results if transcript exists
-        setProcessingResults({
+        };
+        setPipelineState(newPipelineState);
+        const newProcessingResults: ProcessingResults = {
           wordCount: transcriptData.word_count || 0,
           fillerCount: transcriptData.filler_words_detected || 0,
           segmentCount: Array.isArray(transcriptData.segments) ? (transcriptData.segments as any[]).length : 0,
@@ -193,7 +241,17 @@ const Refiner = () => {
           accuracyScore: Math.round((transcriptData.avg_confidence || 0.95) * 100),
           clipsGenerated: 4,
           audioEnhanced: 12,
-        });
+        };
+        setProcessingResults(newProcessingResults);
+        
+        // Save to cache
+        if (projectId) {
+          saveToCache(projectId, {
+            transcript: transcriptData,
+            processingResults: newProcessingResults,
+            pipelineState: newPipelineState,
+          });
+        }
       } else {
         // Reset pipeline state for unprocessed projects
         setPipelineState({
@@ -236,7 +294,14 @@ const Refiner = () => {
     
     if (transcriptData) {
       setTranscript(transcriptData);
-      setProcessingResults({
+      const newPipelineState: PipelineState = {
+        transcription: 'complete',
+        removeFillers: 'complete',
+        removeGaps: 'complete',
+        audioCleanup: 'complete',
+      };
+      setPipelineState(newPipelineState);
+      const newProcessingResults: ProcessingResults = {
         wordCount: transcriptData.word_count || 0,
         fillerCount: transcriptData.filler_words_detected || 0,
         segmentCount: Array.isArray(transcriptData.segments) ? (transcriptData.segments as any[]).length : 0,
@@ -244,6 +309,14 @@ const Refiner = () => {
         accuracyScore: Math.round((transcriptData.avg_confidence || 0.95) * 100),
         clipsGenerated: 4,
         audioEnhanced: 12,
+      };
+      setProcessingResults(newProcessingResults);
+      
+      // Save to cache
+      saveToCache(projectId, {
+        transcript: transcriptData,
+        processingResults: newProcessingResults,
+        pipelineState: newPipelineState,
       });
     }
   }, [projectId]);
