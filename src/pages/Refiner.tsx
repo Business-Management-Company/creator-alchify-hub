@@ -217,7 +217,7 @@ const Refiner = () => {
       
       <AppLayout>
         {/* Tabs Navigation */}
-        <div className="border-b border-border mb-6">
+        <div className="border-b border-border mb-4">
           <div className="flex items-center justify-center gap-1">
             <button
               onClick={() => setActiveTab('overview')}
@@ -262,7 +262,7 @@ const Refiner = () => {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-12 gap-6">
+        <div className="grid lg:grid-cols-12 gap-4">
           {/* Left Sidebar - Project Selection */}
           <div className="lg:col-span-3">
             <Card>
@@ -412,7 +412,7 @@ const Refiner = () => {
 
         {/* Processing Results - Show for all projects */}
         {project && (
-          <Card className="mt-6">
+          <Card className="mt-4">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <BarChart3 className="h-5 w-5 text-primary" />

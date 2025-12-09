@@ -31,7 +31,7 @@ const AppHeader = () => {
   const initials = displayName.slice(0, 2).toUpperCase();
 
   return (
-    <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm flex items-center justify-between px-4">
+    <header className="h-10 border-b border-border bg-card/50 backdrop-blur-sm flex items-center justify-between px-4">
       <SidebarTrigger className="-ml-1" />
       
       <div className="flex items-center gap-2">
