@@ -13,7 +13,9 @@ import {
   Play,
   X,
   Save,
-  Plus
+  Plus,
+  Share2,
+  MessageCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -685,10 +687,10 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
         />
       )}
 
-      {/* Video Preview Modal (legacy) */}
+      {/* Video Preview Modal - respects selected format */}
       {previewUrl && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className="relative bg-card rounded-xl p-4 max-w-md w-full mx-4">
+          <div className="relative bg-card rounded-xl p-4 max-w-2xl w-full mx-4">
             <Button
               variant="ghost"
               size="icon"
@@ -702,7 +704,11 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
               src={previewUrl}
               controls
               autoPlay
-              className="w-full rounded-lg aspect-[9/16] max-h-[70vh] object-contain bg-black"
+              className={`w-full rounded-lg max-h-[70vh] object-contain bg-black mx-auto ${
+                selectedFormat === '1:1' ? 'aspect-square max-w-[400px]' :
+                selectedFormat === '16:9' || selectedFormat === 'landscape' ? 'aspect-video' :
+                'aspect-[9/16] max-w-[300px]'
+              }`}
             />
             <p className="text-xs text-muted-foreground mt-2 text-center">
               Rendered with Creatomate • Animated word-by-word captions
@@ -926,7 +932,7 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
 
                 {/* Action buttons */}
                 {clip.renderStatus === 'done' && clip.renderUrl && (
-                  <div className="flex gap-2 mt-2 pt-2 border-t border-white/20">
+                  <div className="flex gap-1 mt-2 pt-2 border-t border-white/20">
                     <Button 
                       variant="ghost" 
                       size="sm"
@@ -943,13 +949,61 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
                       variant="ghost" 
                       size="sm"
                       className="h-7 text-xs text-white hover:bg-white/20 flex-1"
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
-                        window.open(clip.renderUrl, '_blank');
+                        try {
+                          // Fetch the video and trigger download
+                          const response = await fetch(clip.renderUrl!);
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `${clip.title.replace(/[^a-zA-Z0-9]/g, '_')}_HD.mp4`;
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          window.URL.revokeObjectURL(url);
+                          toast({
+                            title: 'Download started',
+                            description: 'Your HD clip is downloading.',
+                          });
+                        } catch (error) {
+                          // Fallback to open in new tab
+                          window.open(clip.renderUrl, '_blank');
+                        }
                       }}
                     >
                       <Download className="mr-1 h-3 w-3" />
                       Download
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className="h-7 w-7 p-0 text-white hover:bg-white/20"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Share via SMS/text message
+                        const shareText = `Check out this clip: ${clip.title}`;
+                        const shareUrl = clip.renderUrl!;
+                        
+                        // Try native share first (mobile)
+                        if (navigator.share) {
+                          navigator.share({
+                            title: clip.title,
+                            text: shareText,
+                            url: shareUrl,
+                          }).catch(() => {
+                            // Fallback to SMS link
+                            window.open(`sms:?body=${encodeURIComponent(`${shareText}\n${shareUrl}`)}`, '_blank');
+                          });
+                        } else {
+                          // Desktop: open SMS link
+                          window.open(`sms:?body=${encodeURIComponent(`${shareText}\n${shareUrl}`)}`, '_blank');
+                        }
+                      }}
+                      title="Share via text message"
+                    >
+                      <MessageCircle className="h-3 w-3" />
                     </Button>
                   </div>
                 )}
