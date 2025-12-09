@@ -370,8 +370,8 @@ const Upload = () => {
                     <Music className="h-8 w-8 text-primary" />
                   )}
                 </div>
-                <div className="flex-1 text-left">
-                  <p className="font-medium text-foreground truncate">{file.name}</p>
+                <div className="flex-1 text-left min-w-0">
+                  <p className="font-medium text-foreground break-words">{file.name}</p>
                   <p className="text-sm text-muted-foreground">
                     {formatFileSize(file.size)} • {getFileType(file.type)}
                   </p>
