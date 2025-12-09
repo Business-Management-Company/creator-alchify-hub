@@ -650,112 +650,119 @@ const Refiner = () => {
               AI Tools
             </h3>
 
-            {/* Step 1: Transcription */}
-            {!transcript ? (
-              <Card className="border-primary/30">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <FileText className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">Generate Transcript</h3>
-                      <p className="text-xs text-muted-foreground">Start AI processing</p>
-                    </div>
+            {/* Step 1: Transcription - Always show */}
+            <Card className={`border-primary/30 ${transcript ? 'bg-green-500/10 border-green-500/30' : ''}`}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`p-2 rounded-lg ${transcript ? 'bg-green-500/20' : 'bg-primary/10'}`}>
+                    <FileText className={`h-5 w-5 ${transcript ? 'text-green-500' : 'text-primary'}`} />
                   </div>
-                  <Button 
-                    variant="hero" 
-                    className="w-full"
-                    onClick={startTranscription}
-                    disabled={isTranscribing}
-                  >
-                    {isTranscribing ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Transcribing...
-                      </>
-                    ) : (
-                      <>
-                        <Wand2 className="mr-2 h-4 w-4" />
-                        Generate Transcript
-                      </>
-                    )}
-                  </Button>
-                  {isTranscribing && (
-                    <div className="mt-3">
-                      <Progress value={45} className="h-2" />
-                      <p className="text-xs text-muted-foreground mt-1 text-center">AI is processing your content...</p>
-                    </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">
+                      {transcript ? 'Transcript Ready' : 'Generate Transcript'}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {transcript ? `${transcript.word_count} words transcribed` : 'Start AI processing'}
+                    </p>
+                  </div>
+                  {transcript && (
+                    <Check className="h-5 w-5 text-green-500 ml-auto" />
                   )}
-                </CardContent>
-              </Card>
-            ) : (
-              <>
-                {/* Clip Generator */}
-                <ToolCard
-                  icon={Film}
-                  title="AI Clip Generator"
-                  description="Create viral clips for TikTok, Reels, Shorts"
-                  isActive={activeTool === 'clips'}
-                  onClick={() => handleToolClick('clips')}
-                  disabled={!transcript}
-                />
+                </div>
+                {!transcript && (
+                  <>
+                    <Button 
+                      variant="hero" 
+                      className="w-full"
+                      onClick={startTranscription}
+                      disabled={isTranscribing}
+                    >
+                      {isTranscribing ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Transcribing...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="mr-2 h-4 w-4" />
+                          Generate Transcript
+                        </>
+                      )}
+                    </Button>
+                    {isTranscribing && (
+                      <div className="mt-3">
+                        <Progress value={45} className="h-2" />
+                        <p className="text-xs text-muted-foreground mt-1 text-center">AI is processing your content...</p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
 
-                {/* Captions */}
-                <ToolCard
-                  icon={Captions}
-                  title="Captions & Subtitles"
-                  description="Export SRT, WebVTT, or burn-in captions"
-                  isActive={activeTool === 'captions'}
-                  onClick={() => handleToolClick('captions')}
-                  disabled={!transcript}
-                />
+            {/* Clip Generator */}
+            <ToolCard
+              icon={Film}
+              title="AI Clip Generator"
+              description="Create viral clips for TikTok, Reels, Shorts"
+              isActive={activeTool === 'clips'}
+              onClick={() => handleToolClick('clips')}
+              disabled={!transcript}
+            />
 
-                {/* Speaker Focus */}
-                <ToolCard
-                  icon={User}
-                  title="Speaker Focus"
-                  description="AI camera framing for single-speaker content"
-                  isActive={activeTool === 'speaker-focus'}
-                  onClick={() => handleToolClick('speaker-focus')}
-                  disabled={!transcript}
-                  badge="New"
-                />
+            {/* Captions */}
+            <ToolCard
+              icon={Captions}
+              title="Captions & Subtitles"
+              description="Export SRT, WebVTT, or burn-in captions"
+              isActive={activeTool === 'captions'}
+              onClick={() => handleToolClick('captions')}
+              disabled={!transcript}
+            />
 
-                {/* Lower Thirds */}
-                <ToolCard
-                  icon={Layers}
-                  title="Lower Thirds & Graphics"
-                  description="Add name overlays, titles, logos"
-                  isActive={activeTool === 'lower-thirds'}
-                  onClick={() => handleToolClick('lower-thirds')}
-                  disabled={!transcript}
-                  badge="New"
-                />
+            {/* Speaker Focus */}
+            <ToolCard
+              icon={User}
+              title="Speaker Focus"
+              description="AI camera framing for single-speaker content"
+              isActive={activeTool === 'speaker-focus'}
+              onClick={() => handleToolClick('speaker-focus')}
+              disabled={!transcript}
+              badge="New"
+            />
 
-                {/* B-Roll Suggestions */}
-                <ToolCard
-                  icon={Image}
-                  title="B-Roll Suggestions"
-                  description="AI suggests stock footage for key moments"
-                  isActive={activeTool === 'b-roll'}
-                  onClick={() => handleToolClick('b-roll')}
-                  disabled={!transcript}
-                  badge="New"
-                />
+            {/* Lower Thirds */}
+            <ToolCard
+              icon={Layers}
+              title="Lower Thirds & Graphics"
+              description="Add name overlays, titles, logos"
+              isActive={activeTool === 'lower-thirds'}
+              onClick={() => handleToolClick('lower-thirds')}
+              disabled={!transcript}
+              badge="New"
+            />
 
-                {/* Timeline Editor */}
-                <ToolCard
-                  icon={Play}
-                  title="Timeline Editor"
-                  description="Multi-track editing with audio/video layers"
-                  isActive={activeTool === 'timeline'}
-                  onClick={() => handleToolClick('timeline')}
-                  disabled={!transcript}
-                  badge="New"
-                />
-              </>
-            )}
+            {/* B-Roll Suggestions */}
+            <ToolCard
+              icon={Image}
+              title="B-Roll Suggestions"
+              description="AI suggests stock footage for key moments"
+              isActive={activeTool === 'b-roll'}
+              onClick={() => handleToolClick('b-roll')}
+              disabled={!transcript}
+              badge="New"
+            />
+
+            {/* Timeline Editor */}
+            <ToolCard
+              icon={Play}
+              title="Timeline Editor"
+              description="Multi-track editing with audio/video layers"
+              isActive={activeTool === 'timeline'}
+              onClick={() => handleToolClick('timeline')}
+              disabled={!transcript}
+              badge="New"
+            />
           </div>
         </div>
         
