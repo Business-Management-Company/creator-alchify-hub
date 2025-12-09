@@ -410,8 +410,8 @@ const Refiner = () => {
           />
         )}
 
-        {/* Processing Results - Only show if we have processed content */}
-        {project && isProcessingComplete && (
+        {/* Processing Results - Show for all projects */}
+        {project && (
           <Card className="mt-6">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
