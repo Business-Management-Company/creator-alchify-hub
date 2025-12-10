@@ -62,32 +62,84 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Calculator,
 };
 
-const navItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: 'LayoutDashboard', path: '/dashboard' },
-  { id: 'upload', label: 'Upload', icon: 'Upload', path: '/upload' },
-  { id: 'library', label: 'Media Library', icon: 'Library', path: '/library' },
-  { id: 'projects', label: 'Projects', icon: 'FolderOpen', path: '/projects' },
-  { id: 'studio', label: 'Recording Studio', icon: 'Video', path: '/studio' },
-  { id: 'refiner', label: 'Refiner Studio', icon: 'Wand2', path: '/refiner' },
-  { id: 'exports', label: 'Exports', icon: 'Download', path: '/exports' },
+type NavSection = {
+  label: string;
+  items: { id: string; label: string; icon: string; path: string }[];
+};
+
+const creatorSections: NavSection[] = [
+  {
+    label: 'Home',
+    items: [
+      { id: 'dashboard', label: 'Dashboard', icon: 'LayoutDashboard', path: '/dashboard' },
+    ],
+  },
+  {
+    label: 'Create',
+    items: [
+      { id: 'studio', label: 'Recording Studio', icon: 'Video', path: '/studio' },
+      { id: 'upload', label: 'Upload', icon: 'Upload', path: '/upload' },
+    ],
+  },
+  {
+    label: 'Library',
+    items: [
+      { id: 'projects', label: 'Projects', icon: 'FolderOpen', path: '/projects' },
+      { id: 'library', label: 'Media Library', icon: 'Library', path: '/library' },
+    ],
+  },
+  {
+    label: 'Refine & Publish',
+    items: [
+      { id: 'refiner', label: 'Refiner Studio', icon: 'Wand2', path: '/refiner' },
+      { id: 'exports', label: 'Exports', icon: 'Download', path: '/exports' },
+    ],
+  },
+  {
+    label: 'Grow & Profile',
+    items: [
+      { id: 'alchify-page', label: 'Alchify Page', icon: 'User', path: '/creator/profile' },
+      { id: 'analytics', label: 'Analytics', icon: 'BarChart3', path: '/analytics' },
+    ],
+  },
+  {
+    label: 'Account',
+    items: [
+      { id: 'integrations', label: 'Integrations', icon: 'Plug', path: '/integrations' },
+      { id: 'settings', label: 'Settings', icon: 'Settings', path: '/settings' },
+    ],
+  },
 ];
 
-const secondaryItems = [
-  { id: 'alchify-page', label: 'Alchify Page', icon: 'User', path: '/creator/profile' },
-  { id: 'integrations', label: 'Integrations', icon: 'Plug', path: '/integrations' },
-  { id: 'analytics', label: 'Analytics', icon: 'BarChart3', path: '/analytics' },
-  { id: 'settings', label: 'Settings', icon: 'Settings', path: '/settings' },
-];
-
-const adminItems = [
-  { id: 'admin', label: 'Admin Dashboard', icon: 'Shield', path: '/admin' },
-  { id: 'admin-users', label: 'Manage Users', icon: 'Users', path: '/admin/users' },
-  { id: 'admin-contacts', label: 'Contacts', icon: 'Contact', path: '/admin/contacts' },
-  { id: 'admin-content', label: 'Content', icon: 'FileText', path: '/admin/content' },
-  { id: 'admin-analytics', label: 'Analytics', icon: 'TrendingUp', path: '/admin/analytics' },
-  { id: 'admin-tech', label: 'Tech Stack', icon: 'Server', path: '/admin/tech-stack' },
-  { id: 'admin-vto', label: 'CEO VTO', icon: 'Presentation', path: '/admin/ceo-vto' },
-  { id: 'admin-cfo', label: 'CFO Dashboard', icon: 'Calculator', path: '/admin/cfo-dashboard' },
+const adminSections: NavSection[] = [
+  {
+    label: 'Admin',
+    items: [
+      { id: 'admin', label: 'Admin Dashboard', icon: 'Shield', path: '/admin' },
+    ],
+  },
+  {
+    label: 'People & Accounts',
+    items: [
+      { id: 'admin-users', label: 'Manage Users', icon: 'Users', path: '/admin/users' },
+      { id: 'admin-contacts', label: 'Contacts', icon: 'Contact', path: '/admin/contacts' },
+    ],
+  },
+  {
+    label: 'Content & Data',
+    items: [
+      { id: 'admin-content', label: 'Content', icon: 'FileText', path: '/admin/content' },
+      { id: 'admin-analytics', label: 'Analytics', icon: 'TrendingUp', path: '/admin/analytics' },
+    ],
+  },
+  {
+    label: 'System & Strategy',
+    items: [
+      { id: 'admin-tech', label: 'Tech Stack', icon: 'Server', path: '/admin/tech-stack' },
+      { id: 'admin-vto', label: 'CEO VTO', icon: 'Presentation', path: '/admin/ceo-vto' },
+      { id: 'admin-cfo', label: 'CFO Dashboard', icon: 'Calculator', path: '/admin/cfo-dashboard' },
+    ],
+  },
 ];
 
 const AppSidebar = () => {
@@ -120,93 +172,72 @@ const AppSidebar = () => {
       </SidebarHeader>
       
       <SidebarContent className="px-2">
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navItems.map((item) => {
-                const Icon = iconMap[item.icon];
-                return (
-                  <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive(item.path)}
-                      tooltip={item.label}
-                    >
-                      <Link 
-                        to={item.path} 
-                        data-ui-element={item.id}
+        {creatorSections.map((section, sectionIndex) => (
+          <SidebarGroup key={section.label}>
+            {!collapsed && (
+              <SidebarGroupLabel className="text-xs text-muted-foreground uppercase tracking-wide">
+                {section.label}
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {section.items.map((item) => {
+                  const Icon = iconMap[item.icon];
+                  return (
+                    <SidebarMenuItem key={item.id}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(item.path)}
+                        tooltip={item.label}
                       >
-                        {Icon && <Icon className="h-4 w-4" />}
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                        <Link to={item.path} data-ui-element={item.id}>
+                          {Icon && <Icon className="h-4 w-4" />}
+                          <span>{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
         
-        <div className="my-4 mx-2 h-px bg-border" />
-        
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {secondaryItems.map((item) => {
-                const Icon = iconMap[item.icon];
-                return (
-                  <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive(item.path)}
-                      tooltip={item.label}
-                    >
-                      <Link 
-                        to={item.path}
-                        data-ui-element={item.id}
-                      >
-                        {Icon && <Icon className="h-4 w-4" />}
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        
-        {/* Admin Section - Only visible to admins */}
+        {/* Admin Sections - Only visible to admins */}
         {isAdmin && (
           <>
             <div className="my-4 mx-2 h-px bg-border" />
             
-            <SidebarGroup>
-              {!collapsed && (
-                <SidebarGroupLabel className="text-xs text-primary/70">Admin</SidebarGroupLabel>
-              )}
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {adminItems.map((item) => {
-                    const Icon = iconMap[item.icon];
-                    return (
-                      <SidebarMenuItem key={item.id}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={isActive(item.path)}
-                          tooltip={item.label}
-                        >
-                          <Link to={item.path}>
-                            {Icon && <Icon className="h-4 w-4 text-primary" />}
-                            <span>{item.label}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+            {adminSections.map((section) => (
+              <SidebarGroup key={section.label}>
+                {!collapsed && (
+                  <SidebarGroupLabel className="text-xs text-primary/70 uppercase tracking-wide">
+                    {section.label}
+                  </SidebarGroupLabel>
+                )}
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {section.items.map((item) => {
+                      const Icon = iconMap[item.icon];
+                      return (
+                        <SidebarMenuItem key={item.id}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={isActive(item.path)}
+                            tooltip={item.label}
+                          >
+                            <Link to={item.path}>
+                              {Icon && <Icon className="h-4 w-4 text-primary" />}
+                              <span>{item.label}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      );
+                    })}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ))}
           </>
         )}
       </SidebarContent>
