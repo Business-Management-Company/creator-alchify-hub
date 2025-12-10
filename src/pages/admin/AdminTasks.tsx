@@ -498,7 +498,7 @@ export default function AdminTasks() {
                                         key={col.id}
                                         className={cn(
                                           col.width,
-                                          'cursor-grab select-none',
+                                          'cursor-grab select-none text-left',
                                           draggedIndex === index && 'bg-primary/10'
                                         )}
                                         draggable
@@ -506,7 +506,7 @@ export default function AdminTasks() {
                                         onDragOver={(e) => handleDragOver(e, index)}
                                         onDragEnd={handleDragEnd}
                                       >
-                                        <div className="flex items-center gap-1">
+                                        <div className="flex items-center gap-1 justify-start">
                                           <GripVertical className="h-3 w-3 text-muted-foreground/50" />
                                           {col.label}
                                         </div>
