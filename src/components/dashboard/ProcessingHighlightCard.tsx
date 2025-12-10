@@ -3,6 +3,7 @@ import { Sparkles } from 'lucide-react';
 import { Insight } from '@/hooks/useCreatorInsights';
 import { InsightModal } from './InsightModal';
 import { LABEL_TO_METRIC_KEY, MetricKey } from '@/types/insights';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ProcessingHighlightCardProps {
   label: string;
@@ -40,9 +41,16 @@ export function ProcessingHighlightCard({
         `}
       >
         {/* AI Insight Indicator */}
-        <div className="absolute top-1.5 right-1.5 opacity-50 group-hover:opacity-100 transition-opacity">
-          <Sparkles className="h-3 w-3 text-primary" />
-        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="absolute top-1.5 right-1.5 opacity-50 group-hover:opacity-100 transition-opacity">
+              <Sparkles className="h-3 w-3 text-primary" />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Click for AI insights</p>
+          </TooltipContent>
+        </Tooltip>
         
         <div className="text-xl font-bold">{value}</div>
         <div className="text-xs text-muted-foreground">{label}</div>

@@ -3,6 +3,7 @@ import { LucideIcon, Sparkles } from 'lucide-react';
 import { Insight } from '@/hooks/useCreatorInsights';
 import { InsightModal } from './InsightModal';
 import { LABEL_TO_METRIC_KEY, MetricKey } from '@/types/insights';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface MetricCardProps {
   label: string;
@@ -34,9 +35,16 @@ export function MetricCard({ label, value, icon: Icon, subtext, passiveInsight, 
         `}
       >
         {/* AI Insight Indicator */}
-        <div className="absolute top-2 right-2 opacity-50 group-hover:opacity-100 transition-opacity">
-          <Sparkles className="h-4 w-4 text-primary" />
-        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="absolute top-2 right-2 opacity-50 group-hover:opacity-100 transition-opacity">
+              <Sparkles className="h-4 w-4 text-primary" />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Click for AI insights</p>
+          </TooltipContent>
+        </Tooltip>
         
         <div className="flex items-center gap-3 mb-2">
           <div className="p-2 rounded-lg bg-primary/10">
