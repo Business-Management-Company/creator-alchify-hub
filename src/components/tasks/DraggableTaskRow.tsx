@@ -48,7 +48,7 @@ export function DraggableTaskRow({ task, columns, renderCell }: DraggableTaskRow
         </div>
       </TableCell>
       {columns.map((col) => (
-        <TableCell key={col.id} className={col.width}>
+        <TableCell key={col.id} className={cn(col.width, "text-left align-middle")}>
           {renderCell(col.id, task)}
         </TableCell>
       ))}
