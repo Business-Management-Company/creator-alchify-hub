@@ -136,57 +136,49 @@ serve(async (req) => {
         position = 'bottom',
       } = captionStyle;
 
-      // Build the Creatomate source with animated captions
+      // Build the Creatomate source with auto-generated animated captions
+      // Using transcript_source to reference video for auto-transcription
+      const videoElementId = 'main-video';
+      const yPos = getYPosition(position);
+      
       const source: any = {
         output_format: 'mp4',
         width: config.width,
         height: config.height,
         elements: [
-          // Video element
+          // Video element with ID for transcript_source reference
           {
             type: 'video',
+            id: videoElementId,
             source: videoUrl,
             trim_start: startTime,
             ...(duration && { duration }),
           },
+          // Auto-generated captions using Creatomate's built-in transcription
+          {
+            type: 'text',
+            transcript_source: videoElementId, // Reference the video for auto-transcription
+            transcript_effect: 'highlight', // Word-by-word highlight effect
+            transcript_color: highlightColor,
+            transcript_maximum_length: 14, // Max words per caption line
+            y: yPos,
+            width: '81%',
+            height: '20%',
+            x_alignment: '50%',
+            y_alignment: '50%',
+            font_family: fontFamily,
+            font_weight: '700',
+            font_size: '9.29 vmin',
+            fill_color: textColor,
+            stroke_color: '#000000',
+            stroke_width: '1.6 vmin',
+            background_color: 'rgba(0,0,0,0.7)',
+            background_x_padding: '20%',
+            background_y_padding: '15%',
+            background_border_radius: '20%',
+          },
         ],
       };
-
-      // Add captions if words are provided
-      if (words && words.length > 0) {
-        const captionText = buildCaptionText(words, startTime);
-        const yPos = getYPosition(position);
-
-        // Creatomate transcript-style animated captions
-        // Using percentage-based positioning for proper placement
-        source.elements.push({
-          type: 'text',
-          transcript: captionText,
-          transcript_effect: 'highlight', // Word-by-word highlight effect
-          transcript_color: highlightColor,
-          y: yPos, // Now percentage like "75%"
-          width: '85%',
-          x_alignment: '50%',
-          y_alignment: '50%',
-          font_family: fontFamily,
-          font_weight: '800',
-          font_size_maximum: `${fontSize} px`,
-          fill_color: textColor,
-          background_color: '#000000CC', // Solid black with transparency
-          background_x_padding: '5%', // Use percentage, not pixels
-          background_y_padding: '2%', // Use percentage, not pixels
-          background_border_radius: '3%', // Use percentage, not pixels
-          text_transform: 'uppercase',
-          text_align: 'center',
-          line_height: '120%',
-          // Word timing from transcript
-          transcript_words: words.map(w => ({
-            word: w.word,
-            start: w.start - startTime,
-            end: w.end - startTime,
-          })),
-        });
-      }
 
       console.log('Sending render request to Creatomate:', JSON.stringify(source, null, 2));
 
