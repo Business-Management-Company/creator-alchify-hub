@@ -30,6 +30,7 @@ interface TaskEditDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   task?: Task | null;
+  defaultSectionId?: string | null;
 }
 
 const RELEASE_TARGETS: { value: ReleaseTarget; label: string }[] = [
@@ -38,7 +39,7 @@ const RELEASE_TARGETS: { value: ReleaseTarget; label: string }[] = [
   { value: 'Jan-1-Alpha', label: 'Jan 1 Alpha' },
 ];
 
-export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps) {
+export function TaskEditDrawer({ open, onOpenChange, task, defaultSectionId }: TaskEditDrawerProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [statusId, setStatusId] = useState('');
@@ -80,14 +81,15 @@ export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps
       setDescription('');
       setStatusId(defaultStatus?.id || '');
       setPriorityId(defaultPriority?.id || '');
-      setSectionId('');
+      // Use defaultSectionId if provided, otherwise use first section
+      setSectionId(defaultSectionId || sections[0]?.id || '');
       setReleaseTarget('Dec-22-Full-Test');
       setDueDate('');
       setArea('');
       setAssigneeIds([]);
       setLinkedUrl('');
     }
-  }, [task, open, defaultStatus?.id, defaultPriority?.id]);
+  }, [task, open, defaultStatus?.id, defaultPriority?.id, defaultSectionId, sections]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
