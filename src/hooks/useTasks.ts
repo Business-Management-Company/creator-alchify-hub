@@ -141,36 +141,50 @@ export function useCreateTask() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (task: Partial<Task>) => {
+    mutationFn: async (task: Partial<Task> & { assigneeIds?: string[] }) => {
+      const { assigneeIds, ...taskData } = task;
+      
       const { data, error } = await supabase
         .from('tasks')
         .insert({
-          title: task.title!,
-          description: task.description,
-          status: task.status || 'backlog',
-          priority: task.priority || 'medium',
-          status_id: task.status_id,
-          priority_id: task.priority_id,
-          release_target: task.release_target || 'Backlog',
-          due_date: task.due_date,
-          area: task.area,
+          title: taskData.title!,
+          description: taskData.description,
+          status: taskData.status || 'backlog',
+          priority: taskData.priority || 'medium',
+          status_id: taskData.status_id,
+          priority_id: taskData.priority_id,
+          release_target: taskData.release_target || 'Backlog',
+          due_date: taskData.due_date,
+          area: taskData.area,
           creator_id: user!.id,
-          assignee_id: task.assignee_id,
-          linked_url: task.linked_url,
+          assignee_id: assigneeIds?.[0] || taskData.assignee_id,
+          linked_url: taskData.linked_url,
         })
         .select()
         .single();
       if (error) throw error;
 
-      // Create notification for assignee if different from creator
-      if (task.assignee_id && task.assignee_id !== user!.id) {
-        await supabase.from('notifications').insert({
-          user_id: task.assignee_id,
-          task_id: data.id,
-          type: 'task_assigned',
-          title: 'New Task Assigned',
-          message: `You've been assigned a new task: ${task.title}`,
-        });
+      // Add assignees to junction table
+      const allAssignees = assigneeIds || (taskData.assignee_id ? [taskData.assignee_id] : []);
+      if (allAssignees.length > 0) {
+        await supabase
+          .from('task_assignees')
+          .insert(allAssignees.map(user_id => ({ task_id: data.id, user_id })));
+        
+        // Create notifications for all assignees except creator
+        const notificationsToCreate = allAssignees
+          .filter(id => id !== user!.id)
+          .map(userId => ({
+            user_id: userId,
+            task_id: data.id,
+            type: 'task_assigned',
+            title: 'New Task Assigned',
+            message: `You've been assigned to: "${taskData.title}"${taskData.due_date ? ` (due ${new Date(taskData.due_date).toLocaleDateString()})` : ''}`,
+          }));
+        
+        if (notificationsToCreate.length > 0) {
+          await supabase.from('notifications').insert(notificationsToCreate);
+        }
       }
 
       return data;
@@ -206,20 +220,30 @@ export function useUpdateTask() {
         .single();
       if (error) throw error;
 
-      // Notify relevant users about update
+      // Get all assignees from junction table
+      const { data: assignees } = await supabase
+        .from('task_assignees')
+        .select('user_id')
+        .eq('task_id', id);
+
+      // Notify relevant users about update (all assignees + creator, except current user)
       if (originalTask) {
         const usersToNotify = new Set<string>();
         if (originalTask.creator_id !== user!.id) usersToNotify.add(originalTask.creator_id);
-        if (originalTask.assignee_id && originalTask.assignee_id !== user!.id) usersToNotify.add(originalTask.assignee_id);
+        (assignees || []).forEach(a => {
+          if (a.user_id !== user!.id) usersToNotify.add(a.user_id);
+        });
 
-        for (const userId of usersToNotify) {
-          await supabase.from('notifications').insert({
-            user_id: userId,
-            task_id: id,
-            type: 'task_updated',
-            title: 'Task Updated',
-            message: `A task was updated: ${originalTask.title}`,
-          });
+        const notificationsToCreate = Array.from(usersToNotify).map(userId => ({
+          user_id: userId,
+          task_id: id,
+          type: 'task_updated',
+          title: 'Task Updated',
+          message: `"${originalTask.title}" was updated`,
+        }));
+
+        if (notificationsToCreate.length > 0) {
+          await supabase.from('notifications').insert(notificationsToCreate);
         }
       }
 
@@ -270,26 +294,35 @@ export function useAddComment() {
         .single();
       if (error) throw error;
 
-      // Notify task participants
+      // Notify task participants (all assignees + creator, except current user)
       const { data: task } = await supabase
         .from('tasks')
-        .select('title, creator_id, assignee_id')
+        .select('title, creator_id')
         .eq('id', taskId)
         .single();
+
+      const { data: assignees } = await supabase
+        .from('task_assignees')
+        .select('user_id')
+        .eq('task_id', taskId);
 
       if (task) {
         const usersToNotify = new Set<string>();
         if (task.creator_id !== user!.id) usersToNotify.add(task.creator_id);
-        if (task.assignee_id && task.assignee_id !== user!.id) usersToNotify.add(task.assignee_id);
+        (assignees || []).forEach(a => {
+          if (a.user_id !== user!.id) usersToNotify.add(a.user_id);
+        });
 
-        for (const userId of usersToNotify) {
-          await supabase.from('notifications').insert({
-            user_id: userId,
-            task_id: taskId,
-            type: 'task_commented',
-            title: 'New Comment on Task',
-            message: `Someone commented on: ${task.title}`,
-          });
+        const notificationsToCreate = Array.from(usersToNotify).map(userId => ({
+          user_id: userId,
+          task_id: taskId,
+          type: 'task_commented',
+          title: 'New Comment on Task',
+          message: `Someone commented on: "${task.title}"`,
+        }));
+
+        if (notificationsToCreate.length > 0) {
+          await supabase.from('notifications').insert(notificationsToCreate);
         }
       }
 
@@ -348,16 +381,18 @@ export function useUpdateTaskAssignees() {
           .single();
         
         if (task) {
-          for (const userId of toAdd) {
-            if (userId !== user!.id) {
-              await supabase.from('notifications').insert({
-                user_id: userId,
-                task_id: taskId,
-                type: 'task_assigned',
-                title: 'Task Assigned',
-                message: `You've been assigned to: ${task.title}`,
-              });
-            }
+          const notificationsToCreate = toAdd
+            .filter(userId => userId !== user!.id)
+            .map(userId => ({
+              user_id: userId,
+              task_id: taskId,
+              type: 'task_assigned',
+              title: 'Task Assigned',
+              message: `You've been assigned to: "${task.title}"`,
+            }));
+          
+          if (notificationsToCreate.length > 0) {
+            await supabase.from('notifications').insert(notificationsToCreate);
           }
         }
       }
