@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend, Tooltip as RechartsTooltip } from 'recharts';
-import { HelpCircle, TrendingUp, DollarSign, Users, Cpu, Sparkles, Loader2 } from 'lucide-react';
+import { HelpCircle, TrendingUp, DollarSign, Users, Cpu, Sparkles, Loader2, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -97,6 +98,7 @@ function InputWithHelp({
 }
 
 export default function AdminCFODashboard() {
+  const navigate = useNavigate();
   const [assumptions, setAssumptions] = useState<Assumptions>(baseAssumptions);
   const [boardSummary, setBoardSummary] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -246,6 +248,15 @@ export default function AdminCFODashboard() {
       <div className="max-w-[1600px] mx-auto">
         {/* Header */}
         <div className="mb-6">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => navigate('/admin')} 
+            className="mb-2 -ml-2 text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back to Dashboard
+          </Button>
           <h1 className="text-2xl font-bold text-foreground">CFO Dashboard</h1>
           <p className="text-muted-foreground">3-Year Pro-Forma Financial Model for Alchify</p>
         </div>
