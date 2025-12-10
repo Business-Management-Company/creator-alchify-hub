@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useRefinerAI } from '@/hooks/useRefinerAI';
 import { InsightResponse, InsightRequest, MetricKey } from '@/types/insights';
 
 interface InsightModalProps {
@@ -46,6 +47,7 @@ export function InsightModal({
 }: InsightModalProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { openWithPrompt } = useRefinerAI();
   const [insight, setInsight] = useState<InsightResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -119,10 +121,8 @@ export function InsightModal({
 
   const handleQuestionClick = (question: string) => {
     onClose();
-    toast({
-      title: 'Ask Refiner AI',
-      description: question,
-    });
+    // Open the Refiner AI panel with the question
+    openWithPrompt(question);
   };
 
   return (

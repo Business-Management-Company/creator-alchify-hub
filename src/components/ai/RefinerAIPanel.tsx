@@ -36,6 +36,7 @@ import { FileUploadArea } from './FileUploadArea';
 import { ProactiveTips } from './ProactiveTips';
 import { AIActionButton, ActionType } from './AIActionButton';
 import { UIHighlighter, detectUIReferences } from './UIHighlighter';
+import { REFINER_AI_OPEN_EVENT, RefinerAIOpenPayload } from '@/hooks/useRefinerAI';
 
 interface UploadedFile {
   file: File;
@@ -264,6 +265,34 @@ export function RefinerAIPanel() {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [isOpen]);
+
+  // Listen for external open events (from InsightModal, etc.)
+  useEffect(() => {
+    const handleOpenEvent = (event: CustomEvent<RefinerAIOpenPayload>) => {
+      setIsOpen(true);
+      if (event.detail.prompt) {
+        // Set the input and auto-send the message
+        setInput(event.detail.prompt);
+        // Use a small delay to ensure the panel is open before sending
+        setTimeout(() => {
+          const prompt = event.detail.prompt;
+          if (prompt) {
+            // Add user message
+            setMessages(prev => [...prev, { role: 'user', content: prompt }]);
+            setInput('');
+            setIsLoading(true);
+            // Stream the chat response
+            streamChat(prompt).finally(() => setIsLoading(false));
+          }
+        }, 200);
+      }
+    };
+
+    window.addEventListener(REFINER_AI_OPEN_EVENT, handleOpenEvent as EventListener);
+    return () => {
+      window.removeEventListener(REFINER_AI_OPEN_EVENT, handleOpenEvent as EventListener);
+    };
+  }, [messages]);
 
   const getCurrentPage = () => {
     const path = location.pathname;
