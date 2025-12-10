@@ -18,9 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Task, TaskStatus, TaskPriority, AREA_OPTIONS } from '@/types/tasks';
+import { Task, AREA_OPTIONS, ReleaseTarget } from '@/types/tasks';
 import { useCreateTask, useUpdateTask } from '@/hooks/useTasks';
+import { useTaskStatuses, useTaskPriorities } from '@/hooks/useTaskConfigs';
 import { Loader2 } from 'lucide-react';
 
 interface TaskEditDrawerProps {
@@ -29,11 +31,18 @@ interface TaskEditDrawerProps {
   task?: Task | null;
 }
 
+const RELEASE_TARGETS: { value: ReleaseTarget; label: string }[] = [
+  { value: 'Dec-15-Full-Test', label: 'Dec 15 Full Test' },
+  { value: 'Jan-1-Alpha', label: 'Jan 1 Alpha' },
+  { value: 'Backlog', label: 'Backlog' },
+];
+
 export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [status, setStatus] = useState<TaskStatus>('backlog');
-  const [priority, setPriority] = useState<TaskPriority>('medium');
+  const [statusId, setStatusId] = useState('');
+  const [priorityId, setPriorityId] = useState('');
+  const [releaseTarget, setReleaseTarget] = useState<ReleaseTarget>('Backlog');
   const [dueDate, setDueDate] = useState('');
   const [area, setArea] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
@@ -42,6 +51,9 @@ export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const isLoading = createTask.isPending || updateTask.isPending;
+
+  const { data: statuses = [] } = useTaskStatuses();
+  const { data: priorities = [] } = useTaskPriorities();
 
   // Fetch users for assignee selection
   const { data: users = [] } = useQuery({
@@ -56,12 +68,17 @@ export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps
     },
   });
 
+  // Get defaults
+  const defaultStatus = statuses.find(s => s.is_default);
+  const defaultPriority = priorities.find(p => p.is_default);
+
   useEffect(() => {
     if (task) {
       setTitle(task.title);
       setDescription(task.description || '');
-      setStatus(task.status);
-      setPriority(task.priority);
+      setStatusId(task.status_id || '');
+      setPriorityId(task.priority_id || '');
+      setReleaseTarget(task.release_target || 'Backlog');
       setDueDate(task.due_date || '');
       setArea(task.area || '');
       setAssigneeId(task.assignee_id || '');
@@ -69,14 +86,15 @@ export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps
     } else {
       setTitle('');
       setDescription('');
-      setStatus('backlog');
-      setPriority('medium');
+      setStatusId(defaultStatus?.id || '');
+      setPriorityId(defaultPriority?.id || '');
+      setReleaseTarget('Backlog');
       setDueDate('');
       setArea('');
       setAssigneeId('');
       setLinkedUrl('');
     }
-  }, [task, open]);
+  }, [task, open, defaultStatus?.id, defaultPriority?.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,8 +102,9 @@ export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps
     const taskData = {
       title,
       description: description || null,
-      status,
-      priority,
+      status_id: statusId || null,
+      priority_id: priorityId || null,
+      release_target: releaseTarget,
       due_date: dueDate || null,
       area: area || null,
       assignee_id: assigneeId || null,
@@ -133,33 +152,54 @@ export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Status</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
+              <Select value={statusId || 'none'} onValueChange={(v) => setStatusId(v === 'none' ? '' : v)}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select status..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="backlog">Backlog</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="blocked">Blocked</SelectItem>
-                  <SelectItem value="done">Done</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
+                  {statuses.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
               <Label>Priority</Label>
-              <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
+              <Select value={priorityId || 'none'} onValueChange={(v) => setPriorityId(v === 'none' ? '' : v)}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select priority..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
+                  {priorities.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Release Target</Label>
+            <RadioGroup 
+              value={releaseTarget} 
+              onValueChange={(v) => setReleaseTarget(v as ReleaseTarget)}
+              className="flex flex-wrap gap-3"
+            >
+              {RELEASE_TARGETS.map((rt) => (
+                <div key={rt.value} className="flex items-center space-x-2">
+                  <RadioGroupItem value={rt.value} id={`release-${rt.value}`} />
+                  <label 
+                    htmlFor={`release-${rt.value}`}
+                    className="text-sm cursor-pointer"
+                  >
+                    {rt.label}
+                  </label>
+                </div>
+              ))}
+            </RadioGroup>
           </div>
 
           <div className="space-y-2">

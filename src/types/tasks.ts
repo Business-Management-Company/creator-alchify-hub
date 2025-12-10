@@ -1,5 +1,24 @@
 export type TaskStatus = 'backlog' | 'in_progress' | 'blocked' | 'done';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type ReleaseTarget = 'Dec-15-Full-Test' | 'Jan-1-Alpha' | 'Backlog';
+
+export interface TaskStatusConfig {
+  id: string;
+  name: string;
+  slug: string;
+  is_default: boolean;
+  sort_order: number;
+  created_at?: string;
+}
+
+export interface TaskPriorityConfig {
+  id: string;
+  name: string;
+  code: string;
+  is_default: boolean;
+  sort_order: number;
+  created_at?: string;
+}
 
 export interface Task {
   id: string;
@@ -7,6 +26,9 @@ export interface Task {
   description: string | null;
   status: TaskStatus;
   priority: TaskPriority;
+  status_id: string | null;
+  priority_id: string | null;
+  release_target: ReleaseTarget | null;
   due_date: string | null;
   area: string | null;
   creator_id: string;
@@ -25,6 +47,9 @@ export interface Task {
     display_name: string | null;
     avatar_url: string | null;
   } | null;
+  // Config lookups
+  status_config?: TaskStatusConfig | null;
+  priority_config?: TaskPriorityConfig | null;
 }
 
 export interface TaskComment {
