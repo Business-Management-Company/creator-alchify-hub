@@ -33,9 +33,9 @@ interface TaskEditDrawerProps {
 }
 
 const RELEASE_TARGETS: { value: ReleaseTarget; label: string }[] = [
-  { value: 'Dec-15-Full-Test', label: 'Dec 15 Full Test' },
+  { value: 'Dec-22-Full-Test', label: 'Dec 22 Full Test' },
+  { value: 'Dec-28-Final-Testing', label: 'Dec 28 Final Testing' },
   { value: 'Jan-1-Alpha', label: 'Jan 1 Alpha' },
-  { value: 'Backlog', label: 'Backlog' },
 ];
 
 export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps) {
@@ -44,7 +44,7 @@ export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps
   const [statusId, setStatusId] = useState('');
   const [priorityId, setPriorityId] = useState('');
   const [sectionId, setSectionId] = useState('');
-  const [releaseTarget, setReleaseTarget] = useState<ReleaseTarget>('Backlog');
+  const [releaseTarget, setReleaseTarget] = useState<ReleaseTarget>('Dec-22-Full-Test');
   const [dueDate, setDueDate] = useState('');
   const [area, setArea] = useState('');
   const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
@@ -70,7 +70,7 @@ export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps
       setStatusId(task.status_id || '');
       setPriorityId(task.priority_id || '');
       setSectionId(task.section_id || '');
-      setReleaseTarget(task.release_target || 'Backlog');
+      setReleaseTarget(task.release_target || 'Dec-22-Full-Test');
       setDueDate(task.due_date || '');
       setArea(task.area || '');
       setAssigneeIds(task.assignees?.map(a => a.user_id) || []);
@@ -81,7 +81,7 @@ export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps
       setStatusId(defaultStatus?.id || '');
       setPriorityId(defaultPriority?.id || '');
       setSectionId('');
-      setReleaseTarget('Backlog');
+      setReleaseTarget('Dec-22-Full-Test');
       setDueDate('');
       setArea('');
       setAssigneeIds([]);

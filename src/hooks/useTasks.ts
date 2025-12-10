@@ -153,7 +153,7 @@ export function useCreateTask() {
           priority: taskData.priority || 'medium',
           status_id: taskData.status_id,
           priority_id: taskData.priority_id,
-          release_target: taskData.release_target || 'Backlog',
+          release_target: taskData.release_target || 'Dec-22-Full-Test',
           due_date: taskData.due_date,
           area: taskData.area,
           creator_id: user!.id,
