@@ -31,8 +31,17 @@ import { Task, AREA_OPTIONS, ReleaseTarget } from '@/types/tasks';
 import { format, isPast, isThisWeek, addDays, isBefore, isToday } from 'date-fns';
 import AppLayout from '@/components/layout/AppLayout';
 
+// Get saved default tab from localStorage
+const getDefaultTab = (): 'my' | 'created' | 'all' => {
+  const saved = localStorage.getItem('admin_tasks_default_tab');
+  if (saved === 'my' || saved === 'created' || saved === 'all') {
+    return saved;
+  }
+  return 'all'; // Default to 'all'
+};
+
 export default function AdminTasks() {
-  const [activeTab, setActiveTab] = useState<'my' | 'created' | 'all'>('my');
+  const [activeTab, setActiveTab] = useState<'my' | 'created' | 'all'>(getDefaultTab);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [releaseFilter, setReleaseFilter] = useState<string>('all');
