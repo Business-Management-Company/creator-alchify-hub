@@ -226,12 +226,21 @@ export function useUpdateTask() {
         .select('user_id')
         .eq('task_id', id);
 
-      // Notify relevant users about update (all assignees + creator, except current user)
+      // Get all watchers
+      const { data: watchers } = await supabase
+        .from('task_watchers')
+        .select('user_id')
+        .eq('task_id', id);
+
+      // Notify relevant users about update (all assignees + creator + watchers, except current user)
       if (originalTask) {
         const usersToNotify = new Set<string>();
         if (originalTask.creator_id !== user!.id) usersToNotify.add(originalTask.creator_id);
         (assignees || []).forEach(a => {
           if (a.user_id !== user!.id) usersToNotify.add(a.user_id);
+        });
+        (watchers || []).forEach(w => {
+          if (w.user_id !== user!.id) usersToNotify.add(w.user_id);
         });
 
         const notificationsToCreate = Array.from(usersToNotify).map(userId => ({
@@ -306,11 +315,20 @@ export function useAddComment() {
         .select('user_id')
         .eq('task_id', taskId);
 
+      // Get all watchers
+      const { data: watchers } = await supabase
+        .from('task_watchers')
+        .select('user_id')
+        .eq('task_id', taskId);
+
       if (task) {
         const usersToNotify = new Set<string>();
         if (task.creator_id !== user!.id) usersToNotify.add(task.creator_id);
         (assignees || []).forEach(a => {
           if (a.user_id !== user!.id) usersToNotify.add(a.user_id);
+        });
+        (watchers || []).forEach(w => {
+          if (w.user_id !== user!.id) usersToNotify.add(w.user_id);
         });
 
         const notificationsToCreate = Array.from(usersToNotify).map(userId => ({
