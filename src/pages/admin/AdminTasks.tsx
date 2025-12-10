@@ -290,9 +290,9 @@ export default function AdminTasks() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-[90px]">Status</TableHead>
-                          <TableHead className="max-w-[320px]">Task</TableHead>
-                          <TableHead className="w-[70px]">Priority</TableHead>
+                          <TableHead className="w-[120px]">Status</TableHead>
+                          <TableHead className="w-[180px]">Task</TableHead>
+                          <TableHead className="w-[120px]">Priority</TableHead>
                           <TableHead className="w-[100px]">Assignees</TableHead>
                           <TableHead className="w-[80px]">Area</TableHead>
                           <TableHead className="w-[70px]">Due</TableHead>
@@ -307,14 +307,14 @@ export default function AdminTasks() {
                                 {task.status_config?.name || 'No Status'}
                               </Badge>
                             </TableCell>
-                            <TableCell className="max-w-[320px]">
+                            <TableCell className="w-[180px]">
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Link 
                                     to={`/admin/tasks/${task.id}`}
                                     className="font-medium hover:underline flex items-center gap-1"
                                   >
-                                    <span className="truncate block max-w-[280px]">{task.title}</span>
+                                    <span className="truncate block max-w-[150px]">{task.title}</span>
                                     {task.linked_url && (
                                       <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                                     )}
@@ -326,8 +326,8 @@ export default function AdminTasks() {
                               </Tooltip>
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline" className="text-xs">
-                                {task.priority_config?.code || 'N/A'}
+                              <Badge variant="outline" className="text-xs whitespace-nowrap">
+                                {task.priority_config?.name || 'N/A'}
                               </Badge>
                             </TableCell>
                             <TableCell>
