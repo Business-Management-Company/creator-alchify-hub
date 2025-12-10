@@ -13,6 +13,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { AdminPresenceBadge } from '@/components/admin/AdminPresenceBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -100,6 +101,9 @@ const AppHeader = () => {
         <Button variant="ghost" size="icon" className="sm:hidden h-9 w-9">
           <Search className="h-4 w-4" />
         </Button>
+        
+        {/* Admin Presence Badge - only shows in admin area */}
+        <AdminPresenceBadge />
         
         {/* Notification Bell */}
         <NotificationBell />

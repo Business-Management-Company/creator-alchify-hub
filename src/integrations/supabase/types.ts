@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_sessions: {
+        Row: {
+          admin_user_id: string
+          created_at: string
+          current_section: string
+          display_name: string | null
+          email: string | null
+          id: string
+          last_seen_at: string
+        }
+        Insert: {
+          admin_user_id: string
+          created_at?: string
+          current_section?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          last_seen_at?: string
+        }
+        Update: {
+          admin_user_id?: string
+          created_at?: string
+          current_section?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          last_seen_at?: string
+        }
+        Relationships: []
+      }
       ai_action_log: {
         Row: {
           action_details: Json | null
