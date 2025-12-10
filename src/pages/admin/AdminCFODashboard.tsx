@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -69,6 +69,34 @@ function InputWithHelp({
   prefix?: string;
   suffix?: string;
 }) {
+  const [displayValue, setDisplayValue] = useState<string>(value.toString());
+
+  // Sync displayValue when prop value changes externally (e.g., scenario buttons)
+  React.useEffect(() => {
+    setDisplayValue(value.toString());
+  }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    setDisplayValue(inputValue);
+    
+    const numValue = parseFloat(inputValue);
+    if (!isNaN(numValue)) {
+      onChange(numValue);
+    } else if (inputValue === '' || inputValue === '-') {
+      // Allow empty or just minus sign while typing
+    }
+  };
+
+  const handleBlur = () => {
+    // On blur, if empty or invalid, reset to 0
+    const numValue = parseFloat(displayValue);
+    if (isNaN(numValue) || displayValue === '') {
+      setDisplayValue('0');
+      onChange(0);
+    }
+  };
+
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-1.5">
@@ -87,8 +115,9 @@ function InputWithHelp({
         <Input
           id={id}
           type="number"
-          value={value}
-          onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+          value={displayValue}
+          onChange={handleChange}
+          onBlur={handleBlur}
           className={`${prefix ? 'pl-7' : ''} ${suffix ? 'pr-8' : ''}`}
         />
         {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{suffix}</span>}
