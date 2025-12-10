@@ -28,7 +28,9 @@ import {
   Check,
   X,
   Loader2,
-  Eye
+  Eye,
+  Upload,
+  Image as ImageIcon
 } from 'lucide-react';
 
 const TikTokIcon = ({ className }: { className?: string }) => (
@@ -69,6 +71,54 @@ export default function CreatorProfileEditor() {
   const [formData, setFormData] = useState<CreatorProfileFormData>(defaultFormData);
   const [handleAvailable, setHandleAvailable] = useState<boolean | null>(null);
   const [checkingHandle, setCheckingHandle] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+
+  const handleImageUpload = async (file: File, type: 'avatar' | 'cover') => {
+    if (!user) return;
+    
+    const isAvatar = type === 'avatar';
+    const setUploading = isAvatar ? setUploadingAvatar : setUploadingCover;
+    const maxSize = isAvatar ? 2 * 1024 * 1024 : 5 * 1024 * 1024; // 2MB for avatar, 5MB for cover
+    
+    if (file.size > maxSize) {
+      toast.error(`File too large. Max size: ${isAvatar ? '2MB' : '5MB'}`);
+      return;
+    }
+    
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+    
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${type}-${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('creator-assets')
+        .upload(fileName, file, { upsert: true });
+      
+      if (uploadError) throw uploadError;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('creator-assets')
+        .getPublicUrl(fileName);
+      
+      setFormData(prev => ({
+        ...prev,
+        [isAvatar ? 'avatar_url' : 'hero_image_url']: publicUrl,
+      }));
+      
+      toast.success(`${isAvatar ? 'Avatar' : 'Cover image'} uploaded!`);
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload image');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -351,24 +401,80 @@ export default function CreatorProfileEditor() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="avatar_url">Avatar URL</Label>
-                  <Input
-                    id="avatar_url"
-                    type="url"
-                    value={formData.avatar_url}
-                    onChange={(e) => setFormData(prev => ({ ...prev, avatar_url: e.target.value }))}
-                    placeholder="https://example.com/avatar.jpg"
-                  />
+                  <Label>Avatar</Label>
+                  <div className="flex items-center gap-3">
+                    {formData.avatar_url ? (
+                      <img 
+                        src={formData.avatar_url} 
+                        alt="Avatar preview" 
+                        className="h-16 w-16 rounded-full object-cover border"
+                      />
+                    ) : (
+                      <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center border">
+                        <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <label className="cursor-pointer">
+                        <div className="flex items-center gap-2 px-3 py-2 border rounded-md hover:bg-muted/50 transition-colors">
+                          {uploadingAvatar ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Upload className="h-4 w-4" />
+                          )}
+                          <span className="text-sm">{uploadingAvatar ? 'Uploading...' : 'Upload Avatar'}</span>
+                        </div>
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleImageUpload(file, 'avatar');
+                          }}
+                          disabled={uploadingAvatar}
+                        />
+                      </label>
+                      <p className="text-xs text-muted-foreground mt-1">Max 2MB</p>
+                    </div>
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="hero_image_url">Cover Image URL</Label>
-                  <Input
-                    id="hero_image_url"
-                    type="url"
-                    value={formData.hero_image_url}
-                    onChange={(e) => setFormData(prev => ({ ...prev, hero_image_url: e.target.value }))}
-                    placeholder="https://example.com/cover.jpg"
-                  />
+                  <Label>Cover Image</Label>
+                  <div className="space-y-2">
+                    {formData.hero_image_url ? (
+                      <img 
+                        src={formData.hero_image_url} 
+                        alt="Cover preview" 
+                        className="h-20 w-full rounded-md object-cover border"
+                      />
+                    ) : (
+                      <div className="h-20 w-full rounded-md bg-muted flex items-center justify-center border">
+                        <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                    )}
+                    <label className="cursor-pointer block">
+                      <div className="flex items-center justify-center gap-2 px-3 py-2 border rounded-md hover:bg-muted/50 transition-colors">
+                        {uploadingCover ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Upload className="h-4 w-4" />
+                        )}
+                        <span className="text-sm">{uploadingCover ? 'Uploading...' : 'Upload Cover'}</span>
+                      </div>
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImageUpload(file, 'cover');
+                        }}
+                        disabled={uploadingCover}
+                      />
+                    </label>
+                    <p className="text-xs text-muted-foreground">Max 5MB</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
