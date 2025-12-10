@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useRefinerAI } from '@/hooks/useRefinerAI';
 
 interface StructuredInsight {
   whereYouStand: { text: string; benchmark?: string }[];
@@ -53,6 +54,7 @@ export function MetricInsightModalV2({
 }: MetricInsightModalV2Props) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { openWithPrompt } = useRefinerAI();
   const [insight, setInsight] = useState<StructuredInsight | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,13 +130,9 @@ export function MetricInsightModalV2({
   };
 
   const handleQuestionClick = (question: string) => {
-    // Navigate to Refiner AI with the question pre-filled
     onClose();
-    // For now, just show a toast - in production this would open the AI chat
-    toast({
-      title: 'Ask Refiner AI',
-      description: question,
-    });
+    // Open the Refiner AI panel with the question
+    openWithPrompt(question);
   };
 
   return (
