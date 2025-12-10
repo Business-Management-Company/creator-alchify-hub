@@ -41,6 +41,7 @@ export interface Task {
   priority: TaskPriority;
   status_id: string | null;
   priority_id: string | null;
+  section_id: string | null;
   release_target: ReleaseTarget | null;
   due_date: string | null;
   area: string | null;
