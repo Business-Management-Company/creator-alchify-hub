@@ -28,7 +28,9 @@ import {
   X,
   Monitor,
   Smartphone,
-  Square
+  Square,
+  Mic2,
+  Type
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -55,6 +57,8 @@ import { ClipGenerator } from '@/components/refiner/ClipGenerator';
 import { CaptionEditor } from '@/components/refiner/CaptionEditor';
 import { TranscriptSheet } from '@/components/refiner/TranscriptSheet';
 import { SpeakerFocus } from '@/components/refiner/SpeakerFocus';
+import { PodcastPostProduction } from '@/components/refiner/PodcastPostProduction';
+import { CaptionStyleWizard, CaptionStyleConfig } from '@/components/refiner/CaptionStyleWizard';
 import { extractAudioFromVideo, needsAudioExtraction } from '@/lib/audio-extraction';
 import VideoThumbnail from '@/components/VideoThumbnail';
 
@@ -174,6 +178,8 @@ const Refiner = () => {
     enhanceVideo: 'pending',
   });
   const [showTranscriptSheet, setShowTranscriptSheet] = useState(false);
+  const [showCaptionWizard, setShowCaptionWizard] = useState(false);
+  const [captionStyleConfig, setCaptionStyleConfig] = useState<CaptionStyleConfig | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -895,6 +901,18 @@ const Refiner = () => {
           </div>
         )}
 
+        {/* Tab Content - Podcast Post-Production */}
+        {activeTab === 'podcast' && project && (
+          <div className="mt-3">
+            <PodcastPostProduction
+              projectId={project.id}
+              mediaUrl={mediaUrl}
+              transcriptContent={transcript?.content || null}
+              transcriptSegments={transcript?.segments as any[] || null}
+            />
+          </div>
+        )}
+
         {/* Tab Content - Distribute */}
         {activeTab === 'distribute' && project && (
           <div className="mt-3">
@@ -1020,6 +1038,17 @@ const Refiner = () => {
                     Video
                   </button>
                   <button
+                    onClick={() => setActiveTab('podcast')}
+                    className={`px-5 py-2 text-base font-medium rounded-md transition-colors flex items-center gap-2 ${
+                      activeTab === 'podcast' 
+                        ? 'bg-background text-foreground shadow-sm' 
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Mic2 className="h-4 w-4" />
+                    Podcast
+                  </button>
+                  <button
                     onClick={() => setActiveTab('distribute')}
                     className={`px-5 py-2 text-base font-medium rounded-md transition-colors ${
                       activeTab === 'distribute' 
@@ -1114,6 +1143,21 @@ const Refiner = () => {
                   </button>
                 ))}
               </div>
+
+              {/* Caption Style Button */}
+              <button
+                onClick={() => {
+                  setShowFormatDialog(false);
+                  setShowCaptionWizard(true);
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-lg border border-dashed border-border hover:border-primary/50 hover:bg-muted/50 transition-all"
+              >
+                <Type className="h-5 w-5 text-primary" />
+                <div className="text-left flex-1">
+                  <p className="font-medium text-foreground">Customize Caption Style</p>
+                  <p className="text-xs text-muted-foreground">Font, colors, emojis & animation</p>
+                </div>
+              </button>
             </div>
             
             <div className="flex justify-end gap-3 pt-2">
@@ -1167,6 +1211,21 @@ const Refiner = () => {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Caption Style Wizard */}
+        <CaptionStyleWizard
+          isOpen={showCaptionWizard}
+          onClose={() => setShowCaptionWizard(false)}
+          onComplete={(config) => {
+            setCaptionStyleConfig(config);
+            setShowCaptionWizard(false);
+            toast({
+              title: 'Caption style saved!',
+              description: 'Your caption styling will be applied to all clips.',
+            });
+          }}
+          initialConfig={captionStyleConfig || undefined}
+        />
       </AppLayout>
     </>
   );
