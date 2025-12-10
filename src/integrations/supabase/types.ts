@@ -728,6 +728,36 @@ export type Database = {
         }
         Relationships: []
       }
+      task_sections: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          id: string
+          is_collapsed: boolean | null
+          name: string
+          sort_order: number
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          is_collapsed?: boolean | null
+          name: string
+          sort_order?: number
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          is_collapsed?: boolean | null
+          name?: string
+          sort_order?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       task_statuses: {
         Row: {
           created_at: string | null
@@ -768,6 +798,7 @@ export type Database = {
           priority: string
           priority_id: string | null
           release_target: string | null
+          section_id: string | null
           status: string
           status_id: string | null
           title: string
@@ -785,6 +816,7 @@ export type Database = {
           priority?: string
           priority_id?: string | null
           release_target?: string | null
+          section_id?: string | null
           status?: string
           status_id?: string | null
           title: string
@@ -802,6 +834,7 @@ export type Database = {
           priority?: string
           priority_id?: string | null
           release_target?: string | null
+          section_id?: string | null
           status?: string
           status_id?: string | null
           title?: string
@@ -813,6 +846,13 @@ export type Database = {
             columns: ["priority_id"]
             isOneToOne: false
             referencedRelation: "task_priorities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "task_sections"
             referencedColumns: ["id"]
           },
           {
