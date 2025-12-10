@@ -473,6 +473,7 @@ export default function CreatorProfileEditor() {
                         disabled={uploadingCover}
                       />
                     </label>
+                    <p className="text-xs text-muted-foreground">Recommended: 1500 × 500 px (3:1 ratio) • Max 5MB</p>
                     <p className="text-xs text-muted-foreground">Max 5MB</p>
                   </div>
                 </div>
