@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Sparkles } from 'lucide-react';
 import { Insight } from '@/hooks/useCreatorInsights';
 import { InsightModal } from './InsightModal';
 import { LABEL_TO_METRIC_KEY, MetricKey } from '@/types/insights';
@@ -35,8 +36,14 @@ export function ProcessingHighlightCard({
           bg-gradient-to-br ${colorClass} rounded-lg p-3 text-center
           transition-all duration-200
           cursor-pointer hover:scale-105 hover:shadow-lg
+          relative group
         `}
       >
+        {/* AI Insight Indicator */}
+        <div className="absolute top-1.5 right-1.5 opacity-50 group-hover:opacity-100 transition-opacity">
+          <Sparkles className="h-3 w-3 text-primary" />
+        </div>
+        
         <div className="text-xl font-bold">{value}</div>
         <div className="text-xs text-muted-foreground">{label}</div>
         {passiveInsight && (
