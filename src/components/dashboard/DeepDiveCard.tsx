@@ -3,8 +3,7 @@ import {
   Sparkles, 
   FileText, 
   Loader2, 
-  Download, 
-  X,
+  Download,
   TrendingUp,
   Target,
   Calendar
@@ -51,30 +50,30 @@ export function DeepDiveCard({ onGenerateReport, isGenerating }: DeepDiveCardPro
 
   return (
     <>
-      <div className="bg-gradient-to-br from-card via-card to-primary/5 border border-border hover:border-primary/30 rounded-2xl p-6 transition-all duration-300">
-        <div className="flex items-start gap-4">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 border border-primary/20">
-            <Sparkles className="h-6 w-6 text-primary" />
+      <div className="bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 border border-primary/20 hover:border-primary/40 rounded-2xl p-5 transition-all duration-300 h-full">
+        <div className="flex items-start gap-3">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 border border-primary/20 shrink-0">
+            <Sparkles className="h-5 w-5 text-primary" />
           </div>
           
-          <div className="flex-1">
-            <h3 className="text-lg font-bold text-foreground mb-1">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-base font-bold text-foreground mb-1">
               Refiner AI Deep Dive
             </h3>
-            <p className="text-sm text-muted-foreground mb-4">
+            <p className="text-sm text-muted-foreground mb-3">
               Get a comprehensive analysis of your performance, bottlenecks, and opportunities with a personalized weekly action plan.
             </p>
             
-            <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
-              <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mb-3">
+              <div className="flex items-center gap-1">
                 <TrendingUp className="h-3.5 w-3.5" />
                 <span>Performance Analysis</span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 <Target className="h-3.5 w-3.5" />
                 <span>Growth Opportunities</span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 <Calendar className="h-3.5 w-3.5" />
                 <span>Weekly Plan</span>
               </div>
@@ -83,12 +82,14 @@ export function DeepDiveCard({ onGenerateReport, isGenerating }: DeepDiveCardPro
             <Button
               onClick={handleGenerateReport}
               disabled={isGenerating}
-              className="bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-lg hover:shadow-xl"
+              variant="default"
+              size="sm"
+              className="bg-primary/90 hover:bg-primary text-primary-foreground"
             >
               {isGenerating ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating Report...
+                  Generating...
                 </>
               ) : (
                 <>
@@ -103,14 +104,14 @@ export function DeepDiveCard({ onGenerateReport, isGenerating }: DeepDiveCardPro
 
       {/* Report Modal */}
       <Dialog open={isReportOpen} onOpenChange={setIsReportOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[85vh]">
+        <DialogContent className="sm:max-w-4xl max-h-[85vh]">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-primary/10">
                   <Sparkles className="h-5 w-5 text-primary" />
                 </div>
-                <DialogTitle className="text-xl font-bold">
+                <DialogTitle className="text-xl font-bold text-foreground">
                   Your Performance Deep Dive
                 </DialogTitle>
               </div>
@@ -127,17 +128,17 @@ export function DeepDiveCard({ onGenerateReport, isGenerating }: DeepDiveCardPro
           </DialogHeader>
           
           <ScrollArea className="max-h-[60vh] pr-4">
-            <div className="prose prose-sm dark:prose-invert max-w-none">
+            <div className="prose prose-sm max-w-none">
               {report && (
                 <div 
-                  className="text-sm text-foreground whitespace-pre-wrap"
+                  className="text-sm text-foreground [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mt-6 [&_h1]:mb-4 [&_h1]:text-foreground [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:text-primary [&_h3]:text-lg [&_h3]:font-bold [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-foreground [&_li]:ml-4 [&_li]:text-foreground [&_strong]:text-foreground [&_p]:text-foreground [&_br]:leading-relaxed"
                   dangerouslySetInnerHTML={{ 
                     __html: report
-                      .replace(/^### (.*$)/gim, '<h3 class="text-lg font-bold mt-4 mb-2">$1</h3>')
-                      .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold mt-6 mb-3 text-primary">$1</h2>')
-                      .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-6 mb-4">$1</h1>')
-                      .replace(/^\* (.*$)/gim, '<li class="ml-4">$1</li>')
-                      .replace(/^\d+\. (.*$)/gim, '<li class="ml-4 list-decimal">$1</li>')
+                      .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                      .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                      .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                      .replace(/^\* (.*$)/gim, '<li>$1</li>')
+                      .replace(/^\d+\. (.*$)/gim, '<li class="list-decimal">$1</li>')
                       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                       .replace(/\n/g, '<br />')
                   }}

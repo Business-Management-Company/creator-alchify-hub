@@ -314,12 +314,18 @@ const Dashboard = () => {
           <DailyBriefButton />
         </div>
 
-        {/* Insight of the Day Widget */}
+        {/* Insight of the Day + Deep Dive Side by Side */}
         {projectCount > 0 && (
-          <InsightOfTheDay 
-            insight={insightOfTheDay} 
-            isLoading={insightsLoading} 
-          />
+          <div className="grid md:grid-cols-2 gap-4 mb-6">
+            <InsightOfTheDay 
+              insight={insightOfTheDay} 
+              isLoading={insightsLoading} 
+            />
+            <DeepDiveCard 
+              onGenerateReport={generateDeepDive}
+              isGenerating={isGeneratingDeepDive}
+            />
+          </div>
         )}
         
         {/* Quick Stats with Click-Activated Insights */}
@@ -465,13 +471,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Deep Dive Card */}
-        {projectCount > 0 && (
-          <DeepDiveCard 
-            onGenerateReport={generateDeepDive}
-            isGenerating={isGeneratingDeepDive}
-          />
-        )}
       </AppLayout>
     </>
   );
