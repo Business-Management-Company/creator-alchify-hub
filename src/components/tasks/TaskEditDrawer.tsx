@@ -22,6 +22,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Task, AREA_OPTIONS, ReleaseTarget } from '@/types/tasks';
 import { useCreateTask, useUpdateTask, useUpdateTaskAssignees } from '@/hooks/useTasks';
 import { useTaskStatuses, useTaskPriorities } from '@/hooks/useTaskConfigs';
+import { useTaskSections } from '@/hooks/useTaskSections';
 import { MultiAssigneeSelect } from '@/components/tasks/MultiAssigneeSelect';
 import { Loader2 } from 'lucide-react';
 
@@ -42,6 +43,7 @@ export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps
   const [description, setDescription] = useState('');
   const [statusId, setStatusId] = useState('');
   const [priorityId, setPriorityId] = useState('');
+  const [sectionId, setSectionId] = useState('');
   const [releaseTarget, setReleaseTarget] = useState<ReleaseTarget>('Backlog');
   const [dueDate, setDueDate] = useState('');
   const [area, setArea] = useState('');
@@ -55,6 +57,7 @@ export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps
 
   const { data: statuses = [] } = useTaskStatuses();
   const { data: priorities = [] } = useTaskPriorities();
+  const { data: sections = [] } = useTaskSections();
 
   // Get defaults
   const defaultStatus = statuses.find(s => s.is_default);
@@ -66,6 +69,7 @@ export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps
       setDescription(task.description || '');
       setStatusId(task.status_id || '');
       setPriorityId(task.priority_id || '');
+      setSectionId(task.section_id || '');
       setReleaseTarget(task.release_target || 'Backlog');
       setDueDate(task.due_date || '');
       setArea(task.area || '');
@@ -76,6 +80,7 @@ export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps
       setDescription('');
       setStatusId(defaultStatus?.id || '');
       setPriorityId(defaultPriority?.id || '');
+      setSectionId('');
       setReleaseTarget('Backlog');
       setDueDate('');
       setArea('');
@@ -92,6 +97,7 @@ export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps
       description: description || null,
       status_id: statusId || null,
       priority_id: priorityId || null,
+      section_id: sectionId || null,
       release_target: releaseTarget,
       due_date: dueDate || null,
       area: area || null,
@@ -139,6 +145,29 @@ export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps
               placeholder="Add more details..."
               rows={3}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Section / Group</Label>
+            <Select value={sectionId || 'none'} onValueChange={(v) => setSectionId(v === 'none' ? '' : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select section..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No Section</SelectItem>
+                {sections.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-2.5 h-2.5 rounded-full" 
+                        style={{ backgroundColor: s.color || '#6366f1' }} 
+                      />
+                      {s.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
