@@ -36,19 +36,29 @@ export function InlineStatusSelect({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Badge
-          variant="outline"
-          className="text-xs cursor-pointer hover:opacity-80 transition-opacity"
-          style={{
-            backgroundColor: `${currentStatusColor}20`,
-            borderColor: currentStatusColor,
-            color: currentStatusColor,
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            setOpen(true);
           }}
+          className="inline-flex"
         >
-          {currentStatusName}
-        </Badge>
+          <Badge
+            variant="outline"
+            className="text-xs cursor-pointer hover:opacity-80 transition-opacity"
+            style={{
+              backgroundColor: `${currentStatusColor}20`,
+              borderColor: currentStatusColor,
+              color: currentStatusColor,
+            }}
+          >
+            {currentStatusName}
+          </Badge>
+        </button>
       </PopoverTrigger>
-      <PopoverContent className="w-48 p-1 bg-popover border border-border shadow-lg z-50" align="start">
+      <PopoverContent className="w-48 p-1 bg-popover border border-border shadow-lg z-[100]" align="start">
         <div className="flex flex-col gap-0.5">
           {statuses.map((status) => (
             <button

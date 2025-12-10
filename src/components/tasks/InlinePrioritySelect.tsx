@@ -36,19 +36,29 @@ export function InlinePrioritySelect({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Badge
-          variant="outline"
-          className="text-xs cursor-pointer hover:opacity-80 transition-opacity whitespace-nowrap"
-          style={{
-            backgroundColor: `${currentPriorityColor}20`,
-            borderColor: currentPriorityColor,
-            color: currentPriorityColor,
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            setOpen(true);
           }}
+          className="inline-flex"
         >
-          {currentPriorityName}
-        </Badge>
+          <Badge
+            variant="outline"
+            className="text-xs cursor-pointer hover:opacity-80 transition-opacity whitespace-nowrap"
+            style={{
+              backgroundColor: `${currentPriorityColor}20`,
+              borderColor: currentPriorityColor,
+              color: currentPriorityColor,
+            }}
+          >
+            {currentPriorityName}
+          </Badge>
+        </button>
       </PopoverTrigger>
-      <PopoverContent className="w-48 p-1 bg-popover border border-border shadow-lg z-50" align="start">
+      <PopoverContent className="w-48 p-1 bg-popover border border-border shadow-lg z-[100]" align="start">
         <div className="flex flex-col gap-0.5">
           {priorities.map((priority) => (
             <button
