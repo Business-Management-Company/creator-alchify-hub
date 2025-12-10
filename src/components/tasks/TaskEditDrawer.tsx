@@ -164,12 +164,12 @@ export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps
 
           <div className="space-y-2">
             <Label>Assignee</Label>
-            <Select value={assigneeId} onValueChange={setAssigneeId}>
+            <Select value={assigneeId || 'unassigned'} onValueChange={(v) => setAssigneeId(v === 'unassigned' ? '' : v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select assignee..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Unassigned</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
                 {users.map((user) => (
                   <SelectItem key={user.user_id} value={user.user_id}>
                     <div className="flex items-center gap-2">
@@ -200,12 +200,12 @@ export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps
 
             <div className="space-y-2">
               <Label>Area</Label>
-              <Select value={area} onValueChange={setArea}>
+              <Select value={area || 'none'} onValueChange={(v) => setArea(v === 'none' ? '' : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select area..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {AREA_OPTIONS.map((opt) => (
                     <SelectItem key={opt} value={opt}>{opt}</SelectItem>
                   ))}
