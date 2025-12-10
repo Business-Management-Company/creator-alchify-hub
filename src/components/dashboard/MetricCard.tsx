@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { LucideIcon } from 'lucide-react';
 import { Insight } from '@/hooks/useCreatorInsights';
-import { MetricInsightModal } from './MetricInsightModal';
+import { InsightModal } from './InsightModal';
+import { LABEL_TO_METRIC_KEY, MetricKey } from '@/types/insights';
 
 interface MetricCardProps {
   label: string;
@@ -14,15 +15,21 @@ interface MetricCardProps {
 
 export function MetricCard({ label, value, icon: Icon, subtext, passiveInsight, insight }: MetricCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Get metric key from label
+  const metricKey: MetricKey = LABEL_TO_METRIC_KEY[label] || 'time_saved_hours';
+  
+  // Parse numeric value from string (e.g., "4.2 hrs" -> 4.2)
+  const numericValue = parseFloat(value.replace(/[^0-9.]/g, '')) || 0;
 
   return (
     <>
       <div 
-        onClick={() => insight && setIsModalOpen(true)}
+        onClick={() => setIsModalOpen(true)}
         className={`
           bg-card/50 border border-border rounded-xl p-4 backdrop-blur-sm 
           hover:border-primary/30 transition-all duration-200
-          ${insight ? 'cursor-pointer hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5' : ''}
+          cursor-pointer hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5
         `}
       >
         <div className="flex items-center gap-3 mb-2">
@@ -42,10 +49,12 @@ export function MetricCard({ label, value, icon: Icon, subtext, passiveInsight, 
         )}
       </div>
 
-      <MetricInsightModal
+      <InsightModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        insight={insight || null}
+        metricKey={metricKey}
+        metricValue={numericValue}
+        metricLabel={label}
         metricIcon={<Icon className="h-5 w-5 text-primary" />}
       />
     </>
