@@ -591,6 +591,51 @@ export type Database = {
           },
         ]
       }
+      task_filter_configs: {
+        Row: {
+          created_at: string | null
+          display_order: number | null
+          field: string
+          id: string
+          is_default: boolean | null
+          label: string
+          operator: string
+          options: Json | null
+          slug: string
+          type: string
+          updated_at: string | null
+          visible_by_default: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number | null
+          field: string
+          id?: string
+          is_default?: boolean | null
+          label: string
+          operator?: string
+          options?: Json | null
+          slug: string
+          type: string
+          updated_at?: string | null
+          visible_by_default?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number | null
+          field?: string
+          id?: string
+          is_default?: boolean | null
+          label?: string
+          operator?: string
+          options?: Json | null
+          slug?: string
+          type?: string
+          updated_at?: string | null
+          visible_by_default?: boolean | null
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           area: string | null

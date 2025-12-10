@@ -33,6 +33,7 @@ import AdminInsightSources from "./pages/admin/AdminInsightSources";
 import AdminCFODashboard from "./pages/admin/AdminCFODashboard";
 import AdminTasks from "./pages/admin/AdminTasks";
 import AdminTaskDetail from "./pages/admin/AdminTaskDetail";
+import AdminTaskFilterSettings from "./pages/admin/AdminTaskFilterSettings";
 import BoardPortal from "./pages/BoardPortal";
 import NotFound from "./pages/NotFound";
 
@@ -77,6 +78,7 @@ const App = () => (
               <Route path="/admin/insight-sources" element={<AdminInsightSources />} />
               <Route path="/admin/cfo-dashboard" element={<AdminCFODashboard />} />
               <Route path="/admin/tasks" element={<AdminTasks />} />
+              <Route path="/admin/tasks/settings" element={<AdminTaskFilterSettings />} />
               <Route path="/admin/tasks/:id" element={<AdminTaskDetail />} />
               {/* Board Portal - Public access for board members */}
               <Route path="/board" element={<BoardPortal />} />
