@@ -160,8 +160,19 @@ const AppSidebar = () => {
     return initial;
   });
 
-  const toggleSection = (label: string) => {
-    setOpenSections(prev => ({ ...prev, [label]: !prev[label] }));
+  const toggleSection = (label: string, isAdminSection: boolean) => {
+    setOpenSections(prev => {
+      const newState = { ...prev, [label]: !prev[label] };
+      
+      // If opening an admin section, collapse all creator sections
+      if (isAdminSection && !prev[label]) {
+        creatorSections.forEach(s => {
+          newState[s.label] = false;
+        });
+      }
+      
+      return newState;
+    });
   };
 
   const isActive = (path: string) => {
@@ -180,7 +191,7 @@ const AppSidebar = () => {
     return (
       <SidebarGroup key={section.label}>
         {!collapsed ? (
-          <Collapsible open={isOpen} onOpenChange={() => toggleSection(section.label)}>
+          <Collapsible open={isOpen} onOpenChange={() => toggleSection(section.label, isAdminSection)}>
             <CollapsibleTrigger className="w-full">
               <SidebarGroupLabel className={`text-xs uppercase tracking-wide cursor-pointer flex items-center justify-between hover:text-foreground transition-colors ${isAdminSection ? 'text-primary/70' : 'text-muted-foreground'}`}>
                 <span>{section.label}</span>
