@@ -34,6 +34,7 @@ import { MetricCard } from '@/components/dashboard/MetricCard';
 import { ProcessingHighlightCard } from '@/components/dashboard/ProcessingHighlightCard';
 import { InsightOfTheDay } from '@/components/dashboard/InsightOfTheDay';
 import { DeepDiveCard } from '@/components/dashboard/DeepDiveCard';
+import { GreetingHeader } from '@/components/dashboard/GreetingHeader';
 
 interface Project {
   id: string;
@@ -301,16 +302,9 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Welcome Section */}
-        <div className="mb-6 flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">
-              Welcome back{user.user_metadata?.display_name ? `, ${user.user_metadata.display_name}` : ''}!
-            </h1>
-            <p className="text-muted-foreground">
-              Ready to refine some content? Upload something new or continue working on a project.
-            </p>
-          </div>
+        {/* Greeting Header with Avatar and Weather */}
+        <div className="flex items-start justify-between">
+          <GreetingHeader />
           <DailyBriefButton />
         </div>
 

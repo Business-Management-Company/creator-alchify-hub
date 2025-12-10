@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Settings, LogOut, User, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -14,12 +14,43 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const AppHeader = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState('');
+
+  // Fetch profile data for avatar
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('display_name, avatar_url')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        if (data) {
+          setAvatarUrl(data.avatar_url);
+          setDisplayName(data.display_name || user.user_metadata?.display_name || user.email?.split('@')[0] || 'User');
+        } else {
+          setDisplayName(user.user_metadata?.display_name || user.email?.split('@')[0] || 'User');
+          setAvatarUrl(user.user_metadata?.avatar_url || null);
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        setDisplayName(user.user_metadata?.display_name || user.email?.split('@')[0] || 'User');
+      }
+    };
+
+    fetchProfile();
+  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -41,7 +72,6 @@ const AppHeader = () => {
     }
   };
 
-  const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'User';
   const initials = displayName.slice(0, 2).toUpperCase();
 
   return (
@@ -74,7 +104,7 @@ const AppHeader = () => {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 w-9 rounded-full">
               <Avatar className="h-9 w-9 border-2 border-primary/20">
-                <AvatarImage src={user?.user_metadata?.avatar_url} alt={displayName} />
+                <AvatarImage src={avatarUrl || undefined} alt={displayName} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
                   {initials}
                 </AvatarFallback>
@@ -84,7 +114,7 @@ const AppHeader = () => {
           <DropdownMenuContent align="end" className="w-56 bg-card border-border">
             <div className="flex items-center gap-2 p-2">
               <Avatar className="h-9 w-9 border-2 border-primary/20">
-                <AvatarImage src={user?.user_metadata?.avatar_url} alt={displayName} />
+                <AvatarImage src={avatarUrl || undefined} alt={displayName} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
                   {initials}
                 </AvatarFallback>
