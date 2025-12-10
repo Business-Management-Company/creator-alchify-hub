@@ -5,6 +5,7 @@ import { ArrowLeft, Plus, Filter, ExternalLink, Loader2, Settings } from 'lucide
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -20,23 +21,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { TaskStatusBadge } from '@/components/tasks/TaskStatusBadge';
-import { TaskPriorityBadge } from '@/components/tasks/TaskPriorityBadge';
 import { TaskEditDrawer } from '@/components/tasks/TaskEditDrawer';
 import { useTasks, useUpdateTask } from '@/hooks/useTasks';
-import { useVisibleTaskFilters } from '@/hooks/useTaskFilters';
+import { useTaskStatuses, useTaskPriorities } from '@/hooks/useTaskConfigs';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Task, TaskStatus, TaskPriority, AREA_OPTIONS } from '@/types/tasks';
-import { format, isPast, isThisWeek, addDays, isBefore } from 'date-fns';
+import { Task, AREA_OPTIONS, ReleaseTarget } from '@/types/tasks';
+import { format, isPast, isThisWeek, addDays, isBefore, isToday } from 'date-fns';
 import AppLayout from '@/components/layout/AppLayout';
 
 export default function AdminTasks() {
   const [activeTab, setActiveTab] = useState<'my' | 'created' | 'all'>('my');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
-  const [areaFilter, setAreaFilter] = useState<string>('all');
+  const [releaseFilter, setReleaseFilter] = useState<string>('all');
   const [dueFilter, setDueFilter] = useState<string>('all');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -46,7 +45,8 @@ export default function AdminTasks() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: tasks = [], isLoading } = useTasks(activeTab);
-  const { data: filterConfigs = [] } = useVisibleTaskFilters();
+  const { data: statuses = [] } = useTaskStatuses();
+  const { data: priorities = [] } = useTaskPriorities();
   const updateTask = useUpdateTask();
 
   useEffect(() => {
@@ -67,15 +67,15 @@ export default function AdminTasks() {
   }, [isAdmin, adminLoading, user, navigate, toast]);
 
   const filteredTasks = tasks.filter((task) => {
-    if (statusFilter !== 'all' && task.status !== statusFilter) return false;
-    if (priorityFilter !== 'all' && task.priority !== priorityFilter) return false;
-    if (areaFilter !== 'all' && task.area !== areaFilter) return false;
+    if (statusFilter !== 'all' && task.status_id !== statusFilter) return false;
+    if (priorityFilter !== 'all' && task.priority_id !== priorityFilter) return false;
+    if (releaseFilter !== 'all' && task.release_target !== releaseFilter) return false;
     
     if (dueFilter !== 'all') {
       const dueDate = task.due_date ? new Date(task.due_date) : null;
-      if (dueFilter === 'overdue' && (!dueDate || !isPast(dueDate) || task.status === 'done')) return false;
+      if (dueFilter === 'overdue' && (!dueDate || !isPast(dueDate) || task.status_config?.slug === 'completed')) return false;
+      if (dueFilter === 'today' && (!dueDate || !isToday(dueDate))) return false;
       if (dueFilter === 'this_week' && (!dueDate || !isThisWeek(dueDate))) return false;
-      if (dueFilter === 'next_30' && (!dueDate || !isBefore(dueDate, addDays(new Date(), 30)))) return false;
       if (dueFilter === 'no_date' && dueDate) return false;
     }
     
@@ -87,19 +87,19 @@ export default function AdminTasks() {
     setDrawerOpen(true);
   };
 
-  const handleStatusChange = (taskId: string, status: TaskStatus) => {
-    updateTask.mutate({ id: taskId, status });
-  };
-
-  const handlePriorityChange = (taskId: string, priority: TaskPriority) => {
-    updateTask.mutate({ id: taskId, priority });
-  };
-
   const getEmptyState = () => {
     switch (activeTab) {
       case 'my': return "You don't have any tasks yet.";
       case 'created': return "You haven't created any tasks yet.";
       default: return "No tasks found.";
+    }
+  };
+
+  const getReleaseTargetColor = (target: ReleaseTarget | null) => {
+    switch (target) {
+      case 'Dec-15-Full-Test': return 'bg-destructive/20 text-destructive';
+      case 'Jan-1-Alpha': return 'bg-blue-500/20 text-blue-600';
+      default: return 'bg-muted text-muted-foreground';
     }
   };
 
@@ -165,38 +165,36 @@ export default function AdminTasks() {
               <div className="flex items-center gap-2 flex-wrap">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[110px] h-8 text-xs">
+                  <SelectTrigger className="w-[130px] h-8 text-xs">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="backlog">Backlog</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="blocked">Blocked</SelectItem>
-                    <SelectItem value="done">Done</SelectItem>
+                    {statuses.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                  <SelectTrigger className="w-[110px] h-8 text-xs">
+                  <SelectTrigger className="w-[130px] h-8 text-xs">
                     <SelectValue placeholder="Priority" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Priority</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
+                    {priorities.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-                <Select value={areaFilter} onValueChange={setAreaFilter}>
-                  <SelectTrigger className="w-[110px] h-8 text-xs">
-                    <SelectValue placeholder="Area" />
+                <Select value={releaseFilter} onValueChange={setReleaseFilter}>
+                  <SelectTrigger className="w-[140px] h-8 text-xs">
+                    <SelectValue placeholder="Release" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Areas</SelectItem>
-                    {AREA_OPTIONS.map((opt) => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                    ))}
+                    <SelectItem value="all">All Releases</SelectItem>
+                    <SelectItem value="Dec-15-Full-Test">Dec 15 Full Test</SelectItem>
+                    <SelectItem value="Jan-1-Alpha">Jan 1 Alpha</SelectItem>
+                    <SelectItem value="Backlog">Backlog</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={dueFilter} onValueChange={setDueFilter}>
@@ -206,8 +204,8 @@ export default function AdminTasks() {
                   <SelectContent>
                     <SelectItem value="all">All Due Dates</SelectItem>
                     <SelectItem value="overdue">Overdue</SelectItem>
+                    <SelectItem value="today">Due Today</SelectItem>
                     <SelectItem value="this_week">This Week</SelectItem>
-                    <SelectItem value="next_30">Next 30 Days</SelectItem>
                     <SelectItem value="no_date">No Due Date</SelectItem>
                   </SelectContent>
                 </Select>
@@ -232,23 +230,21 @@ export default function AdminTasks() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[90px]">Status</TableHead>
+                        <TableHead className="w-[100px]">Status</TableHead>
                         <TableHead>Task</TableHead>
-                        <TableHead className="w-[90px]">Priority</TableHead>
+                        <TableHead className="w-[100px]">Priority</TableHead>
+                        <TableHead className="w-[120px]">Release</TableHead>
                         <TableHead className="w-[140px]">Owner</TableHead>
-                        <TableHead className="w-[90px]">Area</TableHead>
                         <TableHead className="w-[90px]">Due</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredTasks.map((task) => (
                         <TableRow key={task.id} className="cursor-pointer hover:bg-muted/50">
-                          <TableCell onClick={(e) => e.stopPropagation()}>
-                            <TaskStatusBadge
-                              status={task.status}
-                              editable
-                              onChange={(status) => handleStatusChange(task.id, status)}
-                            />
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              {task.status_config?.name || 'No Status'}
+                            </Badge>
                           </TableCell>
                           <TableCell>
                             <Link 
@@ -261,12 +257,16 @@ export default function AdminTasks() {
                               )}
                             </Link>
                           </TableCell>
-                          <TableCell onClick={(e) => e.stopPropagation()}>
-                            <TaskPriorityBadge
-                              priority={task.priority}
-                              editable
-                              onChange={(priority) => handlePriorityChange(task.id, priority)}
-                            />
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              {task.priority_config?.code || 'N/A'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={`text-xs ${getReleaseTargetColor(task.release_target)}`}>
+                              {task.release_target === 'Dec-15-Full-Test' ? 'Dec 15' : 
+                               task.release_target === 'Jan-1-Alpha' ? 'Jan 1' : 'Backlog'}
+                            </Badge>
                           </TableCell>
                           <TableCell>
                             {task.assignee ? (
@@ -286,13 +286,8 @@ export default function AdminTasks() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <span className="text-sm text-muted-foreground">
-                              {task.area || '-'}
-                            </span>
-                          </TableCell>
-                          <TableCell>
                             {task.due_date ? (
-                              <span className={`text-sm ${isPast(new Date(task.due_date)) && task.status !== 'done' ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                              <span className={`text-sm ${isPast(new Date(task.due_date)) && task.status_config?.slug !== 'completed' ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
                                 {format(new Date(task.due_date), 'MMM d')}
                               </span>
                             ) : (

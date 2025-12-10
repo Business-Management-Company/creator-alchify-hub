@@ -636,6 +636,60 @@ export type Database = {
         }
         Relationships: []
       }
+      task_priorities: {
+        Row: {
+          code: string
+          created_at: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      task_statuses: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           area: string | null
@@ -647,7 +701,10 @@ export type Database = {
           id: string
           linked_url: string | null
           priority: string
+          priority_id: string | null
+          release_target: string | null
           status: string
+          status_id: string | null
           title: string
           updated_at: string
         }
@@ -661,7 +718,10 @@ export type Database = {
           id?: string
           linked_url?: string | null
           priority?: string
+          priority_id?: string | null
+          release_target?: string | null
           status?: string
+          status_id?: string | null
           title: string
           updated_at?: string
         }
@@ -675,11 +735,29 @@ export type Database = {
           id?: string
           linked_url?: string | null
           priority?: string
+          priority_id?: string | null
+          release_target?: string | null
           status?: string
+          status_id?: string | null
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tasks_priority_id_fkey"
+            columns: ["priority_id"]
+            isOneToOne: false
+            referencedRelation: "task_priorities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_status_id_fkey"
+            columns: ["status_id"]
+            isOneToOne: false
+            referencedRelation: "task_statuses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transcripts: {
         Row: {

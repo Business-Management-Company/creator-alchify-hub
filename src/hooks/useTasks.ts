@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Task, TaskComment, TaskStatus, TaskPriority } from '@/types/tasks';
+import { Task, TaskComment } from '@/types/tasks';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
@@ -17,12 +17,25 @@ async function enrichTasksWithProfiles(tasks: any[]) {
     .select('user_id, display_name, avatar_url')
     .in('user_id', userIds);
   
-  const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+  // Fetch status and priority configs
+  const statusIds = [...new Set(tasks.map(t => t.status_id).filter(Boolean))];
+  const priorityIds = [...new Set(tasks.map(t => t.priority_id).filter(Boolean))];
+  
+  const [statusesRes, prioritiesRes] = await Promise.all([
+    statusIds.length ? supabase.from('task_statuses').select('*').in('id', statusIds) : { data: [] },
+    priorityIds.length ? supabase.from('task_priorities').select('*').in('id', priorityIds) : { data: [] },
+  ]);
+  
+  const profileMap = new Map(profiles?.map(p => [p.user_id, p] as const) || []);
+  const statusMap = new Map((statusesRes.data || []).map(s => [s.id, s] as const));
+  const priorityMap = new Map((prioritiesRes.data || []).map(p => [p.id, p] as const));
   
   return tasks.map(task => ({
     ...task,
     creator: profileMap.get(task.creator_id) || null,
     assignee: task.assignee_id ? profileMap.get(task.assignee_id) || null : null,
+    status_config: task.status_id ? statusMap.get(task.status_id) || null : null,
+    priority_config: task.priority_id ? priorityMap.get(task.priority_id) || null : null,
   }));
 }
 
@@ -110,6 +123,9 @@ export function useCreateTask() {
           description: task.description,
           status: task.status || 'backlog',
           priority: task.priority || 'medium',
+          status_id: task.status_id,
+          priority_id: task.priority_id,
+          release_target: task.release_target || 'Backlog',
           due_date: task.due_date,
           area: task.area,
           creator_id: user!.id,
