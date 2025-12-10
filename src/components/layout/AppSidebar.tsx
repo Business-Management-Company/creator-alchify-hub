@@ -18,7 +18,8 @@ import {
   Server,
   Library,
   Presentation,
-  Contact
+  Contact,
+  User
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -56,6 +57,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Library,
   Presentation,
   Contact,
+  User,
 };
 
 const navItems = [
@@ -69,6 +71,7 @@ const navItems = [
 ];
 
 const secondaryItems = [
+  { id: 'alchify-page', label: 'Alchify Page', icon: 'User', path: '/creator/profile' },
   { id: 'integrations', label: 'Integrations', icon: 'Plug', path: '/integrations' },
   { id: 'analytics', label: 'Analytics', icon: 'BarChart3', path: '/analytics' },
   { id: 'settings', label: 'Settings', icon: 'Settings', path: '/settings' },

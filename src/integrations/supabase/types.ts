@@ -148,6 +148,63 @@ export type Database = {
         }
         Relationships: []
       }
+      creator_profiles: {
+        Row: {
+          accent_color: string | null
+          avatar_url: string | null
+          bio: string | null
+          created_at: string | null
+          display_name: string
+          featured_project_ids: string[] | null
+          handle: string
+          hero_image_url: string | null
+          highlight_metrics: Json | null
+          id: string
+          is_public: boolean | null
+          primary_color: string | null
+          social_links: Json | null
+          tagline: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          accent_color?: string | null
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          display_name: string
+          featured_project_ids?: string[] | null
+          handle: string
+          hero_image_url?: string | null
+          highlight_metrics?: Json | null
+          id?: string
+          is_public?: boolean | null
+          primary_color?: string | null
+          social_links?: Json | null
+          tagline?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          accent_color?: string | null
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          display_name?: string
+          featured_project_ids?: string[] | null
+          handle?: string
+          hero_image_url?: string | null
+          highlight_metrics?: Json | null
+          id?: string
+          is_public?: boolean | null
+          primary_color?: string | null
+          social_links?: Json | null
+          tagline?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       daily_briefs: {
         Row: {
           action_items: Json | null

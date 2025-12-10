@@ -19,6 +19,8 @@ import Settings from "./pages/Settings";
 import Pricing from "./pages/Pricing";
 import About from "./pages/About";
 import Transparency from "./pages/Transparency";
+import CreatorPublicPage from "./pages/CreatorPublicPage";
+import CreatorProfileEditor from "./pages/CreatorProfileEditor";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminContent from "./pages/admin/AdminContent";
@@ -56,6 +58,9 @@ const App = () => (
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/about" element={<About />} />
               <Route path="/transparency" element={<Transparency />} />
+              {/* Creator Profile Routes */}
+              <Route path="/c/:handle" element={<CreatorPublicPage />} />
+              <Route path="/creator/profile" element={<CreatorProfileEditor />} />
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/users" element={<AdminUsers />} />
