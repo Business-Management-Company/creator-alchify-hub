@@ -21,7 +21,7 @@ export function useTaskStatuses() {
 export function useCreateTaskStatus() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (status: { name: string; slug: string; sort_order: number; is_default?: boolean }) => {
+    mutationFn: async (status: { name: string; slug: string; sort_order: number; color?: string; is_default?: boolean }) => {
       const { data, error } = await supabase
         .from('task_statuses')
         .insert(status)
@@ -115,7 +115,7 @@ export function useTaskPriorities() {
 export function useCreateTaskPriority() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (priority: { name: string; code: string; sort_order: number; is_default?: boolean }) => {
+    mutationFn: async (priority: { name: string; code: string; sort_order: number; color?: string; is_default?: boolean }) => {
       const { data, error } = await supabase
         .from('task_priorities')
         .insert(priority)

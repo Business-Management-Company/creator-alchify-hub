@@ -6,6 +6,7 @@ export interface TaskStatusConfig {
   id: string;
   name: string;
   slug: string;
+  color: string;
   is_default: boolean;
   sort_order: number;
   created_at?: string;
@@ -15,6 +16,7 @@ export interface TaskPriorityConfig {
   id: string;
   name: string;
   code: string;
+  color: string;
   is_default: boolean;
   sort_order: number;
   created_at?: string;
