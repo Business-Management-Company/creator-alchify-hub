@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   LayoutDashboard, 
   Upload, 
@@ -152,13 +152,49 @@ const AppSidebar = () => {
   const collapsed = state === 'collapsed';
   const { isAdmin } = useAdminCheck();
 
-  // Initialize all sections as expanded
+  // Find section containing the current route
+  const findSectionForPath = useMemo(() => {
+    const allSections = [...creatorSections, ...adminSections];
+    for (const section of allSections) {
+      for (const item of section.items) {
+        if (location.pathname === item.path || 
+            (item.path === '/refiner' && location.pathname.startsWith('/refiner')) ||
+            (item.path === '/admin' && location.pathname === '/admin') ||
+            (item.path !== '/admin' && location.pathname.startsWith(item.path))) {
+          return section.label;
+        }
+      }
+    }
+    return null;
+  }, [location.pathname]);
+
+  // Initialize sections - expand creator sections, admin sections collapsed by default
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     creatorSections.forEach(s => { initial[s.label] = true; });
-    adminSections.forEach(s => { initial[s.label] = true; });
+    adminSections.forEach(s => { initial[s.label] = false; });
     return initial;
   });
+
+  // Auto-expand section containing active route when navigating
+  useEffect(() => {
+    if (findSectionForPath) {
+      const isAdminSection = adminSections.some(s => s.label === findSectionForPath);
+      
+      setOpenSections(prev => {
+        const newState = { ...prev, [findSectionForPath]: true };
+        
+        // If navigating to admin section, collapse creator sections
+        if (isAdminSection) {
+          creatorSections.forEach(s => {
+            newState[s.label] = false;
+          });
+        }
+        
+        return newState;
+      });
+    }
+  }, [findSectionForPath]);
 
   const toggleSection = (label: string, isAdminSection: boolean) => {
     setOpenSections(prev => {
