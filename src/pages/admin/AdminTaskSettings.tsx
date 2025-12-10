@@ -33,6 +33,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import AppLayout from '@/components/layout/AppLayout';
 import { TaskStatusConfig, TaskPriorityConfig } from '@/types/tasks';
 
+const TAB_OPTIONS = [
+  { value: 'all', label: 'All Tasks' },
+  { value: 'my', label: 'My Tasks' },
+  { value: 'created', label: 'Created by Me' },
+] as const;
+
 export default function AdminTaskSettings() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -62,6 +68,16 @@ export default function AdminTaskSettings() {
   const [statusSlug, setStatusSlug] = useState('');
   const [priorityName, setPriorityName] = useState('');
   const [priorityCode, setPriorityCode] = useState('');
+  
+  // Default tab preference
+  const [defaultTab, setDefaultTabState] = useState<string>(() => {
+    return localStorage.getItem('admin_tasks_default_tab') || 'all';
+  });
+  
+  const handleDefaultTabChange = (value: string) => {
+    setDefaultTabState(value);
+    localStorage.setItem('admin_tasks_default_tab', value);
+  };
   
   if (authLoading || adminLoading) {
     return (
@@ -172,6 +188,30 @@ export default function AdminTaskSettings() {
               Configure task statuses and priorities.
             </p>
           </div>
+
+          {/* Default Tab Preference */}
+          <Card className="mb-6">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Default Tab</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup value={defaultTab} onValueChange={handleDefaultTabChange}>
+                <div className="flex flex-wrap gap-4">
+                  {TAB_OPTIONS.map((option) => (
+                    <div key={option.value} className="flex items-center gap-2">
+                      <RadioGroupItem value={option.value} id={`tab-${option.value}`} />
+                      <label htmlFor={`tab-${option.value}`} className="text-sm cursor-pointer">
+                        {option.label}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </RadioGroup>
+              <p className="text-xs text-muted-foreground mt-3">
+                This tab will be selected by default when you open the Tasks page.
+              </p>
+            </CardContent>
+          </Card>
 
           <div className="grid md:grid-cols-2 gap-6">
             {/* Statuses */}
