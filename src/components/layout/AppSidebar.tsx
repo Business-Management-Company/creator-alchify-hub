@@ -26,7 +26,7 @@ import {
   Layers,
   Settings2
 } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Sidebar,
   SidebarContent,
@@ -179,82 +179,129 @@ const adminSections: NavSection[] = [
   },
 ];
 
-// All admin paths for mode detection
-const ADMIN_PATHS = ['/admin', '/admin/'];
-
 type NavMode = 'creator' | 'admin';
 
-const STORAGE_KEY = 'alchify-nav-state';
+const STORAGE_KEY = 'alchify-sidebar-state';
 
-interface StoredNavState {
-  expandedGroups: string[];
+interface SidebarState {
+  mode: NavMode;
+  openCreatorGroupId: string | null;
+  adminExpanded: boolean;
 }
+
+// Find which creator section contains a given path
+const findCreatorSectionForPath = (path: string): string | null => {
+  for (const section of creatorSections) {
+    for (const item of section.items) {
+      if (path === item.path || (item.path !== '/' && path.startsWith(item.path))) {
+        return section.id;
+      }
+    }
+  }
+  return null;
+};
 
 const AppSidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const { isAdmin } = useAdminCheck();
 
-  // Determine nav mode based on current route
-  const navMode: NavMode = useMemo(() => {
-    return location.pathname.startsWith('/admin') ? 'admin' : 'creator';
-  }, [location.pathname]);
-
-  // Load persisted expanded groups from localStorage
-  const loadStoredState = (): StoredNavState => {
+  // Load persisted state from localStorage
+  const loadStoredState = (): SidebarState => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         return JSON.parse(stored);
       }
     } catch (e) {
-      console.error('Failed to load nav state:', e);
+      console.error('Failed to load sidebar state:', e);
     }
-    return { expandedGroups: [] };
+    return { mode: 'creator', openCreatorGroupId: null, adminExpanded: false };
   };
 
-  // Initialize expanded groups
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
-    const stored = loadStoredState();
-    return new Set(stored.expandedGroups);
-  });
+  const [sidebarState, setSidebarState] = useState<SidebarState>(loadStoredState);
 
-  // Track if user manually collapsed the mode toggle
-  const [creatorViewExpanded, setCreatorViewExpanded] = useState(false);
-  const [adminViewExpanded, setAdminViewExpanded] = useState(false);
-
-  // Persist expanded groups to localStorage
+  // Persist state to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        expandedGroups: Array.from(expandedGroups),
-      }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(sidebarState));
     } catch (e) {
-      console.error('Failed to save nav state:', e);
+      console.error('Failed to save sidebar state:', e);
     }
-  }, [expandedGroups]);
+  }, [sidebarState]);
 
-  // Reset view expansions when mode changes
+  // Sync mode with route changes
   useEffect(() => {
-    if (navMode === 'admin') {
-      setCreatorViewExpanded(false);
-    } else {
-      setAdminViewExpanded(false);
-    }
-  }, [navMode]);
-
-  // Toggle a specific section
-  const toggleSection = useCallback((sectionId: string) => {
-    setExpandedGroups(prev => {
-      const next = new Set(prev);
-      if (next.has(sectionId)) {
-        next.delete(sectionId);
+    const isAdminRoute = location.pathname.startsWith('/admin');
+    const currentMode = isAdminRoute ? 'admin' : 'creator';
+    
+    if (currentMode !== sidebarState.mode) {
+      if (currentMode === 'admin') {
+        // Switching to admin: collapse creator, expand admin
+        setSidebarState(prev => ({
+          ...prev,
+          mode: 'admin',
+          adminExpanded: true,
+        }));
       } else {
-        next.add(sectionId);
+        // Switching to creator: find and expand the relevant section
+        const sectionId = findCreatorSectionForPath(location.pathname);
+        setSidebarState(prev => ({
+          ...prev,
+          mode: 'creator',
+          openCreatorGroupId: sectionId || prev.openCreatorGroupId,
+          adminExpanded: false,
+        }));
       }
-      return next;
-    });
+    } else if (currentMode === 'creator') {
+      // Already in creator mode, update open section if navigating
+      const sectionId = findCreatorSectionForPath(location.pathname);
+      if (sectionId && sectionId !== sidebarState.openCreatorGroupId) {
+        setSidebarState(prev => ({
+          ...prev,
+          openCreatorGroupId: sectionId,
+        }));
+      }
+    }
+  }, [location.pathname]);
+
+  // Toggle admin section expansion
+  const handleAdminToggle = useCallback(() => {
+    if (!sidebarState.adminExpanded) {
+      // Expanding admin: collapse all creator groups
+      setSidebarState(prev => ({
+        ...prev,
+        adminExpanded: true,
+        openCreatorGroupId: null,
+      }));
+    } else {
+      // Collapsing admin
+      setSidebarState(prev => ({
+        ...prev,
+        adminExpanded: false,
+      }));
+    }
+  }, [sidebarState.adminExpanded]);
+
+  // Handle clicking a creator section
+  const handleCreatorSectionClick = useCallback((sectionId: string) => {
+    setSidebarState(prev => ({
+      ...prev,
+      openCreatorGroupId: prev.openCreatorGroupId === sectionId ? null : sectionId,
+      adminExpanded: false, // Collapse admin when interacting with creator sections
+    }));
+  }, []);
+
+  // Handle clicking a creator nav item
+  const handleCreatorItemClick = useCallback((sectionId: string) => {
+    setSidebarState(prev => ({
+      ...prev,
+      mode: 'creator',
+      openCreatorGroupId: sectionId,
+      adminExpanded: false,
+    }));
   }, []);
 
   // Check if a path is active
@@ -271,8 +318,8 @@ const AppSidebar = () => {
     return location.pathname === path;
   }, [location.pathname]);
 
-  // Render a nav item
-  const renderNavItem = (item: NavItem, isAdminItem = false) => {
+  // Render a nav item - tighter spacing
+  const renderNavItem = (item: NavItem, sectionId: string, isAdminItem = false) => {
     const Icon = iconMap[item.icon];
     return (
       <SidebarMenuItem key={item.id}>
@@ -280,10 +327,14 @@ const AppSidebar = () => {
           asChild
           isActive={isActive(item.path)}
           tooltip={item.label}
-          className="py-1.5"
+          className="py-1 h-7 text-[13px]"
         >
-          <Link to={item.path} data-ui-element={item.id}>
-            {Icon && <Icon className={cn('h-4 w-4', isAdminItem && 'text-primary')} />}
+          <Link 
+            to={item.path} 
+            data-ui-element={item.id}
+            onClick={() => !isAdminItem && handleCreatorItemClick(sectionId)}
+          >
+            {Icon && <Icon className={cn('h-3.5 w-3.5', isAdminItem && 'text-primary')} />}
             <span>{item.label}</span>
           </Link>
         </SidebarMenuButton>
@@ -291,17 +342,16 @@ const AppSidebar = () => {
     );
   };
 
-  // Render a collapsible section
-  const renderSection = (section: NavSection, isAdminSection = false, forceOpen = false) => {
-    const isOpen = forceOpen || expandedGroups.has(section.id);
+  // Render a collapsible creator section - tighter spacing
+  const renderCreatorSection = (section: NavSection) => {
+    const isOpen = sidebarState.openCreatorGroupId === section.id;
     
     if (collapsed) {
-      // In collapsed mode, just show icons
       return (
-        <SidebarGroup key={section.id} className="py-0.5">
+        <SidebarGroup key={section.id} className="py-px">
           <SidebarGroupContent>
-            <SidebarMenu className="gap-0.5">
-              {section.items.map((item) => renderNavItem(item, isAdminSection))}
+            <SidebarMenu className="gap-px">
+              {section.items.map((item) => renderNavItem(item, section.id, false))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -309,27 +359,24 @@ const AppSidebar = () => {
     }
 
     return (
-      <SidebarGroup key={section.id} className="py-0.5">
-        <Collapsible open={isOpen} onOpenChange={() => toggleSection(section.id)}>
+      <SidebarGroup key={section.id} className="py-px">
+        <Collapsible open={isOpen} onOpenChange={() => handleCreatorSectionClick(section.id)}>
           <CollapsibleTrigger className="w-full">
             <SidebarGroupLabel 
-              className={cn(
-                'text-[10px] uppercase tracking-wider cursor-pointer flex items-center justify-between hover:text-foreground transition-colors py-1',
-                isAdminSection ? 'text-primary/70' : 'text-muted-foreground'
-              )}
+              className="text-[9px] uppercase tracking-wider cursor-pointer flex items-center justify-between hover:text-foreground transition-colors py-0.5 text-muted-foreground"
             >
               <span>{section.label}</span>
               {isOpen ? (
-                <ChevronDown className="h-3 w-3" />
+                <ChevronDown className="h-2.5 w-2.5" />
               ) : (
-                <ChevronRight className="h-3 w-3" />
+                <ChevronRight className="h-2.5 w-2.5" />
               )}
             </SidebarGroupLabel>
           </CollapsibleTrigger>
           <CollapsibleContent>
             <SidebarGroupContent>
-              <SidebarMenu className="gap-0.5">
-                {section.items.map((item) => renderNavItem(item, isAdminSection))}
+              <SidebarMenu className="gap-px">
+                {section.items.map((item) => renderNavItem(item, section.id, false))}
               </SidebarMenu>
             </SidebarGroupContent>
           </CollapsibleContent>
@@ -338,28 +385,49 @@ const AppSidebar = () => {
     );
   };
 
-  // Render collapsed mode toggle (Creator View or Admin & Settings)
-  const renderModeToggle = (
-    label: string,
-    icon: React.ReactNode,
-    isExpanded: boolean,
-    onToggle: () => void,
-    sections: NavSection[],
-    isAdminSection: boolean
-  ) => {
+  // Render admin section - tighter spacing
+  const renderAdminSection = (section: NavSection) => {
     if (collapsed) {
-      // In collapsed sidebar, show a single icon that links to the first item
-      const firstItem = sections[0]?.items[0];
-      if (!firstItem) return null;
-      const Icon = iconMap[firstItem.icon];
       return (
-        <SidebarGroup className="py-0.5">
+        <SidebarGroup key={section.id} className="py-px">
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-px">
+              {section.items.map((item) => renderNavItem(item, section.id, true))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      );
+    }
+
+    return (
+      <SidebarGroup key={section.id} className="py-px">
+        <SidebarGroupLabel 
+          className="text-[9px] uppercase tracking-wider py-0.5 text-primary/70"
+        >
+          {section.label}
+        </SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu className="gap-px">
+            {section.items.map((item) => renderNavItem(item, section.id, true))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    );
+  };
+
+  // Render the Admin & Settings toggle - tighter spacing
+  const renderAdminToggle = () => {
+    if (!isAdmin) return null;
+
+    if (collapsed) {
+      return (
+        <SidebarGroup className="py-px">
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip={label} className="py-1.5">
-                  <Link to={firstItem.path}>
-                    {Icon && <Icon className={cn('h-4 w-4', isAdminSection && 'text-primary')} />}
+                <SidebarMenuButton asChild tooltip="Admin & Settings" className="py-1 h-7">
+                  <Link to="/admin">
+                    <Settings2 className="h-3.5 w-3.5 text-primary" />
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -370,29 +438,26 @@ const AppSidebar = () => {
     }
 
     return (
-      <SidebarGroup className="py-0.5">
-        <Collapsible open={isExpanded} onOpenChange={onToggle}>
+      <SidebarGroup className="py-px">
+        <Collapsible open={sidebarState.adminExpanded} onOpenChange={handleAdminToggle}>
           <CollapsibleTrigger className="w-full">
             <SidebarGroupLabel 
-              className={cn(
-                'text-[10px] uppercase tracking-wider cursor-pointer flex items-center justify-between hover:text-foreground transition-colors py-1.5 px-2 rounded-md',
-                isAdminSection ? 'text-primary/70 bg-primary/5' : 'text-muted-foreground bg-muted/50'
-              )}
+              className="text-[9px] uppercase tracking-wider cursor-pointer flex items-center justify-between hover:text-foreground transition-colors py-1 px-1.5 rounded-sm text-primary/70 bg-primary/5"
             >
-              <span className="flex items-center gap-2">
-                {icon}
-                {label}
+              <span className="flex items-center gap-1.5">
+                <Settings2 className="h-2.5 w-2.5" />
+                Admin & Settings
               </span>
-              {isExpanded ? (
-                <ChevronDown className="h-3 w-3" />
+              {sidebarState.adminExpanded ? (
+                <ChevronDown className="h-2.5 w-2.5" />
               ) : (
-                <ChevronRight className="h-3 w-3" />
+                <ChevronRight className="h-2.5 w-2.5" />
               )}
             </SidebarGroupLabel>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="mt-1 space-y-0.5">
-              {sections.map((section) => renderSection(section, isAdminSection, true))}
+            <div className="mt-0.5 space-y-px">
+              {adminSections.map((section) => renderAdminSection(section))}
             </div>
           </CollapsibleContent>
         </Collapsible>
@@ -400,62 +465,110 @@ const AppSidebar = () => {
     );
   };
 
+  // Render Creator View toggle (shown in admin mode) - tighter spacing
+  const renderCreatorViewToggle = () => {
+    const hasOpenCreatorGroup = sidebarState.openCreatorGroupId !== null;
+
+    if (collapsed) {
+      return (
+        <SidebarGroup className="py-px">
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Creator View" className="py-1 h-7">
+                  <Link to="/dashboard">
+                    <Layers className="h-3.5 w-3.5" />
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      );
+    }
+
+    return (
+      <SidebarGroup className="py-px">
+        <Collapsible 
+          open={hasOpenCreatorGroup} 
+          onOpenChange={() => {
+            if (hasOpenCreatorGroup) {
+              setSidebarState(prev => ({ ...prev, openCreatorGroupId: null }));
+            } else {
+              setSidebarState(prev => ({ ...prev, openCreatorGroupId: 'home' }));
+            }
+          }}
+        >
+          <CollapsibleTrigger className="w-full">
+            <SidebarGroupLabel 
+              className="text-[9px] uppercase tracking-wider cursor-pointer flex items-center justify-between hover:text-foreground transition-colors py-1 px-1.5 rounded-sm text-muted-foreground bg-muted/50"
+            >
+              <span className="flex items-center gap-1.5">
+                <Layers className="h-2.5 w-2.5" />
+                Creator View
+              </span>
+              {hasOpenCreatorGroup ? (
+                <ChevronDown className="h-2.5 w-2.5" />
+              ) : (
+                <ChevronRight className="h-2.5 w-2.5" />
+              )}
+            </SidebarGroupLabel>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="mt-0.5 space-y-px">
+              {creatorSections.map((section) => renderCreatorSection(section))}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      </SidebarGroup>
+    );
+  };
+
+  // Determine what to render based on current mode
+  const isAdminMode = sidebarState.mode === 'admin' || location.pathname.startsWith('/admin');
+
   return (
     <Sidebar collapsible="icon" className="border-r border-border">
-      <SidebarHeader className="p-3">
+      <SidebarHeader className="p-2.5">
         <Link to="/dashboard" className="flex items-center gap-2">
           <div className="relative flex-shrink-0">
-            <Sparkles className="h-6 w-6 text-primary" />
+            <Sparkles className="h-5 w-5 text-primary" />
           </div>
           {!collapsed && (
-            <span className="text-lg font-bold gradient-text">Alchify</span>
+            <span className="text-base font-bold gradient-text">Alchify</span>
           )}
         </Link>
       </SidebarHeader>
       
-      <SidebarContent className="px-1.5">
-        {navMode === 'admin' && isAdmin ? (
+      <SidebarContent className="px-1">
+        {isAdminMode && isAdmin ? (
           <>
-            {/* Admin mode: Show admin sections first */}
-            {adminSections.map((section) => renderSection(section, true, true))}
+            {/* Admin mode: Show admin sections expanded */}
+            {adminSections.map((section) => renderAdminSection(section))}
             
             {/* Collapsed Creator View toggle */}
-            <div className="my-2 mx-1 h-px bg-border" />
-            {renderModeToggle(
-              'Creator View',
-              <Layers className="h-3 w-3" />,
-              creatorViewExpanded,
-              () => setCreatorViewExpanded(!creatorViewExpanded),
-              creatorSections,
-              false
-            )}
+            <div className="my-1 mx-0.5 h-px bg-border" />
+            {renderCreatorViewToggle()}
           </>
         ) : (
           <>
-            {/* Creator mode: Show creator sections first */}
-            {creatorSections.map((section) => renderSection(section, false, true))}
+            {/* Creator mode: Show creator sections */}
+            {creatorSections.map((section) => renderCreatorSection(section))}
             
             {/* Admin toggle - only for admins */}
             {isAdmin && (
               <>
-                <div className="my-2 mx-1 h-px bg-border" />
-                {renderModeToggle(
-                  'Admin & Settings',
-                  <Settings2 className="h-3 w-3" />,
-                  adminViewExpanded,
-                  () => setAdminViewExpanded(!adminViewExpanded),
-                  adminSections,
-                  true
-                )}
+                <div className="my-1 mx-0.5 h-px bg-border" />
+                {renderAdminToggle()}
               </>
             )}
           </>
         )}
       </SidebarContent>
       
-      <SidebarFooter className="p-2">
+      <SidebarFooter className="p-1.5">
         {!collapsed && (
-          <div className="text-[10px] text-muted-foreground text-center">
+          <div className="text-[9px] text-muted-foreground text-center">
             The Crucible for Creators
           </div>
         )}
