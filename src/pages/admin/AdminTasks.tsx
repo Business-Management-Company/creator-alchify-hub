@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { ArrowLeft, Plus, Filter, ExternalLink, Loader2, Settings, GripVertical, RotateCcw } from 'lucide-react';
+import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -31,6 +32,8 @@ import { Input } from '@/components/ui/input';
 import { TaskEditDrawer } from '@/components/tasks/TaskEditDrawer';
 import { AssigneesCell } from '@/components/tasks/MultiAssigneeSelect';
 import { TaskSectionGroup } from '@/components/tasks/TaskSectionGroup';
+import { DraggableTaskRow } from '@/components/tasks/DraggableTaskRow';
+import { DroppableSection } from '@/components/tasks/DroppableSection';
 import { useTasks, useUpdateTask } from '@/hooks/useTasks';
 import { useTaskStatuses, useTaskPriorities } from '@/hooks/useTaskConfigs';
 import { useTaskSections, useCreateTaskSection, useAssignTaskToSection } from '@/hooks/useTaskSections';
@@ -87,6 +90,16 @@ export default function AdminTasks() {
   const [newSectionName, setNewSectionName] = useState('');
   const [showNewSectionInput, setShowNewSectionInput] = useState(false);
   const [newTaskSectionId, setNewTaskSectionId] = useState<string | null>(null);
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
 
   // Fetch users for assignee filter
   const { data: users = [] } = useQuery({
@@ -146,6 +159,46 @@ export default function AdminTasks() {
     setDrawerOpen(true);
   };
 
+  // Drag handlers
+  const handleDragStartTask = (event: DragStartEvent) => {
+    const { active } = event;
+    const task = filteredTasks.find(t => t.id === active.id);
+    if (task) setActiveTask(task);
+  };
+
+  const handleDragEndTask = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveTask(null);
+    
+    if (!over) return;
+    
+    const taskId = active.id as string;
+    const overId = over.id as string;
+    
+    // Find the target section
+    let targetSectionId: string | null = null;
+    
+    if (overId === 'unsectioned') {
+      targetSectionId = null;
+    } else if (sections.some(s => s.id === overId)) {
+      targetSectionId = overId;
+    } else {
+      // Dropped on a task - find its section
+      const targetTask = filteredTasks.find(t => t.id === overId);
+      if (targetTask) {
+        targetSectionId = targetTask.section_id || null;
+      }
+    }
+    
+    // Get the current task
+    const currentTask = filteredTasks.find(t => t.id === taskId);
+    if (!currentTask) return;
+    
+    // Only update if section changed
+    if (currentTask.section_id !== targetSectionId) {
+      assignToSection.mutate({ taskId, sectionId: targetSectionId });
+    }
+  };
   const handleAddSection = () => {
     if (newSectionName.trim()) {
       createSection.mutate({ name: newSectionName.trim() });
@@ -410,25 +463,88 @@ export default function AdminTasks() {
                   </Button>
                 </div>
               ) : (
-                <TooltipProvider>
-                  {/* Sections with tasks */}
-                  {sections.map((section) => {
-                    const sectionTasks = tasksBySection.grouped[section.id] || [];
-                    return (
-                      <TaskSectionGroup
-                        key={section.id}
-                        section={section}
-                        taskCount={sectionTasks.length}
-                        onAddTask={handleNewTask}
-                      >
-                        {sectionTasks.length === 0 ? (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragStart={handleDragStartTask}
+                  onDragEnd={handleDragEndTask}
+                >
+                  <TooltipProvider>
+                    {/* Sections with tasks */}
+                    {sections.map((section) => {
+                      const sectionTasks = tasksBySection.grouped[section.id] || [];
+                      return (
+                        <DroppableSection key={section.id} id={section.id}>
+                          <TaskSectionGroup
+                            section={section}
+                            taskCount={sectionTasks.length}
+                            onAddTask={handleNewTask}
+                          >
+                            {sectionTasks.length === 0 ? (
+                              <div className="text-center py-6 text-muted-foreground text-sm">
+                                Drop tasks here
+                              </div>
+                            ) : (
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead className="w-8" />
+                                    {columns.map((col, index) => (
+                                      <TableHead
+                                        key={col.id}
+                                        className={cn(
+                                          col.width,
+                                          'cursor-grab select-none',
+                                          draggedIndex === index && 'bg-primary/10'
+                                        )}
+                                        draggable
+                                        onDragStart={() => handleDragStart(index)}
+                                        onDragOver={(e) => handleDragOver(e, index)}
+                                        onDragEnd={handleDragEnd}
+                                      >
+                                        <div className="flex items-center gap-1">
+                                          <GripVertical className="h-3 w-3 text-muted-foreground/50" />
+                                          {col.label}
+                                        </div>
+                                      </TableHead>
+                                    ))}
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {sectionTasks.map((task) => (
+                                    <DraggableTaskRow
+                                      key={task.id}
+                                      task={task}
+                                      columns={columns}
+                                      renderCell={renderCell}
+                                    />
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            )}
+                          </TaskSectionGroup>
+                        </DroppableSection>
+                      );
+                    })}
+
+                    {/* Unsectioned tasks */}
+                    <DroppableSection id="unsectioned">
+                      <div className="border rounded-lg overflow-hidden">
+                        <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b">
+                          <span className="font-medium text-sm">Unsectioned</span>
+                          <span className="text-xs text-muted-foreground">
+                            ({tasksBySection.unsectioned.length})
+                          </span>
+                        </div>
+                        {tasksBySection.unsectioned.length === 0 ? (
                           <div className="text-center py-6 text-muted-foreground text-sm">
-                            No tasks in this section
+                            Drop tasks here
                           </div>
                         ) : (
                           <Table>
                             <TableHeader>
                               <TableRow>
+                                <TableHead className="w-8" />
                                 {columns.map((col, index) => (
                                   <TableHead
                                     key={col.id}
@@ -451,116 +567,76 @@ export default function AdminTasks() {
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {sectionTasks.map((task) => (
-                                <TableRow key={task.id} className="cursor-pointer hover:bg-muted/50">
-                                  {columns.map((col) => (
-                                    <TableCell key={col.id} className={col.width}>
-                                      {renderCell(col.id, task)}
-                                    </TableCell>
-                                  ))}
-                                </TableRow>
+                              {tasksBySection.unsectioned.map((task) => (
+                                <DraggableTaskRow
+                                  key={task.id}
+                                  task={task}
+                                  columns={columns}
+                                  renderCell={renderCell}
+                                />
                               ))}
                             </TableBody>
                           </Table>
                         )}
-                      </TaskSectionGroup>
-                    );
-                  })}
-
-                  {/* Unsectioned tasks */}
-                  {tasksBySection.unsectioned.length > 0 && (
-                    <div className="border rounded-lg overflow-hidden">
-                      <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b">
-                        <span className="font-medium text-sm">Unsectioned</span>
-                        <span className="text-xs text-muted-foreground">
-                          ({tasksBySection.unsectioned.length})
-                        </span>
                       </div>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            {columns.map((col, index) => (
-                              <TableHead
-                                key={col.id}
-                                className={cn(
-                                  col.width,
-                                  'cursor-grab select-none',
-                                  draggedIndex === index && 'bg-primary/10'
-                                )}
-                                draggable
-                                onDragStart={() => handleDragStart(index)}
-                                onDragOver={(e) => handleDragOver(e, index)}
-                                onDragEnd={handleDragEnd}
-                              >
-                                <div className="flex items-center gap-1">
-                                  <GripVertical className="h-3 w-3 text-muted-foreground/50" />
-                                  {col.label}
-                                </div>
-                              </TableHead>
-                            ))}
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {tasksBySection.unsectioned.map((task) => (
-                            <TableRow key={task.id} className="cursor-pointer hover:bg-muted/50">
-                              {columns.map((col) => (
-                                <TableCell key={col.id} className={col.width}>
-                                  {renderCell(col.id, task)}
-                                </TableCell>
-                              ))}
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
+                    </DroppableSection>
 
-                  {/* Add Section Button */}
-                  <div className="flex items-center gap-2">
-                    {showNewSectionInput ? (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          value={newSectionName}
-                          onChange={(e) => setNewSectionName(e.target.value)}
-                          placeholder="Section name..."
-                          className="h-8 w-48 text-sm"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleAddSection();
-                            if (e.key === 'Escape') {
+                    {/* Add Section Button */}
+                    <div className="flex items-center gap-2">
+                      {showNewSectionInput ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={newSectionName}
+                            onChange={(e) => setNewSectionName(e.target.value)}
+                            placeholder="Section name..."
+                            className="h-8 w-48 text-sm"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleAddSection();
+                              if (e.key === 'Escape') {
+                                setShowNewSectionInput(false);
+                                setNewSectionName('');
+                              }
+                            }}
+                          />
+                          <Button size="sm" className="h-8" onClick={handleAddSection}>
+                            Add
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-8"
+                            onClick={() => {
                               setShowNewSectionInput(false);
                               setNewSectionName('');
-                            }
-                          }}
-                        />
-                        <Button size="sm" className="h-8" onClick={handleAddSection}>
-                          Add
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          className="h-8"
-                          onClick={() => {
-                            setShowNewSectionInput(false);
-                            setNewSectionName('');
-                          }}
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground"
+                          onClick={() => setShowNewSectionInput(true)}
                         >
-                          Cancel
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add Section
                         </Button>
+                      )}
+                    </div>
+                  </TooltipProvider>
+
+                  {/* Drag overlay */}
+                  <DragOverlay>
+                    {activeTask ? (
+                      <div className="bg-background border rounded-md shadow-lg p-2 text-sm font-medium">
+                        {activeTask.title}
                       </div>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-muted-foreground"
-                        onClick={() => setShowNewSectionInput(true)}
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add Section
-                      </Button>
-                    )}
-                  </div>
-                </TooltipProvider>
+                    ) : null}
+                  </DragOverlay>
+                </DndContext>
               )}
             </TabsContent>
           </Tabs>
