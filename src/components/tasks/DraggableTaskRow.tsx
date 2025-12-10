@@ -34,13 +34,13 @@ export function DraggableTaskRow({ task, columns, renderCell }: DraggableTaskRow
       ref={setNodeRef}
       style={style}
       className={cn(
-        "cursor-pointer hover:bg-muted/50",
+        "hover:bg-muted/50",
         isDragging && "opacity-50 bg-muted shadow-lg z-50"
       )}
-      {...attributes}
     >
       <TableCell className="w-8 p-2">
         <div 
+          {...attributes}
           {...listeners}
           className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
         >
