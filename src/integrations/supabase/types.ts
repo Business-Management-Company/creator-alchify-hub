@@ -704,6 +704,7 @@ export type Database = {
       task_priorities: {
         Row: {
           code: string
+          color: string | null
           created_at: string | null
           id: string
           is_default: boolean | null
@@ -712,6 +713,7 @@ export type Database = {
         }
         Insert: {
           code: string
+          color?: string | null
           created_at?: string | null
           id?: string
           is_default?: boolean | null
@@ -720,6 +722,7 @@ export type Database = {
         }
         Update: {
           code?: string
+          color?: string | null
           created_at?: string | null
           id?: string
           is_default?: boolean | null
@@ -760,6 +763,7 @@ export type Database = {
       }
       task_statuses: {
         Row: {
+          color: string | null
           created_at: string | null
           id: string
           is_default: boolean | null
@@ -768,6 +772,7 @@ export type Database = {
           sort_order: number
         }
         Insert: {
+          color?: string | null
           created_at?: string | null
           id?: string
           is_default?: boolean | null
@@ -776,6 +781,7 @@ export type Database = {
           sort_order?: number
         }
         Update: {
+          color?: string | null
           created_at?: string | null
           id?: string
           is_default?: boolean | null

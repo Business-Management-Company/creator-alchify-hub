@@ -66,8 +66,10 @@ export default function AdminTaskSettings() {
   
   const [statusName, setStatusName] = useState('');
   const [statusSlug, setStatusSlug] = useState('');
+  const [statusColor, setStatusColor] = useState('#6b7280');
   const [priorityName, setPriorityName] = useState('');
   const [priorityCode, setPriorityCode] = useState('');
+  const [priorityColor, setPriorityColor] = useState('#6b7280');
   
   // Default tab preference
   const [defaultTab, setDefaultTabState] = useState<string>(() => {
@@ -97,10 +99,12 @@ export default function AdminTaskSettings() {
       setEditingStatus(status);
       setStatusName(status.name);
       setStatusSlug(status.slug);
+      setStatusColor(status.color || '#6b7280');
     } else {
       setEditingStatus(null);
       setStatusName('');
       setStatusSlug('');
+      setStatusColor('#6b7280');
     }
     setStatusDialog(true);
   };
@@ -110,10 +114,12 @@ export default function AdminTaskSettings() {
       setEditingPriority(priority);
       setPriorityName(priority.name);
       setPriorityCode(priority.code);
+      setPriorityColor(priority.color || '#6b7280');
     } else {
       setEditingPriority(null);
       setPriorityName('');
       setPriorityCode('');
+      setPriorityColor('#6b7280');
     }
     setPriorityDialog(true);
   };
@@ -122,11 +128,12 @@ export default function AdminTaskSettings() {
     if (!statusName.trim() || !statusSlug.trim()) return;
     
     if (editingStatus) {
-      await updateStatus.mutateAsync({ id: editingStatus.id, name: statusName, slug: statusSlug });
+      await updateStatus.mutateAsync({ id: editingStatus.id, name: statusName, slug: statusSlug, color: statusColor });
     } else {
       await createStatus.mutateAsync({ 
         name: statusName, 
         slug: statusSlug, 
+        color: statusColor,
         sort_order: statuses.length + 1 
       });
     }
@@ -137,11 +144,12 @@ export default function AdminTaskSettings() {
     if (!priorityName.trim() || !priorityCode.trim()) return;
     
     if (editingPriority) {
-      await updatePriority.mutateAsync({ id: editingPriority.id, name: priorityName, code: priorityCode });
+      await updatePriority.mutateAsync({ id: editingPriority.id, name: priorityName, code: priorityCode, color: priorityColor });
     } else {
       await createPriority.mutateAsync({ 
         name: priorityName, 
         code: priorityCode, 
+        color: priorityColor,
         sort_order: priorities.length + 1 
       });
     }
@@ -247,10 +255,14 @@ export default function AdminTaskSettings() {
                               <GripVertical className="h-3 w-3" />
                             </button>
                           </div>
+                          <div 
+                            className="w-3 h-3 rounded-full border"
+                            style={{ backgroundColor: status.color || '#6b7280' }}
+                          />
                           <RadioGroupItem value={status.id} id={`status-${status.id}`} />
                           <label 
                             htmlFor={`status-${status.id}`}
-                            className="text-sm cursor-pointer"
+                            className="text-sm text-foreground cursor-pointer"
                             onClick={() => handleOpenStatusDialog(status)}
                           >
                             {status.name}
@@ -308,10 +320,14 @@ export default function AdminTaskSettings() {
                               <GripVertical className="h-3 w-3" />
                             </button>
                           </div>
+                          <div 
+                            className="w-3 h-3 rounded-full border"
+                            style={{ backgroundColor: priority.color || '#6b7280' }}
+                          />
                           <RadioGroupItem value={priority.id} id={`priority-${priority.id}`} />
                           <label 
                             htmlFor={`priority-${priority.id}`}
-                            className="text-sm cursor-pointer"
+                            className="text-sm text-foreground cursor-pointer"
                             onClick={() => handleOpenPriorityDialog(priority)}
                           >
                             {priority.name}
@@ -340,13 +356,13 @@ export default function AdminTaskSettings() {
 
         {/* Status Dialog */}
         <Dialog open={statusDialog} onOpenChange={setStatusDialog}>
-          <DialogContent>
+          <DialogContent className="bg-background">
             <DialogHeader>
-              <DialogTitle>{editingStatus ? 'Edit Status' : 'Add Status'}</DialogTitle>
+              <DialogTitle className="text-foreground">{editingStatus ? 'Edit Status' : 'Add Status'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label>Name</Label>
+                <Label className="text-foreground">Name</Label>
                 <Input 
                   value={statusName} 
                   onChange={(e) => setStatusName(e.target.value)}
@@ -354,12 +370,29 @@ export default function AdminTaskSettings() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Slug</Label>
+                <Label className="text-foreground">Slug</Label>
                 <Input 
                   value={statusSlug} 
                   onChange={(e) => setStatusSlug(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
                   placeholder="e.g. in-review"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-foreground">Color</Label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={statusColor}
+                    onChange={(e) => setStatusColor(e.target.value)}
+                    className="w-10 h-10 rounded border cursor-pointer"
+                  />
+                  <Input 
+                    value={statusColor} 
+                    onChange={(e) => setStatusColor(e.target.value)}
+                    placeholder="#6b7280"
+                    className="flex-1"
+                  />
+                </div>
               </div>
             </div>
             <DialogFooter>
@@ -373,13 +406,13 @@ export default function AdminTaskSettings() {
 
         {/* Priority Dialog */}
         <Dialog open={priorityDialog} onOpenChange={setPriorityDialog}>
-          <DialogContent>
+          <DialogContent className="bg-background">
             <DialogHeader>
-              <DialogTitle>{editingPriority ? 'Edit Priority' : 'Add Priority'}</DialogTitle>
+              <DialogTitle className="text-foreground">{editingPriority ? 'Edit Priority' : 'Add Priority'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label>Name</Label>
+                <Label className="text-foreground">Name</Label>
                 <Input 
                   value={priorityName} 
                   onChange={(e) => setPriorityName(e.target.value)}
@@ -387,12 +420,29 @@ export default function AdminTaskSettings() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Code</Label>
+                <Label className="text-foreground">Code</Label>
                 <Input 
                   value={priorityCode} 
                   onChange={(e) => setPriorityCode(e.target.value.toUpperCase())}
                   placeholder="e.g. P1"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-foreground">Color</Label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={priorityColor}
+                    onChange={(e) => setPriorityColor(e.target.value)}
+                    className="w-10 h-10 rounded border cursor-pointer"
+                  />
+                  <Input 
+                    value={priorityColor} 
+                    onChange={(e) => setPriorityColor(e.target.value)}
+                    placeholder="#6b7280"
+                    className="flex-1"
+                  />
+                </div>
               </div>
             </div>
             <DialogFooter>

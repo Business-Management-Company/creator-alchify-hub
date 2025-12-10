@@ -150,30 +150,29 @@ export function MultiAssigneeSelect({ selectedIds, onChange, disabled }: MultiAs
   );
 }
 
-// Compact cell display for the table
+// Compact cell display for the table - shows avatars with names
 export function AssigneesCell({ assignees }: { assignees: { profile?: { user_id: string; display_name: string | null; avatar_url: string | null } | null }[] }) {
   if (!assignees?.length) {
     return <span className="text-muted-foreground text-sm">—</span>;
   }
 
   return (
-    <div className="flex items-center -space-x-1.5">
-      {assignees.slice(0, 3).map((a, i) => (
-        <Avatar 
-          key={a.profile?.user_id || i} 
-          className="h-6 w-6 border-2 border-background"
-          title={a.profile?.display_name || 'User'}
-        >
-          <AvatarImage src={a.profile?.avatar_url || undefined} />
-          <AvatarFallback className="text-xs bg-muted">
-            {(a.profile?.display_name || 'U')[0].toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-      ))}
-      {assignees.length > 3 && (
-        <div className="h-6 w-6 rounded-full bg-muted border-2 border-background flex items-center justify-center text-xs font-medium">
-          +{assignees.length - 3}
+    <div className="flex items-center gap-1.5">
+      {assignees.slice(0, 2).map((a, i) => (
+        <div key={a.profile?.user_id || i} className="flex items-center gap-1">
+          <Avatar className="h-5 w-5 border border-border">
+            <AvatarImage src={a.profile?.avatar_url || undefined} />
+            <AvatarFallback className="text-[10px] bg-muted text-foreground">
+              {(a.profile?.display_name || 'U')[0].toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-xs text-foreground truncate max-w-[60px]">
+            {a.profile?.display_name?.split(' ')[0] || 'User'}
+          </span>
         </div>
+      ))}
+      {assignees.length > 2 && (
+        <span className="text-xs text-muted-foreground">+{assignees.length - 2}</span>
       )}
     </div>
   );

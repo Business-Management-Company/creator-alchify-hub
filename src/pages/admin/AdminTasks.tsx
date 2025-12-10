@@ -191,8 +191,17 @@ export default function AdminTasks() {
   const renderCell = (columnId: string, task: Task) => {
     switch (columnId) {
       case 'status':
+        const statusColor = task.status_config?.color || '#6b7280';
         return (
-          <Badge variant="outline" className="text-xs">
+          <Badge 
+            variant="outline" 
+            className="text-xs text-foreground"
+            style={{ 
+              backgroundColor: `${statusColor}20`,
+              borderColor: statusColor,
+              color: statusColor
+            }}
+          >
             {task.status_config?.name || 'No Status'}
           </Badge>
         );
@@ -202,7 +211,7 @@ export default function AdminTasks() {
             <TooltipTrigger asChild>
               <Link 
                 to={`/admin/tasks/${task.id}`}
-                className="font-medium hover:underline flex items-center gap-1"
+                className="font-medium text-foreground hover:underline flex items-center gap-1"
               >
                 <span className="truncate block max-w-[150px]">{task.title}</span>
                 {task.linked_url && (
@@ -216,8 +225,17 @@ export default function AdminTasks() {
           </Tooltip>
         );
       case 'priority':
+        const priorityColor = task.priority_config?.color || '#6b7280';
         return (
-          <Badge variant="outline" className="text-xs whitespace-nowrap">
+          <Badge 
+            variant="outline" 
+            className="text-xs whitespace-nowrap"
+            style={{ 
+              backgroundColor: `${priorityColor}20`,
+              borderColor: priorityColor,
+              color: priorityColor
+            }}
+          >
             {task.priority_config?.name || 'N/A'}
           </Badge>
         );
@@ -225,13 +243,13 @@ export default function AdminTasks() {
         return <AssigneesCell assignees={task.assignees || []} />;
       case 'area':
         return task.area ? (
-          <span className="text-xs text-muted-foreground">{task.area}</span>
+          <span className="text-xs text-foreground">{task.area}</span>
         ) : (
           <span className="text-muted-foreground text-xs">—</span>
         );
       case 'due':
         return task.due_date ? (
-          <span className={`text-xs ${isPast(new Date(task.due_date)) && task.status_config?.slug !== 'completed' ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+          <span className={`text-xs ${isPast(new Date(task.due_date)) && task.status_config?.slug !== 'completed' ? 'text-destructive font-medium' : 'text-foreground'}`}>
             {format(new Date(task.due_date), 'MMM d')}
           </span>
         ) : (
@@ -239,7 +257,7 @@ export default function AdminTasks() {
         );
       case 'added':
         return (
-          <span className="text-xs text-muted-foreground">
+          <span className="text-xs text-foreground">
             {format(new Date(task.created_at), 'MMM d')}
           </span>
         );
