@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Task, TaskComment } from '@/types/tasks';
+import { Task, TaskComment, TaskAssignee } from '@/types/tasks';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
@@ -26,14 +26,40 @@ async function enrichTasksWithProfiles(tasks: any[]) {
     priorityIds.length ? supabase.from('task_priorities').select('*').in('id', priorityIds) : { data: [] },
   ]);
   
+  // Fetch assignees from junction table
+  const taskIds = tasks.map(t => t.id);
+  const { data: assigneesData } = await supabase
+    .from('task_assignees')
+    .select('*')
+    .in('task_id', taskIds);
+  
+  // Get unique assignee user_ids
+  const assigneeUserIds = [...new Set((assigneesData || []).map(a => a.user_id))];
+  const { data: assigneeProfiles } = assigneeUserIds.length 
+    ? await supabase.from('profiles').select('user_id, display_name, avatar_url').in('user_id', assigneeUserIds)
+    : { data: [] };
+  
   const profileMap = new Map(profiles?.map(p => [p.user_id, p] as const) || []);
+  const assigneeProfileMap = new Map((assigneeProfiles || []).map(p => [p.user_id, p] as const));
   const statusMap = new Map((statusesRes.data || []).map(s => [s.id, s] as const));
   const priorityMap = new Map((prioritiesRes.data || []).map(p => [p.id, p] as const));
+  
+  // Group assignees by task_id
+  const assigneesByTask = new Map<string, TaskAssignee[]>();
+  (assigneesData || []).forEach(a => {
+    const list = assigneesByTask.get(a.task_id) || [];
+    list.push({
+      ...a,
+      profile: assigneeProfileMap.get(a.user_id) || null,
+    });
+    assigneesByTask.set(a.task_id, list);
+  });
   
   return tasks.map(task => ({
     ...task,
     creator: profileMap.get(task.creator_id) || null,
     assignee: task.assignee_id ? profileMap.get(task.assignee_id) || null : null,
+    assignees: assigneesByTask.get(task.id) || [],
     status_config: task.status_id ? statusMap.get(task.status_id) || null : null,
     priority_config: task.priority_id ? priorityMap.get(task.priority_id) || null : null,
   }));
@@ -275,6 +301,81 @@ export function useAddComment() {
     },
     onError: (error: Error) => {
       toast({ title: 'Error adding comment', description: error.message, variant: 'destructive' });
+    },
+  });
+}
+
+// Multi-assignee hooks
+export function useUpdateTaskAssignees() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ taskId, userIds }: { taskId: string; userIds: string[] }) => {
+      // Get current assignees
+      const { data: currentAssignees } = await supabase
+        .from('task_assignees')
+        .select('user_id')
+        .eq('task_id', taskId);
+      
+      const currentIds = new Set((currentAssignees || []).map(a => a.user_id));
+      const newIds = new Set(userIds);
+      
+      // Find additions and removals
+      const toAdd = userIds.filter(id => !currentIds.has(id));
+      const toRemove = [...currentIds].filter(id => !newIds.has(id));
+      
+      // Remove old assignees
+      if (toRemove.length) {
+        await supabase
+          .from('task_assignees')
+          .delete()
+          .eq('task_id', taskId)
+          .in('user_id', toRemove);
+      }
+      
+      // Add new assignees
+      if (toAdd.length) {
+        await supabase
+          .from('task_assignees')
+          .insert(toAdd.map(user_id => ({ task_id: taskId, user_id })));
+        
+        // Notify new assignees
+        const { data: task } = await supabase
+          .from('tasks')
+          .select('title')
+          .eq('id', taskId)
+          .single();
+        
+        if (task) {
+          for (const userId of toAdd) {
+            if (userId !== user!.id) {
+              await supabase.from('notifications').insert({
+                user_id: userId,
+                task_id: taskId,
+                type: 'task_assigned',
+                title: 'Task Assigned',
+                message: `You've been assigned to: ${task.title}`,
+              });
+            }
+          }
+        }
+      }
+      
+      // Also update legacy assignee_id to first assignee
+      await supabase
+        .from('tasks')
+        .update({ assignee_id: userIds[0] || null })
+        .eq('id', taskId);
+      
+      return { added: toAdd, removed: toRemove };
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['task', variables.taskId] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error updating assignees', description: error.message, variant: 'destructive' });
     },
   });
 }
