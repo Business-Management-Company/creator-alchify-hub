@@ -1,6 +1,6 @@
 export type TaskStatus = 'backlog' | 'in_progress' | 'blocked' | 'done';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
-export type ReleaseTarget = 'Dec-15-Full-Test' | 'Jan-1-Alpha' | 'Backlog';
+export type ReleaseTarget = 'Dec-22-Full-Test' | 'Dec-28-Final-Testing' | 'Jan-1-Alpha';
 
 export interface TaskStatusConfig {
   id: string;

@@ -234,7 +234,8 @@ export default function AdminTasks() {
 
   const getReleaseTargetColor = (target: ReleaseTarget | null) => {
     switch (target) {
-      case 'Dec-15-Full-Test': return 'bg-destructive/20 text-destructive';
+      case 'Dec-22-Full-Test': return 'bg-destructive/20 text-destructive';
+      case 'Dec-28-Final-Testing': return 'bg-orange-500/20 text-orange-600';
       case 'Jan-1-Alpha': return 'bg-blue-500/20 text-blue-600';
       default: return 'bg-muted text-muted-foreground';
     }
