@@ -36,6 +36,7 @@ import { DraggableTaskRow } from '@/components/tasks/DraggableTaskRow';
 import { DroppableSection } from '@/components/tasks/DroppableSection';
 import { InlineStatusSelect } from '@/components/tasks/InlineStatusSelect';
 import { InlinePrioritySelect } from '@/components/tasks/InlinePrioritySelect';
+import { TaskWatchButton } from '@/components/tasks/TaskWatchButton';
 import { useTasks, useUpdateTask } from '@/hooks/useTasks';
 import { useTaskStatuses, useTaskPriorities } from '@/hooks/useTaskConfigs';
 import { useTaskSections, useCreateTaskSection, useAssignTaskToSection } from '@/hooks/useTaskSections';
@@ -291,7 +292,12 @@ export default function AdminTasks() {
           />
         );
       case 'assignees':
-        return <AssigneesCell assignees={task.assignees || []} />;
+        return (
+          <div className="flex items-center gap-1">
+            <AssigneesCell assignees={task.assignees || []} />
+            <TaskWatchButton taskId={task.id} />
+          </div>
+        );
       case 'area':
         return task.area ? (
           <span className="text-xs text-foreground">{task.area}</span>
