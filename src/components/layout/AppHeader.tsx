@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -94,11 +95,14 @@ const AppHeader = () => {
         </form>
       </div>
       
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         {/* Mobile search button */}
         <Button variant="ghost" size="icon" className="sm:hidden h-9 w-9">
           <Search className="h-4 w-4" />
         </Button>
+        
+        {/* Notification Bell */}
+        <NotificationBell />
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
