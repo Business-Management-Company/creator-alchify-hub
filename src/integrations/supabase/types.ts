@@ -190,6 +190,131 @@ export type Database = {
         }
         Relationships: []
       }
+      insight_documents: {
+        Row: {
+          applicable_metrics: string[] | null
+          benchmarks: Json | null
+          content_markdown: string | null
+          content_summary: string | null
+          created_at: string | null
+          creator_type_tags: string[] | null
+          id: string
+          is_processed: boolean | null
+          key_points: Json | null
+          processing_error: string | null
+          published_at: string | null
+          recommended_actions: Json | null
+          source_id: string | null
+          tags: string[] | null
+          title: string
+          topic_tags: string[] | null
+          updated_at: string | null
+          url: string | null
+        }
+        Insert: {
+          applicable_metrics?: string[] | null
+          benchmarks?: Json | null
+          content_markdown?: string | null
+          content_summary?: string | null
+          created_at?: string | null
+          creator_type_tags?: string[] | null
+          id?: string
+          is_processed?: boolean | null
+          key_points?: Json | null
+          processing_error?: string | null
+          published_at?: string | null
+          recommended_actions?: Json | null
+          source_id?: string | null
+          tags?: string[] | null
+          title: string
+          topic_tags?: string[] | null
+          updated_at?: string | null
+          url?: string | null
+        }
+        Update: {
+          applicable_metrics?: string[] | null
+          benchmarks?: Json | null
+          content_markdown?: string | null
+          content_summary?: string | null
+          created_at?: string | null
+          creator_type_tags?: string[] | null
+          id?: string
+          is_processed?: boolean | null
+          key_points?: Json | null
+          processing_error?: string | null
+          published_at?: string | null
+          recommended_actions?: Json | null
+          source_id?: string | null
+          tags?: string[] | null
+          title?: string
+          topic_tags?: string[] | null
+          updated_at?: string | null
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insight_documents_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "insight_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      insight_sources: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          creator_type_tags: string[] | null
+          documents_count: number | null
+          fetch_frequency_hours: number | null
+          id: string
+          is_active: boolean | null
+          last_fetch_at: string | null
+          name: string
+          tags: string[] | null
+          topic_tags: string[] | null
+          type: string
+          updated_at: string | null
+          url: string
+          use_transcripts: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          creator_type_tags?: string[] | null
+          documents_count?: number | null
+          fetch_frequency_hours?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_fetch_at?: string | null
+          name: string
+          tags?: string[] | null
+          topic_tags?: string[] | null
+          type: string
+          updated_at?: string | null
+          url: string
+          use_transcripts?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          creator_type_tags?: string[] | null
+          documents_count?: number | null
+          fetch_frequency_hours?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_fetch_at?: string | null
+          name?: string
+          tags?: string[] | null
+          topic_tags?: string[] | null
+          type?: string
+          updated_at?: string | null
+          url?: string
+          use_transcripts?: boolean | null
+        }
+        Relationships: []
+      }
       pricing_features: {
         Row: {
           display_order: number
