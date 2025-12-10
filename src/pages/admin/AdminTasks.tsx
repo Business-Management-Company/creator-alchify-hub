@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { ArrowLeft, Plus, Filter, ExternalLink, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Filter, ExternalLink, Loader2, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -24,6 +24,7 @@ import { TaskStatusBadge } from '@/components/tasks/TaskStatusBadge';
 import { TaskPriorityBadge } from '@/components/tasks/TaskPriorityBadge';
 import { TaskEditDrawer } from '@/components/tasks/TaskEditDrawer';
 import { useTasks, useUpdateTask } from '@/hooks/useTasks';
+import { useVisibleTaskFilters } from '@/hooks/useTaskFilters';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -45,6 +46,7 @@ export default function AdminTasks() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: tasks = [], isLoading } = useTasks(activeTab);
+  const { data: filterConfigs = [] } = useVisibleTaskFilters();
   const updateTask = useUpdateTask();
 
   useEffect(() => {
@@ -140,10 +142,15 @@ export default function AdminTasks() {
                 Manage and track team tasks.
               </p>
             </div>
-            <Button onClick={handleNewTask} size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              New Task
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate('/admin/tasks/settings')}>
+                <Settings className="h-4 w-4" />
+              </Button>
+              <Button onClick={handleNewTask} size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                New Task
+              </Button>
+            </div>
           </div>
 
           {/* Tabs + Filters */}
