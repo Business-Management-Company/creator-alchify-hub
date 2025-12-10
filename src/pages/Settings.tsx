@@ -5,6 +5,7 @@ import { useTheme } from 'next-themes';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useBrowserNotifications } from '@/hooks/useBrowserNotifications';
 import AppLayout from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +29,8 @@ import {
   AlertTriangle,
   Sun,
   Moon,
-  Monitor
+  Monitor,
+  BellRing
 } from 'lucide-react';
 
 interface Profile {
@@ -275,6 +277,83 @@ const Settings = () => {
     }
   };
 
+  // Browser notification card component
+  const BrowserNotificationCard = () => {
+    const { isSupported, permission, requestPermission, isGranted, isDenied } = useBrowserNotifications();
+    const [requesting, setRequesting] = useState(false);
+
+    const handleRequestPermission = async () => {
+      setRequesting(true);
+      const granted = await requestPermission();
+      setRequesting(false);
+      if (granted) {
+        toast({ title: 'Browser notifications enabled!' });
+      }
+    };
+
+    if (!isSupported) {
+      return (
+        <Card className="border-muted">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BellRing className="h-5 w-5" />
+              Browser Notifications
+            </CardTitle>
+            <CardDescription>
+              Browser notifications are not supported in this browser
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      );
+    }
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BellRing className="h-5 w-5" />
+            Browser Notifications
+          </CardTitle>
+          <CardDescription>
+            Get instant notifications for task updates right in your browser
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isGranted ? (
+            <div className="flex items-center gap-2 text-green-600">
+              <Check className="h-4 w-4" />
+              <span className="text-sm">Browser notifications are enabled</span>
+            </div>
+          ) : isDenied ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="text-sm">Notifications were blocked</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                To enable, click the lock icon in your browser's address bar and allow notifications
+              </p>
+            </div>
+          ) : (
+            <Button onClick={handleRequestPermission} disabled={requesting} variant="outline">
+              {requesting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Requesting...
+                </>
+              ) : (
+                <>
+                  <Bell className="h-4 w-4 mr-2" />
+                  Enable Browser Notifications
+                </>
+              )}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -513,6 +592,8 @@ const Settings = () => {
 
             {/* Notifications Tab */}
             <TabsContent value="notifications" className="space-y-6">
+              <BrowserNotificationCard />
+              
               <Card>
                 <CardHeader>
                   <CardTitle>Email Notifications</CardTitle>

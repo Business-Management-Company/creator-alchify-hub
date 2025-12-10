@@ -34,6 +34,8 @@ import { AssigneesCell } from '@/components/tasks/MultiAssigneeSelect';
 import { TaskSectionGroup } from '@/components/tasks/TaskSectionGroup';
 import { DraggableTaskRow } from '@/components/tasks/DraggableTaskRow';
 import { DroppableSection } from '@/components/tasks/DroppableSection';
+import { InlineStatusSelect } from '@/components/tasks/InlineStatusSelect';
+import { InlinePrioritySelect } from '@/components/tasks/InlinePrioritySelect';
 import { useTasks, useUpdateTask } from '@/hooks/useTasks';
 import { useTaskStatuses, useTaskPriorities } from '@/hooks/useTaskConfigs';
 import { useTaskSections, useCreateTaskSection, useAssignTaskToSection } from '@/hooks/useTaskSections';
@@ -252,17 +254,12 @@ export default function AdminTasks() {
       case 'status':
         const statusColor = task.status_config?.color || '#6b7280';
         return (
-          <Badge 
-            variant="outline" 
-            className="text-xs text-foreground"
-            style={{ 
-              backgroundColor: `${statusColor}20`,
-              borderColor: statusColor,
-              color: statusColor
-            }}
-          >
-            {task.status_config?.name || 'No Status'}
-          </Badge>
+          <InlineStatusSelect
+            taskId={task.id}
+            currentStatusId={task.status_id || null}
+            currentStatusName={task.status_config?.name || 'No Status'}
+            currentStatusColor={statusColor}
+          />
         );
       case 'task':
         return (
@@ -286,17 +283,12 @@ export default function AdminTasks() {
       case 'priority':
         const priorityColor = task.priority_config?.color || '#6b7280';
         return (
-          <Badge 
-            variant="outline" 
-            className="text-xs whitespace-nowrap"
-            style={{ 
-              backgroundColor: `${priorityColor}20`,
-              borderColor: priorityColor,
-              color: priorityColor
-            }}
-          >
-            {task.priority_config?.name || 'N/A'}
-          </Badge>
+          <InlinePrioritySelect
+            taskId={task.id}
+            currentPriorityId={task.priority_id || null}
+            currentPriorityName={task.priority_config?.name || 'N/A'}
+            currentPriorityColor={priorityColor}
+          />
         );
       case 'assignees':
         return <AssigneesCell assignees={task.assignees || []} />;
