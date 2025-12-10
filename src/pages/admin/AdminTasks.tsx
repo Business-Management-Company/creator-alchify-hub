@@ -207,22 +207,27 @@ export default function AdminTasks() {
     }
   };
 
-  // Group tasks by section
+  // Group tasks by section - unsectioned tasks go to first section
   const tasksBySection = useMemo(() => {
     const grouped: Record<string, Task[]> = {};
-    const unsectioned: Task[] = [];
+    const firstSectionId = sections[0]?.id;
+    
+    // Initialize all sections
+    sections.forEach(s => {
+      grouped[s.id] = [];
+    });
     
     filteredTasks.forEach(task => {
-      if (task.section_id) {
-        if (!grouped[task.section_id]) grouped[task.section_id] = [];
+      if (task.section_id && grouped[task.section_id]) {
         grouped[task.section_id].push(task);
-      } else {
-        unsectioned.push(task);
+      } else if (firstSectionId) {
+        // Put unsectioned tasks in the first section
+        grouped[firstSectionId].push(task);
       }
     });
     
-    return { grouped, unsectioned };
-  }, [filteredTasks]);
+    return { grouped };
+  }, [filteredTasks, sections]);
 
   const getEmptyState = () => {
     switch (activeTab) {
@@ -409,9 +414,9 @@ export default function AdminTasks() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Releases</SelectItem>
-                    <SelectItem value="Dec-15-Full-Test">Dec 15 Full Test</SelectItem>
+                    <SelectItem value="Dec-22-Full-Test">Dec 22 Full Test</SelectItem>
+                    <SelectItem value="Dec-28-Final-Testing">Dec 28 Final Testing</SelectItem>
                     <SelectItem value="Jan-1-Alpha">Jan 1 Alpha</SelectItem>
-                    <SelectItem value="Backlog">Backlog</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={dueFilter} onValueChange={setDueFilter}>
@@ -528,59 +533,6 @@ export default function AdminTasks() {
                       );
                     })}
 
-                    {/* Unsectioned tasks */}
-                    <DroppableSection id="unsectioned">
-                      <div className="border rounded-lg overflow-hidden">
-                        <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b">
-                          <span className="font-medium text-sm">Unsectioned</span>
-                          <span className="text-xs text-muted-foreground">
-                            ({tasksBySection.unsectioned.length})
-                          </span>
-                        </div>
-                        {tasksBySection.unsectioned.length === 0 ? (
-                          <div className="text-center py-6 text-muted-foreground text-sm">
-                            Drop tasks here
-                          </div>
-                        ) : (
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead className="w-8" />
-                                {columns.map((col, index) => (
-                                  <TableHead
-                                    key={col.id}
-                                    className={cn(
-                                      col.width,
-                                      'cursor-grab select-none',
-                                      draggedIndex === index && 'bg-primary/10'
-                                    )}
-                                    draggable
-                                    onDragStart={() => handleDragStart(index)}
-                                    onDragOver={(e) => handleDragOver(e, index)}
-                                    onDragEnd={handleDragEnd}
-                                  >
-                                    <div className="flex items-center gap-1">
-                                      <GripVertical className="h-3 w-3 text-muted-foreground/50" />
-                                      {col.label}
-                                    </div>
-                                  </TableHead>
-                                ))}
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {tasksBySection.unsectioned.map((task) => (
-                                <DraggableTaskRow
-                                  key={task.id}
-                                  task={task}
-                                  columns={columns}
-                                  renderCell={renderCell}
-                                />
-                              ))}
-                            </TableBody>
-                          </Table>
-                        )}
-                      </div>
-                    </DroppableSection>
 
                     {/* Add Section Button */}
                     <div className="flex items-center gap-2">
@@ -646,6 +598,7 @@ export default function AdminTasks() {
             open={drawerOpen}
             onOpenChange={setDrawerOpen}
             task={editingTask}
+            defaultSectionId={newTaskSectionId}
           />
         </div>
       </AppLayout>
