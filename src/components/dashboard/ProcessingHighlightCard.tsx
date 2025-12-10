@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Insight } from '@/hooks/useCreatorInsights';
-import { MetricInsightModal } from './MetricInsightModal';
+import { InsightModal } from './InsightModal';
+import { LABEL_TO_METRIC_KEY, MetricKey } from '@/types/insights';
 
 interface ProcessingHighlightCardProps {
   label: string;
@@ -18,15 +19,22 @@ export function ProcessingHighlightCard({
   insight 
 }: ProcessingHighlightCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Get metric key from label
+  const metricKey: MetricKey = LABEL_TO_METRIC_KEY[label] || 'time_saved_hours';
+  
+  // Parse numeric value from string (e.g., "47" or "2.4k")
+  let numericValue = parseFloat(value.replace(/[^0-9.]/g, '')) || 0;
+  if (value.includes('k')) numericValue *= 1000;
 
   return (
     <>
       <div 
-        onClick={() => insight && setIsModalOpen(true)}
+        onClick={() => setIsModalOpen(true)}
         className={`
           bg-gradient-to-br ${colorClass} rounded-lg p-3 text-center
           transition-all duration-200
-          ${insight ? 'cursor-pointer hover:scale-105 hover:shadow-lg' : ''}
+          cursor-pointer hover:scale-105 hover:shadow-lg
         `}
       >
         <div className="text-xl font-bold">{value}</div>
@@ -38,10 +46,12 @@ export function ProcessingHighlightCard({
         )}
       </div>
 
-      <MetricInsightModal
+      <InsightModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        insight={insight || null}
+        metricKey={metricKey}
+        metricValue={numericValue}
+        metricLabel={label}
       />
     </>
   );

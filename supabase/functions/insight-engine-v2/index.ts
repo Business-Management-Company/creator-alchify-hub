@@ -530,9 +530,48 @@ serve(async (req) => {
     }
     
     // ========== OLD FORMAT: action-based requests ==========
-    const { action, userId, metricKey, userMetrics, creatorType = 'creator' } = requestBody;
+    const { action, request, userId, metricKey, userMetrics, creatorType = 'creator' } = requestBody;
     
-    console.log('Insight Engine legacy request:', { action, metricKey, creatorType });
+    console.log('Insight Engine request:', { action, metricKey, creatorType });
+
+    // ========== NEW generateInsight action with InsightResponse format ==========
+    if (action === 'generateInsight' && request) {
+      const { metricKey: reqMetricKey, metricValue, userContext } = request;
+      const cType = userContext?.contentType || 'mixed';
+      
+      console.log('Generating insight for:', { reqMetricKey, metricValue, cType });
+      
+      const documents = await queryInsightCorpus(supabase, reqMetricKey, cType === 'podcast' ? 'podcaster' : 'creator');
+      const config = METRIC_CONFIG[reqMetricKey];
+      
+      // Build InsightResponse format for frontend
+      const summary = buildSummary(reqMetricKey, metricValue, config);
+      const whereYouStand = buildWhereYouStand(reqMetricKey, metricValue, documents);
+      const industryPractices = buildIndustryPractices(documents, reqMetricKey);
+      const inProductCTAs = buildInProductCTAs(reqMetricKey);
+      const suggestedQuestions = buildSuggestedQuestions(reqMetricKey);
+      
+      // Convert to simplified InsightResponse for frontend
+      const insightResponse = {
+        metricKey: reqMetricKey,
+        title: summary.headline,
+        summary: summary.oneLiner,
+        insightBullets: whereYouStand.takeaways,
+        recommendations: inProductCTAs.slice(0, 3).map(cta => cta.description),
+        industryContext: industryPractices.summary,
+        focusAreas: ['efficiency', 'growth', 'automation'],
+        sourceSnippets: industryPractices.items.slice(0, 2).map(item => ({
+          label: item.title,
+          snippet: item.description,
+          sourceType: item.sourceHints[0]?.startsWith('rss') ? 'rss' as const : 'firecrawl' as const,
+        })),
+      };
+
+      return new Response(
+        JSON.stringify({ success: true, data: insightResponse }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     if (action === 'getMetricInsight') {
       const documents = await queryInsightCorpus(supabase, metricKey, creatorType);
