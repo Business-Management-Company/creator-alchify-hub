@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { ArrowLeft, Plus, Filter, ExternalLink, Loader2, Settings } from 'lucide-react';
+import { ArrowLeft, Plus, Filter, ExternalLink, Loader2, Settings, GripVertical, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -34,11 +34,13 @@ import { useTaskStatuses, useTaskPriorities } from '@/hooks/useTaskConfigs';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useColumnOrder } from '@/hooks/useColumnOrder';
 import { Task, AREA_OPTIONS, ReleaseTarget } from '@/types/tasks';
 import { format, isPast, isThisWeek, isToday } from 'date-fns';
 import AppLayout from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { cn } from '@/lib/utils';
 
 // Get saved default tab from localStorage
 const getDefaultTab = (): 'my' | 'created' | 'all' => {
@@ -67,6 +69,14 @@ export default function AdminTasks() {
   const { data: statuses = [] } = useTaskStatuses();
   const { data: priorities = [] } = useTaskPriorities();
   const updateTask = useUpdateTask();
+  const {
+    columns,
+    draggedIndex,
+    handleDragStart,
+    handleDragOver,
+    handleDragEnd,
+    resetToDefault,
+  } = useColumnOrder('admin_tasks');
 
   // Fetch users for assignee filter
   const { data: users = [] } = useQuery({
@@ -138,6 +148,67 @@ export default function AdminTasks() {
       case 'Dec-15-Full-Test': return 'bg-destructive/20 text-destructive';
       case 'Jan-1-Alpha': return 'bg-blue-500/20 text-blue-600';
       default: return 'bg-muted text-muted-foreground';
+    }
+  };
+
+  // Render cell content based on column ID
+  const renderCell = (columnId: string, task: Task) => {
+    switch (columnId) {
+      case 'status':
+        return (
+          <Badge variant="outline" className="text-xs">
+            {task.status_config?.name || 'No Status'}
+          </Badge>
+        );
+      case 'task':
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link 
+                to={`/admin/tasks/${task.id}`}
+                className="font-medium hover:underline flex items-center gap-1"
+              >
+                <span className="truncate block max-w-[150px]">{task.title}</span>
+                {task.linked_url && (
+                  <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                )}
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-sm">
+              {task.title}
+            </TooltipContent>
+          </Tooltip>
+        );
+      case 'priority':
+        return (
+          <Badge variant="outline" className="text-xs whitespace-nowrap">
+            {task.priority_config?.name || 'N/A'}
+          </Badge>
+        );
+      case 'assignees':
+        return <AssigneesCell assignees={task.assignees || []} />;
+      case 'area':
+        return task.area ? (
+          <span className="text-xs text-muted-foreground">{task.area}</span>
+        ) : (
+          <span className="text-muted-foreground text-xs">—</span>
+        );
+      case 'due':
+        return task.due_date ? (
+          <span className={`text-xs ${isPast(new Date(task.due_date)) && task.status_config?.slug !== 'completed' ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+            {format(new Date(task.due_date), 'MMM d')}
+          </span>
+        ) : (
+          <span className="text-muted-foreground text-xs">—</span>
+        );
+      case 'added':
+        return (
+          <span className="text-xs text-muted-foreground">
+            {format(new Date(task.created_at), 'MMM d')}
+          </span>
+        );
+      default:
+        return null;
     }
   };
 
@@ -286,74 +357,55 @@ export default function AdminTasks() {
                 </div>
               ) : (
                 <div className="rounded-md border">
+                  <div className="flex items-center justify-end px-3 py-2 border-b bg-muted/30">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-7 px-2 text-xs text-muted-foreground"
+                          onClick={resetToDefault}
+                        >
+                          <RotateCcw className="h-3 w-3 mr-1" />
+                          Reset columns
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Reset column order to default</TooltipContent>
+                    </Tooltip>
+                  </div>
                   <TooltipProvider>
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-[120px]">Status</TableHead>
-                          <TableHead className="w-[180px]">Task</TableHead>
-                          <TableHead className="w-[120px]">Priority</TableHead>
-                          <TableHead className="w-[100px]">Assignees</TableHead>
-                          <TableHead className="w-[80px]">Area</TableHead>
-                          <TableHead className="w-[70px]">Due</TableHead>
-                          <TableHead className="w-[70px]">Added</TableHead>
+                          {columns.map((col, index) => (
+                            <TableHead
+                              key={col.id}
+                              className={cn(
+                                col.width,
+                                'cursor-grab select-none',
+                                draggedIndex === index && 'bg-primary/10'
+                              )}
+                              draggable
+                              onDragStart={() => handleDragStart(index)}
+                              onDragOver={(e) => handleDragOver(e, index)}
+                              onDragEnd={handleDragEnd}
+                            >
+                              <div className="flex items-center gap-1">
+                                <GripVertical className="h-3 w-3 text-muted-foreground/50" />
+                                {col.label}
+                              </div>
+                            </TableHead>
+                          ))}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredTasks.map((task) => (
                           <TableRow key={task.id} className="cursor-pointer hover:bg-muted/50">
-                            <TableCell>
-                              <Badge variant="outline" className="text-xs">
-                                {task.status_config?.name || 'No Status'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="w-[180px]">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Link 
-                                    to={`/admin/tasks/${task.id}`}
-                                    className="font-medium hover:underline flex items-center gap-1"
-                                  >
-                                    <span className="truncate block max-w-[150px]">{task.title}</span>
-                                    {task.linked_url && (
-                                      <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                    )}
-                                  </Link>
-                                </TooltipTrigger>
-                                <TooltipContent side="top" className="max-w-sm">
-                                  {task.title}
-                                </TooltipContent>
-                              </Tooltip>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="text-xs whitespace-nowrap">
-                                {task.priority_config?.name || 'N/A'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <AssigneesCell assignees={task.assignees || []} />
-                            </TableCell>
-                            <TableCell>
-                              {task.area ? (
-                                <span className="text-xs text-muted-foreground">{task.area}</span>
-                              ) : (
-                                <span className="text-muted-foreground text-xs">—</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {task.due_date ? (
-                                <span className={`text-xs ${isPast(new Date(task.due_date)) && task.status_config?.slug !== 'completed' ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
-                                  {format(new Date(task.due_date), 'MMM d')}
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground text-xs">—</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <span className="text-xs text-muted-foreground">
-                                {format(new Date(task.created_at), 'MMM d')}
-                              </span>
-                            </TableCell>
+                            {columns.map((col) => (
+                              <TableCell key={col.id} className={col.width}>
+                                {renderCell(col.id, task)}
+                              </TableCell>
+                            ))}
                           </TableRow>
                         ))}
                       </TableBody>
