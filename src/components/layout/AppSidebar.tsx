@@ -23,7 +23,8 @@ import {
   User,
   Calculator,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  ClipboardList
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -64,6 +65,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Contact,
   User,
   Calculator,
+  ClipboardList,
 };
 
 type NavSection = {
@@ -134,6 +136,12 @@ const adminSections: NavSection[] = [
     items: [
       { id: 'admin-content', label: 'Content', icon: 'FileText', path: '/admin/content' },
       { id: 'admin-analytics', label: 'Analytics', icon: 'TrendingUp', path: '/admin/analytics' },
+    ],
+  },
+  {
+    label: 'Tasks & Workflow',
+    items: [
+      { id: 'admin-tasks', label: 'Tasks', icon: 'ClipboardList', path: '/admin/tasks' },
     ],
   },
   {

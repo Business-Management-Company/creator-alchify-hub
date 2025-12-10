@@ -21,6 +21,7 @@ import About from "./pages/About";
 import Transparency from "./pages/Transparency";
 import CreatorPublicPage from "./pages/CreatorPublicPage";
 import CreatorProfileEditor from "./pages/CreatorProfileEditor";
+import Notifications from "./pages/Notifications";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminContent from "./pages/admin/AdminContent";
@@ -30,6 +31,8 @@ import AdminCEOVTO from "./pages/admin/AdminCEOVTO";
 import AdminContacts from "./pages/admin/AdminContacts";
 import AdminInsightSources from "./pages/admin/AdminInsightSources";
 import AdminCFODashboard from "./pages/admin/AdminCFODashboard";
+import AdminTasks from "./pages/admin/AdminTasks";
+import AdminTaskDetail from "./pages/admin/AdminTaskDetail";
 import BoardPortal from "./pages/BoardPortal";
 import NotFound from "./pages/NotFound";
 
@@ -59,6 +62,7 @@ const App = () => (
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/about" element={<About />} />
               <Route path="/transparency" element={<Transparency />} />
+              <Route path="/notifications" element={<Notifications />} />
               {/* Creator Profile Routes */}
               <Route path="/c/:handle" element={<CreatorPublicPage />} />
               <Route path="/creator/profile" element={<CreatorProfileEditor />} />
@@ -72,6 +76,8 @@ const App = () => (
               <Route path="/admin/contacts" element={<AdminContacts />} />
               <Route path="/admin/insight-sources" element={<AdminInsightSources />} />
               <Route path="/admin/cfo-dashboard" element={<AdminCFODashboard />} />
+              <Route path="/admin/tasks" element={<AdminTasks />} />
+              <Route path="/admin/tasks/:id" element={<AdminTaskDetail />} />
               {/* Board Portal - Public access for board members */}
               <Route path="/board" element={<BoardPortal />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
