@@ -237,34 +237,37 @@ const AppSidebar = () => {
     const isAdminRoute = location.pathname.startsWith('/admin');
     const currentMode = isAdminRoute ? 'admin' : 'creator';
     
-    if (currentMode !== sidebarState.mode) {
-      if (currentMode === 'admin') {
-        // Switching to admin: collapse creator, expand admin
-        setSidebarState(prev => ({
-          ...prev,
-          mode: 'admin',
-          adminExpanded: true,
-        }));
-      } else {
-        // Switching to creator: find and expand the relevant section
+    setSidebarState(prev => {
+      if (currentMode !== prev.mode) {
+        if (currentMode === 'admin') {
+          // Switching to admin: collapse creator, expand admin
+          return {
+            ...prev,
+            mode: 'admin',
+            adminExpanded: true,
+          };
+        } else {
+          // Switching to creator: find and expand the relevant section
+          const sectionId = findCreatorSectionForPath(location.pathname);
+          return {
+            ...prev,
+            mode: 'creator',
+            openCreatorGroupId: sectionId || prev.openCreatorGroupId,
+            adminExpanded: false,
+          };
+        }
+      } else if (currentMode === 'creator') {
+        // Already in creator mode, update open section if navigating
         const sectionId = findCreatorSectionForPath(location.pathname);
-        setSidebarState(prev => ({
-          ...prev,
-          mode: 'creator',
-          openCreatorGroupId: sectionId || prev.openCreatorGroupId,
-          adminExpanded: false,
-        }));
+        if (sectionId && sectionId !== prev.openCreatorGroupId) {
+          return {
+            ...prev,
+            openCreatorGroupId: sectionId,
+          };
+        }
       }
-    } else if (currentMode === 'creator') {
-      // Already in creator mode, update open section if navigating
-      const sectionId = findCreatorSectionForPath(location.pathname);
-      if (sectionId && sectionId !== sidebarState.openCreatorGroupId) {
-        setSidebarState(prev => ({
-          ...prev,
-          openCreatorGroupId: sectionId,
-        }));
-      }
-    }
+      return prev;
+    });
   }, [location.pathname]);
 
   // Toggle admin section expansion
