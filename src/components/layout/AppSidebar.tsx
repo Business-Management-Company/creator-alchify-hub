@@ -19,7 +19,8 @@ import {
   Library,
   Presentation,
   Contact,
-  User
+  User,
+  Calculator
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -58,6 +59,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Presentation,
   Contact,
   User,
+  Calculator,
 };
 
 const navItems = [
@@ -85,6 +87,7 @@ const adminItems = [
   { id: 'admin-analytics', label: 'Analytics', icon: 'TrendingUp', path: '/admin/analytics' },
   { id: 'admin-tech', label: 'Tech Stack', icon: 'Server', path: '/admin/tech-stack' },
   { id: 'admin-vto', label: 'CEO VTO', icon: 'Presentation', path: '/admin/ceo-vto' },
+  { id: 'admin-cfo', label: 'CFO Dashboard', icon: 'Calculator', path: '/admin/cfo-dashboard' },
 ];
 
 const AppSidebar = () => {
