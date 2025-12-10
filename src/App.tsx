@@ -29,6 +29,7 @@ import AdminTechStack from "./pages/admin/AdminTechStack";
 import AdminCEOVTO from "./pages/admin/AdminCEOVTO";
 import AdminContacts from "./pages/admin/AdminContacts";
 import AdminInsightSources from "./pages/admin/AdminInsightSources";
+import AdminCFODashboard from "./pages/admin/AdminCFODashboard";
 import BoardPortal from "./pages/BoardPortal";
 import NotFound from "./pages/NotFound";
 
@@ -70,6 +71,7 @@ const App = () => (
               <Route path="/admin/ceo-vto" element={<AdminCEOVTO />} />
               <Route path="/admin/contacts" element={<AdminContacts />} />
               <Route path="/admin/insight-sources" element={<AdminInsightSources />} />
+              <Route path="/admin/cfo-dashboard" element={<AdminCFODashboard />} />
               {/* Board Portal - Public access for board members */}
               <Route path="/board" element={<BoardPortal />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
