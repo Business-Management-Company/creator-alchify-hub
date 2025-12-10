@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { 
@@ -13,8 +13,7 @@ import {
   Video,
   Music,
   Loader2,
-  PartyPopper,
-  X
+  PartyPopper
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -30,6 +29,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useCreatorInsights, CreatorMetrics } from '@/hooks/useCreatorInsights';
+import { MetricCard } from '@/components/dashboard/MetricCard';
+import { ProcessingHighlightCard } from '@/components/dashboard/ProcessingHighlightCard';
+import { InsightOfTheDay } from '@/components/dashboard/InsightOfTheDay';
+import { DeepDiveCard } from '@/components/dashboard/DeepDiveCard';
 
 interface Project {
   id: string;
@@ -49,6 +53,29 @@ const Dashboard = () => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationMessage, setCelebrationMessage] = useState('');
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
+
+  // Demo metrics for presentation (in production, these come from actual data)
+  const creatorMetrics: CreatorMetrics = useMemo(() => ({
+    timeSavedHours: projectCount > 0 ? projectCount * 0.7 : 0,
+    projectCount,
+    exportsCount: projectCount > 0 ? Math.floor(projectCount * 1.5) : 0,
+    avgAccuracy: projectCount > 0 ? 96.2 : 0,
+    fillersRemoved: projectCount > 0 ? 47 : 0,
+    pausesCut: projectCount > 0 ? 12 : 0,
+    audioEnhancedPercent: projectCount > 0 ? 18 : 0,
+    clipsCreated: projectCount > 0 ? 5 : 0,
+    wordsTranscribed: projectCount > 0 ? 2400 : 0,
+    captionsSynced: projectCount > 0 ? 8 : 0,
+  }), [projectCount]);
+
+  const { 
+    insights, 
+    insightOfTheDay, 
+    isLoading: insightsLoading,
+    getInsightForMetric,
+    generateDeepDive,
+    isGeneratingDeepDive
+  } = useCreatorInsights(creatorMetrics);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -75,7 +102,6 @@ const Dashboard = () => {
     
     if (celebration === 'first-upload') {
       triggerCelebration('Congrats! You uploaded your first project! 🎉');
-      // Remove the param after showing
       searchParams.delete('celebration');
       setSearchParams(searchParams, { replace: true });
     } else if (celebration === 'first-clip') {
@@ -89,10 +115,8 @@ const Dashboard = () => {
     setCelebrationMessage(message);
     setShowCelebration(true);
     
-    // Fire confetti
     const duration = 3000;
     const end = Date.now() + duration;
-
     const colors = ['#f59e0b', '#8b5cf6', '#22c55e', '#3b82f6', '#ec4899'];
 
     (function frame() {
@@ -116,7 +140,6 @@ const Dashboard = () => {
       }
     }());
 
-    // Also fire a burst from center
     confetti({
       particleCount: 100,
       spread: 70,
@@ -124,7 +147,6 @@ const Dashboard = () => {
       colors: colors
     });
 
-    // Hide celebration message after delay
     setTimeout(() => {
       setShowCelebration(false);
     }, 5000);
@@ -156,16 +178,80 @@ const Dashboard = () => {
     );
   }
 
-  // Demo stats for presentation
+  // Stats with insights
   const timeSaved = projectCount > 0 ? `${(projectCount * 0.7).toFixed(1)} hrs` : '0 hrs';
   const exportsCount = projectCount > 0 ? Math.floor(projectCount * 1.5) : 0;
   const avgAccuracy = projectCount > 0 ? '96.2%' : '—';
   
   const stats = [
-    { label: 'Time Saved', value: timeSaved, icon: Clock, subtext: 'vs manual editing' },
-    { label: 'Projects', value: projectCount.toString(), icon: FolderOpen, subtext: 'total uploads' },
-    { label: 'Exports', value: exportsCount.toString(), icon: Wand2, subtext: 'clips created' },
-    { label: 'Avg Accuracy', value: avgAccuracy, icon: BarChart3, subtext: 'transcription' },
+    { 
+      label: 'Time Saved', 
+      value: timeSaved, 
+      icon: Clock, 
+      subtext: 'vs manual editing',
+      insightKey: 'Time Saved'
+    },
+    { 
+      label: 'Projects', 
+      value: projectCount.toString(), 
+      icon: FolderOpen, 
+      subtext: 'total uploads',
+      insightKey: 'Projects'
+    },
+    { 
+      label: 'Exports', 
+      value: exportsCount.toString(), 
+      icon: Wand2, 
+      subtext: 'clips created',
+      insightKey: 'Exports'
+    },
+    { 
+      label: 'Avg Accuracy', 
+      value: avgAccuracy, 
+      icon: BarChart3, 
+      subtext: 'transcription',
+      insightKey: 'Avg Accuracy'
+    },
+  ];
+
+  // Processing highlights with insights
+  const processingHighlights = [
+    { 
+      label: 'Fillers Removed', 
+      value: '47', 
+      colorClass: 'from-accent/10 to-transparent border border-accent/20 text-accent',
+      insightKey: 'Fillers Removed'
+    },
+    { 
+      label: 'Pauses Cut', 
+      value: '12', 
+      colorClass: 'from-green-500/10 to-transparent border border-green-500/20 text-green-500',
+      insightKey: 'Pauses Cut'
+    },
+    { 
+      label: 'Audio Enhanced', 
+      value: '18%', 
+      colorClass: 'from-blue-500/10 to-transparent border border-blue-500/20 text-blue-500',
+      insightKey: 'Audio Enhanced'
+    },
+    { 
+      label: 'Clips Created', 
+      value: '5', 
+      colorClass: 'from-purple-500/10 to-transparent border border-purple-500/20 text-purple-500',
+      insightKey: 'Clips Created'
+    },
+    { 
+      label: 'Words Transcribed', 
+      value: '2.4k', 
+      colorClass: 'from-yellow-500/10 to-transparent border border-yellow-500/20 text-yellow-500',
+      insightKey: 'Words Transcribed'
+    },
+    { 
+      label: 'Captions Synced', 
+      value: '8', 
+      colorClass: 'from-pink-500/10 to-transparent border border-pink-500/20 text-pink-500',
+      insightKey: 'Captions Synced'
+    },
   ];
 
   const formatDate = (dateString: string) => {
@@ -216,7 +302,7 @@ const Dashboard = () => {
         )}
 
         {/* Welcome Section */}
-        <div className="mb-8 flex items-start justify-between">
+        <div className="mb-6 flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground mb-2">
               Welcome back{user.user_metadata?.display_name ? `, ${user.user_metadata.display_name}` : ''}!
@@ -227,53 +313,43 @@ const Dashboard = () => {
           </div>
           <DailyBriefButton />
         </div>
+
+        {/* Insight of the Day Widget */}
+        {projectCount > 0 && (
+          <InsightOfTheDay 
+            insight={insightOfTheDay} 
+            isLoading={insightsLoading} 
+          />
+        )}
         
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        {/* Quick Stats with Click-Activated Insights */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {stats.map((stat) => (
-            <div 
+            <MetricCard
               key={stat.label}
-              className="bg-card/50 border border-border rounded-xl p-4 backdrop-blur-sm hover:border-primary/30 transition-colors"
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <stat.icon className="h-4 w-4 text-primary" />
-                </div>
-                <span className="text-sm text-muted-foreground">{stat.label}</span>
-              </div>
-              <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-              <p className="text-xs text-muted-foreground mt-1">{stat.subtext}</p>
-            </div>
+              label={stat.label}
+              value={stat.value}
+              icon={stat.icon}
+              subtext={stat.subtext}
+              passiveInsight={getInsightForMetric(stat.insightKey)?.passiveInsight}
+              insight={getInsightForMetric(stat.insightKey)}
+            />
           ))}
         </div>
         
-        {/* Processing Highlights - show when user has projects */}
+        {/* Processing Highlights with Click-Activated Insights */}
         {projectCount > 0 && (
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-8">
-            <div className="bg-gradient-to-br from-accent/10 to-transparent border border-accent/20 rounded-lg p-3 text-center">
-              <div className="text-xl font-bold text-accent">47</div>
-              <div className="text-xs text-muted-foreground">Fillers Removed</div>
-            </div>
-            <div className="bg-gradient-to-br from-green-500/10 to-transparent border border-green-500/20 rounded-lg p-3 text-center">
-              <div className="text-xl font-bold text-green-500">12</div>
-              <div className="text-xs text-muted-foreground">Pauses Cut</div>
-            </div>
-            <div className="bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20 rounded-lg p-3 text-center">
-              <div className="text-xl font-bold text-blue-500">18%</div>
-              <div className="text-xs text-muted-foreground">Audio Enhanced</div>
-            </div>
-            <div className="bg-gradient-to-br from-purple-500/10 to-transparent border border-purple-500/20 rounded-lg p-3 text-center">
-              <div className="text-xl font-bold text-purple-500">5</div>
-              <div className="text-xs text-muted-foreground">Clips Created</div>
-            </div>
-            <div className="bg-gradient-to-br from-yellow-500/10 to-transparent border border-yellow-500/20 rounded-lg p-3 text-center">
-              <div className="text-xl font-bold text-yellow-500">2.4k</div>
-              <div className="text-xs text-muted-foreground">Words Transcribed</div>
-            </div>
-            <div className="bg-gradient-to-br from-pink-500/10 to-transparent border border-pink-500/20 rounded-lg p-3 text-center">
-              <div className="text-xl font-bold text-pink-500">8</div>
-              <div className="text-xs text-muted-foreground">Captions Synced</div>
-            </div>
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-6">
+            {processingHighlights.map((highlight) => (
+              <ProcessingHighlightCard
+                key={highlight.label}
+                label={highlight.label}
+                value={highlight.value}
+                colorClass={highlight.colorClass}
+                passiveInsight={getInsightForMetric(highlight.insightKey)?.passiveInsight}
+                insight={getInsightForMetric(highlight.insightKey)}
+              />
+            ))}
           </div>
         )}
         
@@ -284,11 +360,9 @@ const Dashboard = () => {
             to="/upload"
             className="group relative overflow-hidden rounded-xl border-2 border-dashed border-primary/30 hover:border-primary/60 transition-all duration-300 block mb-6"
           >
-            {/* Animated gradient background */}
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-accent/5 to-transparent" />
             <div className="absolute top-0 right-0 w-72 h-72 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:bg-primary/30 transition-colors duration-500" />
             
-            {/* Content */}
             <div className="relative z-10 p-5 flex items-center gap-5">
               <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 border border-primary/20 group-hover:scale-110 transition-transform duration-300 shrink-0">
                 <Upload className="h-6 w-6 text-primary" />
@@ -364,8 +438,8 @@ const Dashboard = () => {
           )}
         </div>
         
-        {/* Usage & Revive Section */}
-        <div className="grid md:grid-cols-2 gap-6">
+        {/* Usage, Revive & Deep Dive Section */}
+        <div className="grid md:grid-cols-2 gap-6 mb-6">
           {/* Usage Indicator */}
           <UsageIndicator />
           
@@ -390,6 +464,14 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+
+        {/* Deep Dive Card */}
+        {projectCount > 0 && (
+          <DeepDiveCard 
+            onGenerateReport={generateDeepDive}
+            isGenerating={isGeneratingDeepDive}
+          />
+        )}
       </AppLayout>
     </>
   );
