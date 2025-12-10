@@ -66,8 +66,8 @@ export function AdminPresenceBadge() {
   // Show placeholder while loading
   if (loading) {
     return (
-      <Button variant="ghost" size="sm" className="h-9 px-2 gap-2" disabled>
-        <Users className="h-4 w-4 text-muted-foreground" />
+      <Button variant="ghost" size="sm" className="h-10 px-2 gap-2" disabled>
+        <Users className="h-5 w-5 text-muted-foreground" />
         <span className="text-sm text-muted-foreground">—</span>
       </Button>
     );
@@ -76,8 +76,8 @@ export function AdminPresenceBadge() {
   // Handle error state gracefully
   if (error) {
     return (
-      <Button variant="ghost" size="sm" className="h-9 px-2 gap-2" disabled>
-        <Users className="h-4 w-4 text-muted-foreground" />
+      <Button variant="ghost" size="sm" className="h-10 px-2 gap-2" disabled>
+        <Users className="h-5 w-5 text-muted-foreground" />
         <span className="text-sm text-muted-foreground">—</span>
       </Button>
     );
@@ -93,12 +93,12 @@ export function AdminPresenceBadge() {
           variant="ghost" 
           size="sm" 
           className={cn(
-            "h-9 px-2 gap-2",
+            "h-10 px-2 gap-2",
             hasOthers && "bg-primary/10 hover:bg-primary/20"
           )}
         >
           <Users className={cn(
-            "h-4 w-4",
+            "h-5 w-5",
             hasOthers ? "text-primary" : "text-muted-foreground"
           )} />
           <span className={cn(
@@ -113,10 +113,10 @@ export function AdminPresenceBadge() {
               {activeAdmins.slice(0, 3).map((admin, i) => (
                 <Avatar 
                   key={admin.id} 
-                  className="h-5 w-5 border border-background"
+                  className="h-6 w-6 border border-background"
                   style={{ zIndex: 3 - i }}
                 >
-                  <AvatarFallback className="bg-primary/20 text-primary text-[8px] font-medium">
+                  <AvatarFallback className="bg-primary/20 text-primary text-[9px] font-medium">
                     {getInitials(admin.display_name)}
                   </AvatarFallback>
                 </Avatar>
