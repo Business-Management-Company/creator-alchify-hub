@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { 
   LayoutDashboard, 
   Upload, 
@@ -20,7 +21,9 @@ import {
   Presentation,
   Contact,
   User,
-  Calculator
+  Calculator,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -36,6 +39,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -148,6 +152,18 @@ const AppSidebar = () => {
   const collapsed = state === 'collapsed';
   const { isAdmin } = useAdminCheck();
 
+  // Initialize all sections as expanded
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    creatorSections.forEach(s => { initial[s.label] = true; });
+    adminSections.forEach(s => { initial[s.label] = true; });
+    return initial;
+  });
+
+  const toggleSection = (label: string) => {
+    setOpenSections(prev => ({ ...prev, [label]: !prev[label] }));
+  };
+
   const isActive = (path: string) => {
     if (path === '/refiner') {
       return location.pathname.startsWith('/refiner');
@@ -156,6 +172,74 @@ const AppSidebar = () => {
       return location.pathname.startsWith('/admin');
     }
     return location.pathname === path;
+  };
+
+  const renderSection = (section: NavSection, isAdminSection = false) => {
+    const isOpen = openSections[section.label] ?? true;
+    
+    return (
+      <SidebarGroup key={section.label}>
+        {!collapsed ? (
+          <Collapsible open={isOpen} onOpenChange={() => toggleSection(section.label)}>
+            <CollapsibleTrigger className="w-full">
+              <SidebarGroupLabel className={`text-xs uppercase tracking-wide cursor-pointer flex items-center justify-between hover:text-foreground transition-colors ${isAdminSection ? 'text-primary/70' : 'text-muted-foreground'}`}>
+                <span>{section.label}</span>
+                {isOpen ? (
+                  <ChevronDown className="h-3 w-3" />
+                ) : (
+                  <ChevronRight className="h-3 w-3" />
+                )}
+              </SidebarGroupLabel>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {section.items.map((item) => {
+                    const Icon = iconMap[item.icon];
+                    return (
+                      <SidebarMenuItem key={item.id}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive(item.path)}
+                          tooltip={item.label}
+                        >
+                          <Link to={item.path} data-ui-element={item.id}>
+                            {Icon && <Icon className={`h-4 w-4 ${isAdminSection ? 'text-primary' : ''}`} />}
+                            <span>{item.label}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </Collapsible>
+        ) : (
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {section.items.map((item) => {
+                const Icon = iconMap[item.icon];
+                return (
+                  <SidebarMenuItem key={item.id}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.path)}
+                      tooltip={item.label}
+                    >
+                      <Link to={item.path} data-ui-element={item.id}>
+                        {Icon && <Icon className={`h-4 w-4 ${isAdminSection ? 'text-primary' : ''}`} />}
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        )}
+      </SidebarGroup>
+    );
   };
 
   return (
@@ -172,72 +256,13 @@ const AppSidebar = () => {
       </SidebarHeader>
       
       <SidebarContent className="px-2">
-        {creatorSections.map((section, sectionIndex) => (
-          <SidebarGroup key={section.label}>
-            {!collapsed && (
-              <SidebarGroupLabel className="text-xs text-muted-foreground uppercase tracking-wide">
-                {section.label}
-              </SidebarGroupLabel>
-            )}
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {section.items.map((item) => {
-                  const Icon = iconMap[item.icon];
-                  return (
-                    <SidebarMenuItem key={item.id}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={isActive(item.path)}
-                        tooltip={item.label}
-                      >
-                        <Link to={item.path} data-ui-element={item.id}>
-                          {Icon && <Icon className="h-4 w-4" />}
-                          <span>{item.label}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
+        {creatorSections.map((section) => renderSection(section, false))}
         
         {/* Admin Sections - Only visible to admins */}
         {isAdmin && (
           <>
             <div className="my-4 mx-2 h-px bg-border" />
-            
-            {adminSections.map((section) => (
-              <SidebarGroup key={section.label}>
-                {!collapsed && (
-                  <SidebarGroupLabel className="text-xs text-primary/70 uppercase tracking-wide">
-                    {section.label}
-                  </SidebarGroupLabel>
-                )}
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {section.items.map((item) => {
-                      const Icon = iconMap[item.icon];
-                      return (
-                        <SidebarMenuItem key={item.id}>
-                          <SidebarMenuButton
-                            asChild
-                            isActive={isActive(item.path)}
-                            tooltip={item.label}
-                          >
-                            <Link to={item.path}>
-                              {Icon && <Icon className="h-4 w-4 text-primary" />}
-                              <span>{item.label}</span>
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      );
-                    })}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-            ))}
+            {adminSections.map((section) => renderSection(section, true))}
           </>
         )}
       </SidebarContent>
