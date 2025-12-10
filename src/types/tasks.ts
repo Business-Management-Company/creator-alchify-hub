@@ -20,6 +20,19 @@ export interface TaskPriorityConfig {
   created_at?: string;
 }
 
+export interface TaskAssignee {
+  id: string;
+  task_id: string;
+  user_id: string;
+  role: string | null;
+  created_at: string;
+  profile?: {
+    user_id: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  } | null;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -32,7 +45,7 @@ export interface Task {
   due_date: string | null;
   area: string | null;
   creator_id: string;
-  assignee_id: string | null;
+  assignee_id: string | null; // Legacy, kept for compatibility
   linked_url: string | null;
   created_at: string;
   updated_at: string;
@@ -47,6 +60,8 @@ export interface Task {
     display_name: string | null;
     avatar_url: string | null;
   } | null;
+  // Multi-assignees
+  assignees?: TaskAssignee[];
   // Config lookups
   status_config?: TaskStatusConfig | null;
   priority_config?: TaskPriorityConfig | null;

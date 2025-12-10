@@ -21,15 +21,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { TaskEditDrawer } from '@/components/tasks/TaskEditDrawer';
+import { AssigneesCell } from '@/components/tasks/MultiAssigneeSelect';
 import { useTasks, useUpdateTask } from '@/hooks/useTasks';
 import { useTaskStatuses, useTaskPriorities } from '@/hooks/useTaskConfigs';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Task, AREA_OPTIONS, ReleaseTarget } from '@/types/tasks';
-import { format, isPast, isThisWeek, addDays, isBefore, isToday } from 'date-fns';
+import { format, isPast, isThisWeek, isToday } from 'date-fns';
 import AppLayout from '@/components/layout/AppLayout';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
 // Get saved default tab from localStorage
 const getDefaultTab = (): 'my' | 'created' | 'all' => {
@@ -37,7 +46,7 @@ const getDefaultTab = (): 'my' | 'created' | 'all' => {
   if (saved === 'my' || saved === 'created' || saved === 'all') {
     return saved;
   }
-  return 'all'; // Default to 'all'
+  return 'all';
 };
 
 export default function AdminTasks() {
@@ -46,6 +55,7 @@ export default function AdminTasks() {
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [releaseFilter, setReleaseFilter] = useState<string>('all');
   const [dueFilter, setDueFilter] = useState<string>('all');
+  const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
@@ -57,6 +67,19 @@ export default function AdminTasks() {
   const { data: statuses = [] } = useTaskStatuses();
   const { data: priorities = [] } = useTaskPriorities();
   const updateTask = useUpdateTask();
+
+  // Fetch users for assignee filter
+  const { data: users = [] } = useQuery({
+    queryKey: ['profiles-for-tasks'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, user_id, display_name, avatar_url')
+        .order('display_name');
+      if (error) throw error;
+      return data;
+    },
+  });
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -79,6 +102,12 @@ export default function AdminTasks() {
     if (statusFilter !== 'all' && task.status_id !== statusFilter) return false;
     if (priorityFilter !== 'all' && task.priority_id !== priorityFilter) return false;
     if (releaseFilter !== 'all' && task.release_target !== releaseFilter) return false;
+    
+    // Assignee filter - check if any assignee matches
+    if (assigneeFilter !== 'all') {
+      const hasMatchingAssignee = task.assignees?.some(a => a.user_id === assigneeFilter);
+      if (!hasMatchingAssignee) return false;
+    }
     
     if (dueFilter !== 'all') {
       const dueDate = task.due_date ? new Date(task.due_date) : null;
@@ -218,6 +247,27 @@ export default function AdminTasks() {
                     <SelectItem value="no_date">No Due Date</SelectItem>
                   </SelectContent>
                 </Select>
+                <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+                  <SelectTrigger className="w-[130px] h-8 text-xs">
+                    <SelectValue placeholder="Assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Assignees</SelectItem>
+                    {users.map((u) => (
+                      <SelectItem key={u.user_id} value={u.user_id}>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-4 w-4">
+                            <AvatarImage src={u.avatar_url || undefined} />
+                            <AvatarFallback className="text-[8px]">
+                              {(u.display_name || 'U')[0].toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="truncate max-w-[80px]">{u.display_name || 'User'}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -236,77 +286,79 @@ export default function AdminTasks() {
                 </div>
               ) : (
                 <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[100px]">Status</TableHead>
-                        <TableHead>Task</TableHead>
-                        <TableHead className="w-[100px]">Priority</TableHead>
-                        <TableHead className="w-[120px]">Release</TableHead>
-                        <TableHead className="w-[140px]">Owner</TableHead>
-                        <TableHead className="w-[90px]">Due</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredTasks.map((task) => (
-                        <TableRow key={task.id} className="cursor-pointer hover:bg-muted/50">
-                          <TableCell>
-                            <Badge variant="outline" className="text-xs">
-                              {task.status_config?.name || 'No Status'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Link 
-                              to={`/admin/tasks/${task.id}`}
-                              className="font-medium hover:underline flex items-center gap-1"
-                            >
-                              {task.title}
-                              {task.linked_url && (
-                                <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                              )}
-                            </Link>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="text-xs">
-                              {task.priority_config?.code || 'N/A'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={`text-xs ${getReleaseTargetColor(task.release_target)}`}>
-                              {task.release_target === 'Dec-15-Full-Test' ? 'Dec 15' : 
-                               task.release_target === 'Jan-1-Alpha' ? 'Jan 1' : 'Backlog'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {task.assignee ? (
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-6 w-6">
-                                  <AvatarImage src={task.assignee.avatar_url || undefined} />
-                                  <AvatarFallback className="text-xs">
-                                    {(task.assignee.display_name || 'U')[0].toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-sm truncate max-w-[90px]">
-                                  {task.assignee.display_name || 'Unknown'}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">Unassigned</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {task.due_date ? (
-                              <span className={`text-sm ${isPast(new Date(task.due_date)) && task.status_config?.slug !== 'completed' ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
-                                {format(new Date(task.due_date), 'MMM d')}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">-</span>
-                            )}
-                          </TableCell>
+                  <TooltipProvider>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[90px]">Status</TableHead>
+                          <TableHead className="max-w-[320px]">Task</TableHead>
+                          <TableHead className="w-[70px]">Priority</TableHead>
+                          <TableHead className="w-[100px]">Assignees</TableHead>
+                          <TableHead className="w-[80px]">Area</TableHead>
+                          <TableHead className="w-[70px]">Due</TableHead>
+                          <TableHead className="w-[70px]">Added</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredTasks.map((task) => (
+                          <TableRow key={task.id} className="cursor-pointer hover:bg-muted/50">
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs">
+                                {task.status_config?.name || 'No Status'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="max-w-[320px]">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Link 
+                                    to={`/admin/tasks/${task.id}`}
+                                    className="font-medium hover:underline flex items-center gap-1"
+                                  >
+                                    <span className="truncate block max-w-[280px]">{task.title}</span>
+                                    {task.linked_url && (
+                                      <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                    )}
+                                  </Link>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-sm">
+                                  {task.title}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs">
+                                {task.priority_config?.code || 'N/A'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <AssigneesCell assignees={task.assignees || []} />
+                            </TableCell>
+                            <TableCell>
+                              {task.area ? (
+                                <span className="text-xs text-muted-foreground">{task.area}</span>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {task.due_date ? (
+                                <span className={`text-xs ${isPast(new Date(task.due_date)) && task.status_config?.slug !== 'completed' ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                                  {format(new Date(task.due_date), 'MMM d')}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-xs text-muted-foreground">
+                                {format(new Date(task.created_at), 'MMM d')}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TooltipProvider>
                 </div>
               )}
             </TabsContent>

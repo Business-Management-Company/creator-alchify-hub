@@ -19,10 +19,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Task, AREA_OPTIONS, ReleaseTarget } from '@/types/tasks';
-import { useCreateTask, useUpdateTask } from '@/hooks/useTasks';
+import { useCreateTask, useUpdateTask, useUpdateTaskAssignees } from '@/hooks/useTasks';
 import { useTaskStatuses, useTaskPriorities } from '@/hooks/useTaskConfigs';
+import { MultiAssigneeSelect } from '@/components/tasks/MultiAssigneeSelect';
 import { Loader2 } from 'lucide-react';
 
 interface TaskEditDrawerProps {
@@ -45,28 +45,16 @@ export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps
   const [releaseTarget, setReleaseTarget] = useState<ReleaseTarget>('Backlog');
   const [dueDate, setDueDate] = useState('');
   const [area, setArea] = useState('');
-  const [assigneeId, setAssigneeId] = useState('');
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [linkedUrl, setLinkedUrl] = useState('');
 
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
-  const isLoading = createTask.isPending || updateTask.isPending;
+  const updateAssignees = useUpdateTaskAssignees();
+  const isLoading = createTask.isPending || updateTask.isPending || updateAssignees.isPending;
 
   const { data: statuses = [] } = useTaskStatuses();
   const { data: priorities = [] } = useTaskPriorities();
-
-  // Fetch users for assignee selection
-  const { data: users = [] } = useQuery({
-    queryKey: ['profiles-for-tasks'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, user_id, display_name, avatar_url')
-        .order('display_name');
-      if (error) throw error;
-      return data;
-    },
-  });
 
   // Get defaults
   const defaultStatus = statuses.find(s => s.is_default);
@@ -81,7 +69,7 @@ export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps
       setReleaseTarget(task.release_target || 'Backlog');
       setDueDate(task.due_date || '');
       setArea(task.area || '');
-      setAssigneeId(task.assignee_id || '');
+      setAssigneeIds(task.assignees?.map(a => a.user_id) || []);
       setLinkedUrl(task.linked_url || '');
     } else {
       setTitle('');
@@ -91,7 +79,7 @@ export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps
       setReleaseTarget('Backlog');
       setDueDate('');
       setArea('');
-      setAssigneeId('');
+      setAssigneeIds([]);
       setLinkedUrl('');
     }
   }, [task, open, defaultStatus?.id, defaultPriority?.id]);
@@ -107,14 +95,18 @@ export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps
       release_target: releaseTarget,
       due_date: dueDate || null,
       area: area || null,
-      assignee_id: assigneeId || null,
+      assignee_id: assigneeIds[0] || null, // Keep legacy field updated
       linked_url: linkedUrl || null,
     };
 
     if (task) {
       await updateTask.mutateAsync({ id: task.id, ...taskData });
+      await updateAssignees.mutateAsync({ taskId: task.id, userIds: assigneeIds });
     } else {
-      await createTask.mutateAsync(taskData);
+      const newTask = await createTask.mutateAsync(taskData);
+      if (assigneeIds.length && newTask?.id) {
+        await updateAssignees.mutateAsync({ taskId: newTask.id, userIds: assigneeIds });
+      }
     }
     
     onOpenChange(false);
@@ -203,28 +195,11 @@ export function TaskEditDrawer({ open, onOpenChange, task }: TaskEditDrawerProps
           </div>
 
           <div className="space-y-2">
-            <Label>Assignee</Label>
-            <Select value={assigneeId || 'unassigned'} onValueChange={(v) => setAssigneeId(v === 'unassigned' ? '' : v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select assignee..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unassigned">Unassigned</SelectItem>
-                {users.map((user) => (
-                  <SelectItem key={user.user_id} value={user.user_id}>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-5 w-5">
-                        <AvatarImage src={user.avatar_url || undefined} />
-                        <AvatarFallback className="text-xs">
-                          {(user.display_name || 'U')[0].toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      {user.display_name || 'Unknown User'}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Assignees</Label>
+            <MultiAssigneeSelect
+              selectedIds={assigneeIds}
+              onChange={setAssigneeIds}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
