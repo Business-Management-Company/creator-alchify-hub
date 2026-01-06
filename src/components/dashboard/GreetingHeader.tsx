@@ -2,12 +2,17 @@ import { useState, useEffect } from 'react';
 import { Cloud, Sun, CloudRain, CloudSnow, CloudLightning, Sparkles } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { apiGet } from '@/lib/api';
 
 interface WeatherData {
   temp: number;
   condition: string;
   location: string;
+}
+
+interface ProfileData {
+  display_name: string | null;
+  avatar_url: string | null;
 }
 
 const getTimeOfDayGreeting = () => {
@@ -48,23 +53,19 @@ export function GreetingHeader() {
       if (!user) return;
       
       try {
-        const { data } = await supabase
-          .from('profiles')
-          .select('display_name, avatar_url')
-          .eq('user_id', user.id)
-          .maybeSingle();
+        const { data } = await apiGet<ProfileData>('/profiles/me');
         
         if (data) {
           setAvatarUrl(data.avatar_url);
           setDisplayName(data.display_name || '');
         } else {
-          // Fallback to user metadata
-          setDisplayName(user.user_metadata?.display_name || user.email?.split('@')[0] || '');
-          setAvatarUrl(user.user_metadata?.avatar_url || null);
+          // Fallback to user data
+          setDisplayName(user.displayName || user.email?.split('@')[0] || '');
+          setAvatarUrl(user.avatarUrl || null);
         }
       } catch (error) {
         console.error('Error fetching profile:', error);
-        setDisplayName(user.user_metadata?.display_name || user.email?.split('@')[0] || '');
+        setDisplayName(user.displayName || user.email?.split('@')[0] || '');
       }
     };
 

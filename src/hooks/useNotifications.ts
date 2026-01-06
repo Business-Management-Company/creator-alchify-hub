@@ -1,52 +1,31 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { Notification } from '@/types/tasks';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiPost } from '@/lib/api';
+import { apiGet, apiPost } from '@/lib/api';
 
 export function useNotifications() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Subscribe to real-time notifications
+  // Poll for new notifications (replaces realtime subscription)
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase
-      .channel('notifications-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          // Invalidate queries to refresh data
-          queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
-          queryClient.invalidateQueries({ queryKey: ['notifications-unread-count', user.id] });
-        }
-      )
-      .subscribe();
+    const interval = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['notifications-unread-count', user.id] });
+    }, 30000); // Poll every 30 seconds
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => clearInterval(interval);
   }, [user, queryClient]);
 
   return useQuery({
     queryKey: ['notifications', user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user!.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
+      const { data, error } = await apiGet<Notification[]>('/notifications');
       if (error) throw error;
-      return data as Notification[];
+      return data || [];
     },
     enabled: !!user,
   });
@@ -58,13 +37,9 @@ export function useUnreadNotificationCount() {
   return useQuery({
     queryKey: ['notifications-unread-count', user?.id],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user!.id)
-        .eq('is_read', false);
+      const { data, error } = await apiGet<{ count: number }>('/notifications/unread-count');
       if (error) throw error;
-      return count || 0;
+      return data?.count || 0;
     },
     enabled: !!user,
     refetchInterval: 30000, // Refresh every 30 seconds

@@ -16,7 +16,12 @@ import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { AdminPresenceBadge } from '@/components/admin/AdminPresenceBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { apiGet } from '@/lib/api';
+
+interface ProfileData {
+  display_name: string | null;
+  avatar_url: string | null;
+}
 
 const AppHeader = () => {
   const { user, signOut } = useAuth();
@@ -32,22 +37,18 @@ const AppHeader = () => {
       if (!user) return;
       
       try {
-        const { data } = await supabase
-          .from('profiles')
-          .select('display_name, avatar_url')
-          .eq('user_id', user.id)
-          .maybeSingle();
+        const { data } = await apiGet<ProfileData>('/profiles/me');
         
         if (data) {
           setAvatarUrl(data.avatar_url);
-          setDisplayName(data.display_name || user.user_metadata?.display_name || user.email?.split('@')[0] || 'User');
+          setDisplayName(data.display_name || user.displayName || user.email?.split('@')[0] || 'User');
         } else {
-          setDisplayName(user.user_metadata?.display_name || user.email?.split('@')[0] || 'User');
-          setAvatarUrl(user.user_metadata?.avatar_url || null);
+          setDisplayName(user.displayName || user.email?.split('@')[0] || 'User');
+          setAvatarUrl(user.avatarUrl || null);
         }
       } catch (error) {
         console.error('Error fetching profile:', error);
-        setDisplayName(user.user_metadata?.display_name || user.email?.split('@')[0] || 'User');
+        setDisplayName(user.displayName || user.email?.split('@')[0] || 'User');
       }
     };
 

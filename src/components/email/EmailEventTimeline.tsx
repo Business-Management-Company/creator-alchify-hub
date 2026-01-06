@@ -105,14 +105,14 @@ export function EmailEventTimeline({ emailSendId }: EmailEventTimelineProps) {
                 <p className="text-xs text-muted-foreground">
                   {format(new Date(event.occurred_at), "MMM d, yyyy h:mm:ss a")}
                 </p>
-                {event.event_data?.click?.link && (
+                {(event.event_data as Record<string, unknown>)?.click && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    Link: {event.event_data.click.link}
+                    Link: {((event.event_data as Record<string, unknown>).click as Record<string, unknown>)?.link as string}
                   </p>
                 )}
-                {event.event_data?.bounce?.message && (
+                {(event.event_data as Record<string, unknown>)?.bounce && (
                   <p className="text-xs text-destructive mt-1">
-                    {event.event_data.bounce.message}
+                    {((event.event_data as Record<string, unknown>).bounce as Record<string, unknown>)?.message as string}
                   </p>
                 )}
               </div>
