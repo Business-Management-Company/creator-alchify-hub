@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiPost } from '@/lib/api';
 
 export interface ColumnDef {
   id: string;
@@ -64,34 +65,17 @@ export function useColumnOrder(viewKey: string = 'admin_tasks') {
     loadColumnOrder();
   }, [user, viewKey]);
 
-  // Save column order to user_preferences
+  // Save column order to user_preferences via backend
   const saveColumnOrder = useCallback(async (newColumns: ColumnDef[]) => {
     if (!user) return;
 
     const columnIds = newColumns.map(col => col.id);
     
     try {
-      const { data: existing } = await supabase
-        .from('user_preferences')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('preference_key', `${viewKey}_column_order`)
-        .maybeSingle();
-
-      if (existing) {
-        await supabase
-          .from('user_preferences')
-          .update({ preference_value: columnIds })
-          .eq('id', existing.id);
-      } else {
-        await supabase
-          .from('user_preferences')
-          .insert({
-            user_id: user.id,
-            preference_key: `${viewKey}_column_order`,
-            preference_value: columnIds,
-          });
-      }
+      await apiPost('/user-preferences', {
+        key: `${viewKey}_column_order`,
+        value: columnIds,
+      });
     } catch (error) {
       console.error('Error saving column order:', error);
     }

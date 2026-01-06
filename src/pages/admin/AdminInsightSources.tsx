@@ -117,7 +117,7 @@ const AdminInsightSources = () => {
     }
 
     try {
-      const { error } = await supabase.from('insight_sources').insert({
+      const { error } = await apiPost('/admin/insight-sources', {
         name: newSource.name,
         type: newSource.type,
         url: newSource.url,
@@ -150,10 +150,10 @@ const AdminInsightSources = () => {
 
   const toggleSourceStatus = async (sourceId: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
-        .from('insight_sources')
-        .update({ is_active: !currentStatus })
-        .eq('id', sourceId);
+      const { error } = await apiPost(`/admin/insight-sources/${sourceId}`, {
+        is_active: !currentStatus,
+        _method: 'PATCH'
+      });
 
       if (error) throw error;
 
@@ -199,10 +199,7 @@ const AdminInsightSources = () => {
     if (!confirm('Are you sure you want to delete this source and all its documents?')) return;
 
     try {
-      const { error } = await supabase
-        .from('insight_sources')
-        .delete()
-        .eq('id', sourceId);
+      const { error } = await apiPost(`/admin/insight-sources/${sourceId}`, { _method: 'DELETE' });
 
       if (error) throw error;
 

@@ -21,6 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { apiGet } from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 
 interface DashboardStats {
@@ -77,9 +78,9 @@ const AdminDashboard = () => {
 
   const fetchStats = async () => {
     try {
-      const { data, error } = await supabase.rpc('admin_get_stats');
+      const { data, error } = await apiGet<DashboardStats>('/admin/stats');
       if (error) throw error;
-      setStats(data as unknown as DashboardStats);
+      setStats(data);
     } catch (error) {
       console.error('Error fetching stats:', error);
       toast({
@@ -94,7 +95,7 @@ const AdminDashboard = () => {
 
   const fetchTaskStats = async () => {
     try {
-      // Get total tasks
+      // Get total tasks (read-only, allowed)
       const { count: totalCount } = await supabase
         .from('tasks')
         .select('*', { count: 'exact', head: true });

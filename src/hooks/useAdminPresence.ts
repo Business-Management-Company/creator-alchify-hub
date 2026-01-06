@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
+import { apiPost } from '@/lib/api';
 
 export interface AdminPresence {
   id: string;
@@ -72,31 +73,7 @@ export function useAdminPresence() {
     if (!user || !isAdmin) return;
 
     try {
-      // Fetch display name from profiles
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('display_name')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      const displayName = profile?.display_name || user.user_metadata?.display_name || user.email?.split('@')[0] || 'Admin';
-
-      // Upsert presence record
-      const { error: upsertError } = await supabase
-        .from('admin_sessions')
-        .upsert({
-          admin_user_id: user.id,
-          display_name: displayName,
-          email: user.email,
-          current_section: section,
-          last_seen_at: new Date().toISOString(),
-        }, {
-          onConflict: 'admin_user_id',
-        });
-
-      if (upsertError) {
-        console.error('Failed to send heartbeat:', upsertError);
-      }
+      await apiPost('/admin/presence/heartbeat', { section });
     } catch (err) {
       console.error('Heartbeat error:', err);
     }
@@ -153,10 +130,7 @@ export function useAdminPresence() {
     if (!user) return;
 
     try {
-      await supabase
-        .from('admin_sessions')
-        .delete()
-        .eq('admin_user_id', user.id);
+      await apiPost('/admin/presence/clear', {});
     } catch (err) {
       console.error('Failed to clear presence:', err);
     }

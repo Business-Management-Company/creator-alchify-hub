@@ -238,12 +238,11 @@ const Upload = () => {
             description: 'Content uploaded. Transcription will continue in the background.',
           });
         } else {
-          // Log AI action
-          await supabase.from('ai_action_log').insert({
-            project_id: project.id,
-            user_id: user.id,
-            action_type: 'auto_alchify',
-            action_details: {
+          // Log AI action via backend
+          await apiPost('/ai-action-log', {
+            projectId: project.id,
+            actionType: 'auto_alchify',
+            actionDetails: {
               word_count: data?.transcript?.wordCount,
               filler_count: data?.transcript?.fillerCount,
               auto_processed: true
