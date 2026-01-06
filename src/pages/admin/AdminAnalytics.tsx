@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { apiGet } from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 
 interface AnalyticsData {
@@ -57,9 +57,9 @@ const AdminAnalytics = () => {
 
   const fetchAnalytics = async () => {
     try {
-      const { data, error } = await supabase.rpc('admin_get_stats');
+      const { data, error } = await apiGet<AnalyticsData>('/admin/stats');
       if (error) throw error;
-      setStats(data as unknown as AnalyticsData);
+      setStats(data);
     } catch (error) {
       console.error('Error fetching analytics:', error);
       toast({

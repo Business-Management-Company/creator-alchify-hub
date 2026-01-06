@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { apiPost } from '@/lib/api';
 
 export interface TaskSection {
   id: string;
@@ -32,21 +33,7 @@ export function useCreateTaskSection() {
 
   return useMutation({
     mutationFn: async ({ name, color }: { name: string; color?: string }) => {
-      // Get max sort_order
-      const { data: existing } = await supabase
-        .from('task_sections')
-        .select('sort_order')
-        .order('sort_order', { ascending: false })
-        .limit(1);
-
-      const nextOrder = existing && existing.length > 0 ? existing[0].sort_order + 1 : 0;
-
-      const { data, error } = await supabase
-        .from('task_sections')
-        .insert({ name, color: color || '#6366f1', sort_order: nextOrder })
-        .select()
-        .single();
-
+      const { data, error } = await apiPost<TaskSection>('/task-sections', { name, color });
       if (error) throw error;
       return data;
     },
@@ -65,13 +52,7 @@ export function useUpdateTaskSection() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<TaskSection> & { id: string }) => {
-      const { data, error } = await supabase
-        .from('task_sections')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
-
+      const { data, error } = await apiPost<TaskSection>(`/task-sections/${id}`, { ...updates, _method: 'PATCH' });
       if (error) throw error;
       return data;
     },
@@ -89,11 +70,7 @@ export function useDeleteTaskSection() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('task_sections')
-        .delete()
-        .eq('id', id);
-
+      const { error } = await apiPost(`/task-sections/${id}`, { _method: 'DELETE' });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -112,10 +89,8 @@ export function useReorderTaskSections() {
 
   return useMutation({
     mutationFn: async (orderedIds: string[]) => {
-      const updates = orderedIds.map((id, index) => 
-        supabase.from('task_sections').update({ sort_order: index }).eq('id', id)
-      );
-      await Promise.all(updates);
+      const { error } = await apiPost('/task-sections/reorder', { orderedIds });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['task-sections'] });
@@ -128,11 +103,7 @@ export function useAssignTaskToSection() {
 
   return useMutation({
     mutationFn: async ({ taskId, sectionId }: { taskId: string; sectionId: string | null }) => {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ section_id: sectionId })
-        .eq('id', taskId);
-
+      const { error } = await apiPost(`/tasks/${taskId}/section`, { sectionId });
       if (error) throw error;
     },
     onSuccess: () => {

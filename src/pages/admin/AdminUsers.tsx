@@ -35,7 +35,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { apiGet, apiPost } from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 
 interface UserData {
@@ -77,7 +77,7 @@ const AdminUsers = () => {
 
   const fetchUsers = async () => {
     try {
-      const { data, error } = await supabase.rpc('admin_get_users');
+      const { data, error } = await apiGet<UserData[]>('/admin/users');
       if (error) throw error;
       setUsers(data || []);
     } catch (error) {
@@ -94,9 +94,7 @@ const AdminUsers = () => {
 
   const assignRole = async (userId: string, role: 'super_admin' | 'admin' | 'moderator' | 'user') => {
     try {
-      const { error } = await supabase
-        .from('user_roles')
-        .upsert({ user_id: userId, role }, { onConflict: 'user_id,role' });
+      const { error } = await apiPost(`/admin/users/${userId}/roles`, { role, action: 'assign' });
       
       if (error) throw error;
       
@@ -117,11 +115,7 @@ const AdminUsers = () => {
 
   const removeRole = async (userId: string, role: string) => {
     try {
-      const { error } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId)
-        .eq('role', role as 'super_admin' | 'admin' | 'moderator' | 'user');
+      const { error } = await apiPost(`/admin/users/${userId}/roles`, { role, action: 'remove' });
       
       if (error) throw error;
       

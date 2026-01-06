@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Notification } from '@/types/tasks';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiPost } from '@/lib/api';
 
 export function useNotifications() {
   const { user } = useAuth();
@@ -76,10 +77,7 @@ export function useMarkNotificationRead() {
 
   return useMutation({
     mutationFn: async (notificationId: string) => {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('id', notificationId);
+      const { error } = await apiPost(`/notifications/${notificationId}/read`, {});
       if (error) throw error;
     },
     onSuccess: () => {
@@ -95,11 +93,7 @@ export function useMarkAllNotificationsRead() {
 
   return useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('user_id', user!.id)
-        .eq('is_read', false);
+      const { error } = await apiPost('/notifications/read-all', {});
       if (error) throw error;
     },
     onSuccess: () => {

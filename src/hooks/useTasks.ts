@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Task, TaskComment, TaskAssignee } from '@/types/tasks';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { apiPost, apiGet } from '@/lib/api';
 
 async function enrichTasksWithProfiles(tasks: any[]) {
   if (!tasks.length) return [];
@@ -138,55 +139,11 @@ export function useTaskComments(taskId: string) {
 
 export function useCreateTask() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (task: Partial<Task> & { assigneeIds?: string[] }) => {
-      const { assigneeIds, ...taskData } = task;
-      
-      const { data, error } = await supabase
-        .from('tasks')
-        .insert({
-          title: taskData.title!,
-          description: taskData.description,
-          status: taskData.status || 'backlog',
-          priority: taskData.priority || 'medium',
-          status_id: taskData.status_id,
-          priority_id: taskData.priority_id,
-          release_target: taskData.release_target || 'Dec-22-Full-Test',
-          due_date: taskData.due_date,
-          area: taskData.area,
-          creator_id: user!.id,
-          assignee_id: assigneeIds?.[0] || taskData.assignee_id,
-          linked_url: taskData.linked_url,
-        })
-        .select()
-        .single();
+      const { data, error } = await apiPost<Task>('/tasks', task);
       if (error) throw error;
-
-      // Add assignees to junction table
-      const allAssignees = assigneeIds || (taskData.assignee_id ? [taskData.assignee_id] : []);
-      if (allAssignees.length > 0) {
-        await supabase
-          .from('task_assignees')
-          .insert(allAssignees.map(user_id => ({ task_id: data.id, user_id })));
-        
-        // Create notifications for all assignees except creator
-        const notificationsToCreate = allAssignees
-          .filter(id => id !== user!.id)
-          .map(userId => ({
-            user_id: userId,
-            task_id: data.id,
-            type: 'task_assigned',
-            title: 'New Task Assigned',
-            message: `You've been assigned to: "${taskData.title}"${taskData.due_date ? ` (due ${new Date(taskData.due_date).toLocaleDateString()})` : ''}`,
-          }));
-        
-        if (notificationsToCreate.length > 0) {
-          await supabase.from('notifications').insert(notificationsToCreate);
-        }
-      }
-
       return data;
     },
     onSuccess: () => {
@@ -201,61 +158,11 @@ export function useCreateTask() {
 
 export function useUpdateTask() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Task> & { id: string }) => {
-      // Get original task for notification logic
-      const { data: originalTask } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      const { data, error } = await supabase
-        .from('tasks')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+      const { data, error } = await apiPost<Task>(`/tasks/${id}`, { ...updates, _method: 'PATCH' });
       if (error) throw error;
-
-      // Get all assignees from junction table
-      const { data: assignees } = await supabase
-        .from('task_assignees')
-        .select('user_id')
-        .eq('task_id', id);
-
-      // Get all watchers
-      const { data: watchers } = await supabase
-        .from('task_watchers')
-        .select('user_id')
-        .eq('task_id', id);
-
-      // Notify relevant users about update (all assignees + creator + watchers, except current user)
-      if (originalTask) {
-        const usersToNotify = new Set<string>();
-        if (originalTask.creator_id !== user!.id) usersToNotify.add(originalTask.creator_id);
-        (assignees || []).forEach(a => {
-          if (a.user_id !== user!.id) usersToNotify.add(a.user_id);
-        });
-        (watchers || []).forEach(w => {
-          if (w.user_id !== user!.id) usersToNotify.add(w.user_id);
-        });
-
-        const notificationsToCreate = Array.from(usersToNotify).map(userId => ({
-          user_id: userId,
-          task_id: id,
-          type: 'task_updated',
-          title: 'Task Updated',
-          message: `"${originalTask.title}" was updated`,
-        }));
-
-        if (notificationsToCreate.length > 0) {
-          await supabase.from('notifications').insert(notificationsToCreate);
-        }
-      }
-
       return data;
     },
     onSuccess: (_, variables) => {
@@ -273,7 +180,7 @@ export function useDeleteTask() {
 
   return useMutation({
     mutationFn: async (taskId: string) => {
-      const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+      const { error } = await apiPost(`/tasks/${taskId}`, { _method: 'DELETE' });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -288,62 +195,11 @@ export function useDeleteTask() {
 
 export function useAddComment() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async ({ taskId, body }: { taskId: string; body: string }) => {
-      const { data, error } = await supabase
-        .from('task_comments')
-        .insert({
-          task_id: taskId,
-          author_id: user!.id,
-          body,
-        })
-        .select()
-        .single();
+      const { data, error } = await apiPost<TaskComment>(`/tasks/${taskId}/comments`, { body });
       if (error) throw error;
-
-      // Notify task participants (all assignees + creator, except current user)
-      const { data: task } = await supabase
-        .from('tasks')
-        .select('title, creator_id')
-        .eq('id', taskId)
-        .single();
-
-      const { data: assignees } = await supabase
-        .from('task_assignees')
-        .select('user_id')
-        .eq('task_id', taskId);
-
-      // Get all watchers
-      const { data: watchers } = await supabase
-        .from('task_watchers')
-        .select('user_id')
-        .eq('task_id', taskId);
-
-      if (task) {
-        const usersToNotify = new Set<string>();
-        if (task.creator_id !== user!.id) usersToNotify.add(task.creator_id);
-        (assignees || []).forEach(a => {
-          if (a.user_id !== user!.id) usersToNotify.add(a.user_id);
-        });
-        (watchers || []).forEach(w => {
-          if (w.user_id !== user!.id) usersToNotify.add(w.user_id);
-        });
-
-        const notificationsToCreate = Array.from(usersToNotify).map(userId => ({
-          user_id: userId,
-          task_id: taskId,
-          type: 'task_commented',
-          title: 'New Comment on Task',
-          message: `Someone commented on: "${task.title}"`,
-        }));
-
-        if (notificationsToCreate.length > 0) {
-          await supabase.from('notifications').insert(notificationsToCreate);
-        }
-      }
-
       return data;
     },
     onSuccess: (_, variables) => {
@@ -359,69 +215,12 @@ export function useAddComment() {
 // Multi-assignee hooks
 export function useUpdateTaskAssignees() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async ({ taskId, userIds }: { taskId: string; userIds: string[] }) => {
-      // Get current assignees
-      const { data: currentAssignees } = await supabase
-        .from('task_assignees')
-        .select('user_id')
-        .eq('task_id', taskId);
-      
-      const currentIds = new Set((currentAssignees || []).map(a => a.user_id));
-      const newIds = new Set(userIds);
-      
-      // Find additions and removals
-      const toAdd = userIds.filter(id => !currentIds.has(id));
-      const toRemove = [...currentIds].filter(id => !newIds.has(id));
-      
-      // Remove old assignees
-      if (toRemove.length) {
-        await supabase
-          .from('task_assignees')
-          .delete()
-          .eq('task_id', taskId)
-          .in('user_id', toRemove);
-      }
-      
-      // Add new assignees
-      if (toAdd.length) {
-        await supabase
-          .from('task_assignees')
-          .insert(toAdd.map(user_id => ({ task_id: taskId, user_id })));
-        
-        // Notify new assignees
-        const { data: task } = await supabase
-          .from('tasks')
-          .select('title')
-          .eq('id', taskId)
-          .single();
-        
-        if (task) {
-          const notificationsToCreate = toAdd
-            .filter(userId => userId !== user!.id)
-            .map(userId => ({
-              user_id: userId,
-              task_id: taskId,
-              type: 'task_assigned',
-              title: 'Task Assigned',
-              message: `You've been assigned to: "${task.title}"`,
-            }));
-          
-          if (notificationsToCreate.length > 0) {
-            await supabase.from('notifications').insert(notificationsToCreate);
-          }
-        }
-      }
-      
-      // Also update legacy assignee_id to first assignee
-      await supabase
-        .from('tasks')
-        .update({ assignee_id: userIds[0] || null })
-        .eq('id', taskId);
-      
-      return { added: toAdd, removed: toRemove };
+      const { data, error } = await apiPost<{ added: string[]; removed: string[] }>(`/tasks/${taskId}/assignees`, { userIds });
+      if (error) throw error;
+      return data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });

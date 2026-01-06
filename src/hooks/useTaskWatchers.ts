@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiPost } from '@/lib/api';
 
 export function useTaskWatchers(taskId: string) {
   const { user } = useAuth();
@@ -25,19 +26,8 @@ export function useTaskWatchers(taskId: string) {
     mutationFn: async () => {
       if (!user) throw new Error('Not authenticated');
       
-      if (isWatching) {
-        const { error } = await supabase
-          .from('task_watchers')
-          .delete()
-          .eq('task_id', taskId)
-          .eq('user_id', user.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('task_watchers')
-          .insert({ task_id: taskId, user_id: user.id });
-        if (error) throw error;
-      }
+      const { error } = await apiPost(`/tasks/${taskId}/watch`, { action: isWatching ? 'unwatch' : 'watch' });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['task-watchers', taskId] });

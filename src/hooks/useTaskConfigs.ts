@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { TaskStatusConfig, TaskPriorityConfig } from '@/types/tasks';
 import { toast } from '@/hooks/use-toast';
+import { apiPost } from '@/lib/api';
 
 // Task Statuses
 export function useTaskStatuses() {
@@ -22,11 +23,7 @@ export function useCreateTaskStatus() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (status: { name: string; slug: string; sort_order: number; color?: string; is_default?: boolean }) => {
-      const { data, error } = await supabase
-        .from('task_statuses')
-        .insert(status)
-        .select()
-        .single();
+      const { data, error } = await apiPost<TaskStatusConfig>('/task-statuses', status);
       if (error) throw error;
       return data;
     },
@@ -44,12 +41,7 @@ export function useUpdateTaskStatus() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<TaskStatusConfig> & { id: string }) => {
-      const { data, error } = await supabase
-        .from('task_statuses')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+      const { data, error } = await apiPost<TaskStatusConfig>(`/task-statuses/${id}`, { ...updates, _method: 'PATCH' });
       if (error) throw error;
       return data;
     },
@@ -66,7 +58,7 @@ export function useDeleteTaskStatus() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('task_statuses').delete().eq('id', id);
+      const { error } = await apiPost(`/task-statuses/${id}`, { _method: 'DELETE' });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -83,10 +75,8 @@ export function useReorderTaskStatuses() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (orderedIds: string[]) => {
-      const updates = orderedIds.map((id, index) => 
-        supabase.from('task_statuses').update({ sort_order: index + 1 }).eq('id', id)
-      );
-      await Promise.all(updates);
+      const { error } = await apiPost('/task-statuses/reorder', { orderedIds });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['task-statuses'] });
@@ -116,11 +106,7 @@ export function useCreateTaskPriority() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (priority: { name: string; code: string; sort_order: number; color?: string; is_default?: boolean }) => {
-      const { data, error } = await supabase
-        .from('task_priorities')
-        .insert(priority)
-        .select()
-        .single();
+      const { data, error } = await apiPost<TaskPriorityConfig>('/task-priorities', priority);
       if (error) throw error;
       return data;
     },
@@ -138,12 +124,7 @@ export function useUpdateTaskPriority() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<TaskPriorityConfig> & { id: string }) => {
-      const { data, error } = await supabase
-        .from('task_priorities')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+      const { data, error } = await apiPost<TaskPriorityConfig>(`/task-priorities/${id}`, { ...updates, _method: 'PATCH' });
       if (error) throw error;
       return data;
     },
@@ -160,7 +141,7 @@ export function useDeleteTaskPriority() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('task_priorities').delete().eq('id', id);
+      const { error } = await apiPost(`/task-priorities/${id}`, { _method: 'DELETE' });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -177,10 +158,8 @@ export function useReorderTaskPriorities() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (orderedIds: string[]) => {
-      const updates = orderedIds.map((id, index) => 
-        supabase.from('task_priorities').update({ sort_order: index + 1 }).eq('id', id)
-      );
-      await Promise.all(updates);
+      const { error } = await apiPost('/task-priorities/reorder', { orderedIds });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['task-priorities'] });
@@ -196,10 +175,7 @@ export function useSetDefaultStatus() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      // First, unset all defaults
-      await supabase.from('task_statuses').update({ is_default: false }).neq('id', '');
-      // Then set the new default
-      const { error } = await supabase.from('task_statuses').update({ is_default: true }).eq('id', id);
+      const { error } = await apiPost(`/task-statuses/${id}/set-default`, {});
       if (error) throw error;
     },
     onSuccess: () => {
@@ -216,10 +192,7 @@ export function useSetDefaultPriority() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      // First, unset all defaults
-      await supabase.from('task_priorities').update({ is_default: false }).neq('id', '');
-      // Then set the new default
-      const { error } = await supabase.from('task_priorities').update({ is_default: true }).eq('id', id);
+      const { error } = await apiPost(`/task-priorities/${id}/set-default`, {});
       if (error) throw error;
     },
     onSuccess: () => {

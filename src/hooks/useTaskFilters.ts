@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { apiPost } from '@/lib/api';
 
 export interface TaskFilterConfig {
   id: string;
@@ -51,14 +52,7 @@ export function useCreateFilterConfig() {
 
   return useMutation({
     mutationFn: async (config: Omit<TaskFilterConfig, 'id' | 'is_default' | 'created_at' | 'updated_at'>) => {
-      const { data, error } = await supabase
-        .from('task_filter_configs')
-        .insert({
-          ...config,
-          is_default: false,
-        })
-        .select()
-        .single();
+      const { data, error } = await apiPost<TaskFilterConfig>('/task-filter-configs', config);
       if (error) throw error;
       return data;
     },
@@ -77,12 +71,7 @@ export function useUpdateFilterConfig() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<TaskFilterConfig> & { id: string }) => {
-      const { data, error } = await supabase
-        .from('task_filter_configs')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+      const { data, error } = await apiPost<TaskFilterConfig>(`/task-filter-configs/${id}`, { ...updates, _method: 'PATCH' });
       if (error) throw error;
       return data;
     },
@@ -100,10 +89,7 @@ export function useDeleteFilterConfig() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('task_filter_configs')
-        .delete()
-        .eq('id', id);
+      const { error } = await apiPost(`/task-filter-configs/${id}`, { _method: 'DELETE' });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -121,18 +107,8 @@ export function useReorderFilters() {
 
   return useMutation({
     mutationFn: async (orderedIds: string[]) => {
-      const updates = orderedIds.map((id, index) => ({
-        id,
-        display_order: index + 1,
-      }));
-      
-      for (const update of updates) {
-        const { error } = await supabase
-          .from('task_filter_configs')
-          .update({ display_order: update.display_order })
-          .eq('id', update.id);
-        if (error) throw error;
-      }
+      const { error } = await apiPost('/task-filter-configs/reorder', { orderedIds });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['task-filter-configs'] });
