@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { apiPost } from "@/lib/api";
 import { toast } from "sonner";
 
 export interface EmailTemplate {
@@ -162,9 +163,7 @@ export function useSendEmail() {
       variables?: Record<string, string>;
       metadata?: Record<string, any>;
     }) => {
-      const { data, error } = await supabase.functions.invoke("send-email", {
-        body: input,
-      });
+      const { data, error } = await apiPost("/send-email", input);
 
       if (error) throw error;
       return data;

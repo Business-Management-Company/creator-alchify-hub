@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { apiPost } from '@/lib/api';
 import VideoThumbnail from '@/components/VideoThumbnail';
 import { extractAudioFromVideo, needsAudioExtraction } from '@/lib/audio-extraction';
 import { 
@@ -222,11 +223,13 @@ const PostProduction = () => {
       
       updateTaskStatus('transcribe', 'processing', 70);
       
-      const { data: transcriptData, error: transcriptError } = await supabase.functions.invoke('transcribe-audio', {
-        body: { 
-          projectId: selectedProject.id,
-          audioData: audioData // Pass extracted audio if available
-        }
+      const { data: transcriptData, error: transcriptError } = await apiPost<{
+        success?: boolean;
+        error?: string;
+        transcript?: { content?: string; wordCount?: number; fillerCount?: number; segmentCount?: number };
+      }>('/transcribe-audio', { 
+        projectId: selectedProject.id,
+        audioData: audioData // Pass extracted audio if available
       });
 
       // Handle errors - Supabase functions.invoke returns error in data for 4xx responses
@@ -284,8 +287,8 @@ const PostProduction = () => {
       if (generateClipsOption && transcriptText) {
         updateTaskStatus('clips', 'processing', 10);
         
-        const { data: clipsData, error: clipsError } = await supabase.functions.invoke('generate-clips', {
-          body: { projectId: selectedProject.id, transcriptContent: transcriptText }
+        const { data: clipsData, error: clipsError } = await apiPost<{ clips?: GeneratedClip[]; error?: string }>('/generate-clips', {
+          projectId: selectedProject.id, transcriptContent: transcriptText
         });
 
         if (clipsError) {

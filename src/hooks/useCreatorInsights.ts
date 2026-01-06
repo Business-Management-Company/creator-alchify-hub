@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { apiPost } from '@/lib/api';
 
 export interface Insight {
   metric: string;
@@ -48,8 +48,8 @@ export function useCreatorInsights(metrics: CreatorMetrics): UseCreatorInsightsR
     setError(null);
     
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('insight-engine', {
-        body: { action: 'getInsights', metrics }
+      const { data, error: fnError } = await apiPost<{ success?: boolean; insights?: Insight[]; insightOfTheDay?: Insight; error?: string }>('/insight-engine', {
+        action: 'getInsights', metrics
       });
 
       if (fnError) throw fnError;
@@ -90,8 +90,8 @@ export function useCreatorInsights(metrics: CreatorMetrics): UseCreatorInsightsR
     setIsGeneratingDeepDive(true);
     
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('insight-engine', {
-        body: { action: 'generateDeepDive', metrics }
+      const { data, error: fnError } = await apiPost<{ success?: boolean; report?: string; error?: string }>('/insight-engine', {
+        action: 'generateDeepDive', metrics
       });
 
       if (fnError) throw fnError;

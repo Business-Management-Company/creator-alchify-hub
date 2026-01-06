@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { apiPost } from '@/lib/api';
 
 interface Speaker {
   id: string;
@@ -103,11 +103,9 @@ export function SpeakerFocusEditor({
     setIsAnalyzing(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('analyze-speakers', {
-        body: { 
-          transcriptSegments,
-          speakerCount: speakers.length,
-        }
+      const { data, error } = await apiPost<{ focusRegions?: FocusRegion[] }>('/analyze-speakers', { 
+        transcriptSegments,
+        speakerCount: speakers.length,
       });
 
       if (error) throw error;

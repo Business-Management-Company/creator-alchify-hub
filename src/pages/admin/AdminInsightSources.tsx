@@ -45,6 +45,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/layout/AppLayout';
+import { apiPost } from '@/lib/api';
 
 interface InsightSource {
   id: string;
@@ -169,11 +170,11 @@ const AdminInsightSources = () => {
   const scrapeSource = async (source: InsightSource) => {
     setIsScraping(source.id);
     try {
-      const functionName = source.type === 'rss' ? 'insight-ingest-rss' : 'insight-ingest-firecrawl';
+      const endpoint = source.type === 'rss' ? '/insight-ingest-rss' : '/insight-ingest-firecrawl';
       const action = source.type === 'rss' ? 'fetchSource' : 'scrapeSource';
 
-      const { data, error } = await supabase.functions.invoke(functionName, {
-        body: { action, sourceId: source.id }
+      const { data, error } = await apiPost<{ success?: boolean; processed?: number; error?: string }>(endpoint, {
+        action, sourceId: source.id
       });
 
       if (error) throw error;

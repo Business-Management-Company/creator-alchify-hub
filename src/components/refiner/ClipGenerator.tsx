@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/popover";
 import { useToast } from '@/hooks/use-toast';
 import { useConfetti } from '@/hooks/useConfetti';
-import { supabase } from '@/integrations/supabase/client';
+import { apiPost } from '@/lib/api';
 import { ClipEditorModal } from './ClipEditorModal';
 
 interface Clip {
@@ -322,8 +322,8 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
 
     try {
       // Try the real API first
-      const { data, error } = await supabase.functions.invoke('generate-clips', {
-        body: { projectId, transcriptContent }
+      const { data, error } = await apiPost<{ clips?: Clip[]; error?: string }>('/generate-clips', {
+        projectId, transcriptContent
       });
 
       if (error || data?.error || !data?.clips?.length) {
@@ -474,23 +474,21 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
           captionStyle 
         });
 
-        const { data, error } = await supabase.functions.invoke('render-creatomate', {
-          body: {
-            action: 'render',
-            videoUrl: mediaUrl,
-            words,
-            platform: platform as 'tiktok' | 'reels' | 'shorts' | 'landscape',
-            startTime,
-            endTime,
-            captionStyle: {
-              fontFamily: 'Montserrat',
-              fontSize,
-              textColor: captionStyle.color,
-              highlightColor: '#FFD700', // Gold highlight for active word
-              backgroundColor: captionStyle.backgroundColor,
-              position: captionStyle.position,
-            },
-          }
+        const { data, error } = await apiPost<{ renderId?: string; error?: string }>('/render-creatomate', {
+          action: 'render',
+          videoUrl: mediaUrl,
+          words,
+          platform: platform as 'tiktok' | 'reels' | 'shorts' | 'landscape',
+          startTime,
+          endTime,
+          captionStyle: {
+            fontFamily: 'Montserrat',
+            fontSize,
+            textColor: captionStyle.color,
+            highlightColor: '#FFD700', // Gold highlight for active word
+            backgroundColor: captionStyle.backgroundColor,
+            position: captionStyle.position,
+          },
         });
 
         if (!error && !data?.error && data?.renderId) {
@@ -552,8 +550,8 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
     const checkStatus = async () => {
       try {
         // Use Creatomate for status polling
-        const { data, error } = await supabase.functions.invoke('render-creatomate', {
-          body: { action: 'status', renderId }
+        const { data, error } = await apiPost<{ status?: string; url?: string; error?: string; error_message?: string }>('/render-creatomate', {
+          action: 'status', renderId
         });
 
         if (error || data?.error) {
