@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { apiPost } from '@/lib/api';
 import { 
   User, 
   Sparkles, 
@@ -160,13 +160,11 @@ export function SpeakerFocus({ projectId, mediaUrl, transcriptContent, transcrip
     setIsAnalyzing(true);
     
     try {
-      const { data, error } = await supabase.functions.invoke('analyze-speakers', {
-        body: {
-          projectId,
-          transcriptContent,
-          transcriptSegments,
-          aspectRatio: selectedAspectRatio,
-        },
+      const { data, error } = await apiPost<{ speakerSegments?: SpeakerSegment[]; speakerCount?: number }>('/analyze-speakers', {
+        projectId,
+        transcriptContent,
+        transcriptSegments,
+        aspectRatio: selectedAspectRatio,
       });
 
       if (error) throw error;

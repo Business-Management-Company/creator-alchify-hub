@@ -18,6 +18,7 @@ import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { apiPost } from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 
 const ACCEPTED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'];
@@ -224,16 +225,14 @@ const Upload = () => {
         description: 'AI is transcribing, enhancing, and preparing your content.',
       });
       
-      // Auto-start transcription
+      // Auto-start transcription via backend API
       try {
-        const { data, error } = await supabase.functions.invoke('transcribe-audio', {
-          body: { projectId: project.id }
-        });
+        const { data, error } = await apiPost<{ transcript?: { wordCount?: number; fillerCount?: number } }>('/transcribe-audio', { projectId: project.id });
         
         setUploadProgress(95);
         
-        if (error || data?.error) {
-          console.error('Auto-transcription warning:', error || data?.error);
+        if (error) {
+          console.error('Auto-transcription warning:', error);
           toast({
             title: 'Upload complete',
             description: 'Content uploaded. Transcription will continue in the background.',
@@ -245,15 +244,15 @@ const Upload = () => {
             user_id: user.id,
             action_type: 'auto_alchify',
             action_details: {
-              word_count: data.transcript?.wordCount,
-              filler_count: data.transcript?.fillerCount,
+              word_count: data?.transcript?.wordCount,
+              filler_count: data?.transcript?.fillerCount,
               auto_processed: true
             }
           });
           
           toast({
             title: 'Content Alchified! ✨',
-            description: `Transcribed ${data.transcript?.wordCount || 0} words. Ready to refine!`,
+            description: `Transcribed ${data?.transcript?.wordCount || 0} words. Ready to refine!`,
           });
         }
       } catch (transcribeError) {

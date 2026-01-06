@@ -9,8 +9,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend, Tooltip as RechartsTooltip } from 'recharts';
 import { HelpCircle, TrendingUp, DollarSign, Users, Cpu, Sparkles, Loader2, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { apiPost } from '@/lib/api';
 
 interface Assumptions {
   alphaCreatorsYear1: number;
@@ -225,29 +225,27 @@ export default function AdminCFODashboard() {
   const generateBoardSummary = async () => {
     setIsGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-board-summary', {
-        body: {
-          creatorsYear1,
-          creatorsYear2,
-          creatorsYear3,
-          year1Revenue,
-          year2Revenue,
-          year3Revenue,
-          year3GrossMarginPercent,
-          year3Ebitda,
-          year3EbitdaMarginPercent,
-          fixedCostsYear1: assumptions.fixedCostsYear1,
-          fixedCostsYear2,
-          fixedCostsYear3,
-          cumulativeCashEndYear1,
-          cumulativeCashEndYear2,
-          cumulativeCashEndYear3,
-          breakEvenYearLabel,
-        },
+      const { data, error } = await apiPost<{ summary: string }>('/generate-board-summary', {
+        creatorsYear1,
+        creatorsYear2,
+        creatorsYear3,
+        year1Revenue,
+        year2Revenue,
+        year3Revenue,
+        year3GrossMarginPercent,
+        year3Ebitda,
+        year3EbitdaMarginPercent,
+        fixedCostsYear1: assumptions.fixedCostsYear1,
+        fixedCostsYear2,
+        fixedCostsYear3,
+        cumulativeCashEndYear1,
+        cumulativeCashEndYear2,
+        cumulativeCashEndYear3,
+        breakEvenYearLabel,
       });
 
       if (error) throw error;
-      setBoardSummary(data.summary);
+      setBoardSummary(data?.summary || '');
       toast.success('Board summary generated');
     } catch (error) {
       console.error('Error generating board summary:', error);

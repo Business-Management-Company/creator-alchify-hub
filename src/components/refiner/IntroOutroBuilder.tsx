@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { apiPost } from '@/lib/api';
 
 interface IntroOutro {
   type: 'intro' | 'outro';
@@ -133,11 +133,9 @@ export function IntroOutroBuilder({
     setIsGeneratingVoice(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('generate-elevenlabs-voice', {
-        body: {
-          text: current.voiceScript,
-          voiceId: current.voiceId,
-        }
+      const { data, error } = await apiPost<{ audioUrl?: string }>('/generate-elevenlabs-voice', {
+        text: current.voiceScript,
+        voiceId: current.voiceId,
       });
 
       if (error) throw error;

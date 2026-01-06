@@ -25,6 +25,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useRefinerAI } from '@/hooks/useRefinerAI';
+import { apiPost } from '@/lib/api';
 
 interface StructuredInsight {
   whereYouStand: { text: string; benchmark?: string }[];
@@ -67,13 +68,11 @@ export function MetricInsightModalV2({
     setError(null);
     
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('insight-engine-v2', {
-        body: {
-          action: 'getMetricInsight',
-          metricKey,
-          userMetrics,
-          creatorType,
-        }
+      const { data, error: fnError } = await apiPost<{ success?: boolean; data?: StructuredInsight; error?: string }>('/insight-engine-v2', {
+        action: 'getMetricInsight',
+        metricKey,
+        userMetrics,
+        creatorType,
       });
 
       if (fnError) throw fnError;

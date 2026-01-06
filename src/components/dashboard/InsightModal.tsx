@@ -25,6 +25,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useRefinerAI } from '@/hooks/useRefinerAI';
 import { InsightResponse, InsightRequest, MetricKey } from '@/types/insights';
+import { apiPost } from '@/lib/api';
 
 interface InsightModalProps {
   isOpen: boolean;
@@ -82,11 +83,9 @@ export function InsightModal({
         }
       };
 
-      const { data, error: fnError } = await supabase.functions.invoke('insight-engine-v2', {
-        body: {
-          action: 'generateInsight',
-          request
-        }
+      const { data, error: fnError } = await apiPost<{ success?: boolean; data?: InsightResponse; error?: string }>('/insight-engine-v2', {
+        action: 'generateInsight',
+        request
       });
 
       if (fnError) throw fnError;
