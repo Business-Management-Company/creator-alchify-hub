@@ -277,6 +277,148 @@ export type Database = {
         }
         Relationships: []
       }
+      email_events: {
+        Row: {
+          email_send_id: string | null
+          event_data: Json | null
+          event_type: string
+          id: string
+          occurred_at: string | null
+        }
+        Insert: {
+          email_send_id?: string | null
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          occurred_at?: string | null
+        }
+        Update: {
+          email_send_id?: string | null
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          occurred_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_events_email_send_id_fkey"
+            columns: ["email_send_id"]
+            isOneToOne: false
+            referencedRelation: "email_sends"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_sends: {
+        Row: {
+          bounced_at: string | null
+          clicked_at: string | null
+          created_at: string | null
+          created_by: string | null
+          delivered_at: string | null
+          from_email: string
+          id: string
+          metadata: Json | null
+          opened_at: string | null
+          resend_id: string | null
+          sent_at: string | null
+          status: string | null
+          subject: string
+          template_id: string | null
+          to_email: string
+          variables: Json | null
+        }
+        Insert: {
+          bounced_at?: string | null
+          clicked_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          delivered_at?: string | null
+          from_email: string
+          id?: string
+          metadata?: Json | null
+          opened_at?: string | null
+          resend_id?: string | null
+          sent_at?: string | null
+          status?: string | null
+          subject: string
+          template_id?: string | null
+          to_email: string
+          variables?: Json | null
+        }
+        Update: {
+          bounced_at?: string | null
+          clicked_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          delivered_at?: string | null
+          from_email?: string
+          id?: string
+          metadata?: Json | null
+          opened_at?: string | null
+          resend_id?: string | null
+          sent_at?: string | null
+          status?: string | null
+          subject?: string
+          template_id?: string | null
+          to_email?: string
+          variables?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_sends_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_templates: {
+        Row: {
+          category: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          html_content: string
+          id: string
+          is_active: boolean | null
+          name: string
+          subject: string
+          text_content: string | null
+          updated_at: string | null
+          variables: Json | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          html_content: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          subject: string
+          text_content?: string | null
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          html_content?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          subject?: string
+          text_content?: string | null
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Relationships: []
+      }
       insight_documents: {
         Row: {
           applicable_metrics: string[] | null

@@ -35,6 +35,8 @@ import AdminCFODashboard from "./pages/admin/AdminCFODashboard";
 import AdminTasks from "./pages/admin/AdminTasks";
 import AdminTaskDetail from "./pages/admin/AdminTaskDetail";
 import AdminTaskSettings from "./pages/admin/AdminTaskSettings";
+import AdminEmailTemplates from "./pages/admin/AdminEmailTemplates";
+import AdminEmailAnalytics from "./pages/admin/AdminEmailAnalytics";
 import BoardPortal from "./pages/BoardPortal";
 import NotFound from "./pages/NotFound";
 
@@ -82,6 +84,8 @@ const App = () => (
               <Route path="/admin/tasks" element={<AdminTasks />} />
               <Route path="/admin/tasks/settings" element={<AdminTaskSettings />} />
               <Route path="/admin/tasks/:id" element={<AdminTaskDetail />} />
+              <Route path="/admin/emails" element={<AdminEmailTemplates />} />
+              <Route path="/admin/emails/analytics" element={<AdminEmailAnalytics />} />
               {/* Board Portal - Public access for board members */}
               <Route path="/board" element={<BoardPortal />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

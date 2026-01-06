@@ -24,7 +24,8 @@ import {
   ChevronRight,
   ClipboardList,
   Layers,
-  Settings2
+  Settings2,
+  Mail
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -68,6 +69,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   ClipboardList,
   Layers,
   Settings2,
+  Mail,
 };
 
 // Nav item type
@@ -166,6 +168,14 @@ const adminSections: NavSection[] = [
     label: 'Tasks & Workflow',
     items: [
       { id: 'admin-tasks', label: 'Tasks', icon: 'ClipboardList', path: '/admin/tasks' },
+    ],
+  },
+  {
+    id: 'email',
+    label: 'Email Management',
+    items: [
+      { id: 'admin-emails', label: 'Templates', icon: 'Mail', path: '/admin/emails' },
+      { id: 'admin-email-analytics', label: 'Email Analytics', icon: 'TrendingUp', path: '/admin/emails/analytics' },
     ],
   },
   {
