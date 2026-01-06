@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { apiPost } from "@/lib/api";
+import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/api";
 import { toast } from "sonner";
 
 export interface EmailTemplate {
@@ -37,18 +36,10 @@ export function useEmailTemplates(category?: string) {
   return useQuery({
     queryKey: ["email-templates", category],
     queryFn: async () => {
-      let query = supabase
-        .from("email_templates")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (category) {
-        query = query.eq("category", category);
-      }
-
-      const { data, error } = await query;
+      const params = category ? { category } : undefined;
+      const { data, error } = await apiGet<EmailTemplate[]>("/email-templates", params);
       if (error) throw error;
-      return data as EmailTemplate[];
+      return data || [];
     },
   });
 }
@@ -58,13 +49,9 @@ export function useEmailTemplate(id: string | undefined) {
     queryKey: ["email-template", id],
     queryFn: async () => {
       if (!id) return null;
-      const { data, error } = await supabase
-        .from("email_templates")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const { data, error } = await apiGet<EmailTemplate>(`/email-templates/${id}`);
       if (error) throw error;
-      return data as EmailTemplate;
+      return data;
     },
     enabled: !!id,
   });
@@ -75,27 +62,19 @@ export function useCreateEmailTemplate() {
 
   return useMutation({
     mutationFn: async (input: CreateEmailTemplateInput) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      const { data, error } = await supabase
-        .from("email_templates")
-        .insert({
-          ...input,
-          variables: input.variables || [],
-          created_by: user.id,
-        })
-        .select()
-        .single();
+      const { data, error } = await apiPost<EmailTemplate>("/email-templates", {
+        ...input,
+        variables: input.variables || [],
+      });
 
       if (error) throw error;
-      return data as EmailTemplate;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["email-templates"] });
       toast.success("Email template created");
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast.error(`Failed to create template: ${error.message}`);
     },
   });
@@ -106,22 +85,19 @@ export function useUpdateEmailTemplate() {
 
   return useMutation({
     mutationFn: async ({ id, ...input }: UpdateEmailTemplateInput) => {
-      const { data, error } = await supabase
-        .from("email_templates")
-        .update(input)
-        .eq("id", id)
-        .select()
-        .single();
+      const { data, error } = await apiPatch<EmailTemplate>(`/email-templates/${id}`, input);
 
       if (error) throw error;
-      return data as EmailTemplate;
+      return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["email-templates"] });
-      queryClient.invalidateQueries({ queryKey: ["email-template", data.id] });
+      if (data) {
+        queryClient.invalidateQueries({ queryKey: ["email-template", data.id] });
+      }
       toast.success("Email template updated");
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast.error(`Failed to update template: ${error.message}`);
     },
   });
@@ -132,18 +108,14 @@ export function useDeleteEmailTemplate() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("email_templates")
-        .delete()
-        .eq("id", id);
-
+      const { error } = await apiDelete(`/email-templates/${id}`);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["email-templates"] });
       toast.success("Email template deleted");
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast.error(`Failed to delete template: ${error.message}`);
     },
   });
@@ -161,7 +133,7 @@ export function useSendEmail() {
       text?: string;
       from?: string;
       variables?: Record<string, string>;
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
     }) => {
       const { data, error } = await apiPost("/send-email", input);
 
@@ -172,7 +144,7 @@ export function useSendEmail() {
       queryClient.invalidateQueries({ queryKey: ["email-sends"] });
       toast.success("Email sent successfully");
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast.error(`Failed to send email: ${error.message}`);
     },
   });

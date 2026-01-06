@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { authService } from "./auth-service";
 
 /**
  * Base URL for the Node.js backend API
@@ -7,11 +7,10 @@ import { supabase } from "@/integrations/supabase/client";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api";
 
 /**
- * Get the current user's JWT token from Supabase auth
+ * Get the current user's JWT token from auth service
  */
-async function getAuthToken(): Promise<string | null> {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token ?? null;
+function getAuthToken(): string | null {
+  return authService.getAccessToken();
 }
 
 /**
@@ -22,7 +21,7 @@ export async function apiRequest<T = unknown>(
   options: RequestInit = {}
 ): Promise<{ data: T | null; error: Error | null }> {
   try {
-    const token = await getAuthToken();
+    const token = getAuthToken();
     
     const headers: HeadersInit = {
       "Content-Type": "application/json",
@@ -68,9 +67,52 @@ export async function apiPost<T = unknown>(
  * GET request helper
  */
 export async function apiGet<T = unknown>(
+  endpoint: string,
+  params?: Record<string, string>
+): Promise<{ data: T | null; error: Error | null }> {
+  let url = endpoint;
+  if (params) {
+    const searchParams = new URLSearchParams(params);
+    url = `${endpoint}?${searchParams.toString()}`;
+  }
+  return apiRequest<T>(url, {
+    method: "GET",
+  });
+}
+
+/**
+ * PUT request helper
+ */
+export async function apiPut<T = unknown>(
+  endpoint: string,
+  body: Record<string, unknown>
+): Promise<{ data: T | null; error: Error | null }> {
+  return apiRequest<T>(endpoint, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+/**
+ * PATCH request helper
+ */
+export async function apiPatch<T = unknown>(
+  endpoint: string,
+  body: Record<string, unknown>
+): Promise<{ data: T | null; error: Error | null }> {
+  return apiRequest<T>(endpoint, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+/**
+ * DELETE request helper
+ */
+export async function apiDelete<T = unknown>(
   endpoint: string
 ): Promise<{ data: T | null; error: Error | null }> {
   return apiRequest<T>(endpoint, {
-    method: "GET",
+    method: "DELETE",
   });
 }
