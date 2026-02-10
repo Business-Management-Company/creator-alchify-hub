@@ -103,6 +103,71 @@ export type Database = {
         }
         Relationships: []
       }
+      clips: {
+        Row: {
+          caption_style: Json | null
+          created_at: string
+          end_time: string
+          hook: string | null
+          id: string
+          metadata: Json | null
+          platforms: string[] | null
+          project_id: string
+          render_id: string | null
+          render_status: string | null
+          render_url: string | null
+          score: number | null
+          start_time: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          caption_style?: Json | null
+          created_at?: string
+          end_time: string
+          hook?: string | null
+          id?: string
+          metadata?: Json | null
+          platforms?: string[] | null
+          project_id: string
+          render_id?: string | null
+          render_status?: string | null
+          render_url?: string | null
+          score?: number | null
+          start_time: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          caption_style?: Json | null
+          created_at?: string
+          end_time?: string
+          hook?: string | null
+          id?: string
+          metadata?: Json | null
+          platforms?: string[] | null
+          project_id?: string
+          render_id?: string | null
+          render_status?: string | null
+          render_url?: string | null
+          score?: number | null
+          start_time?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clips_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       competitor_sources: {
         Row: {
           category: string
