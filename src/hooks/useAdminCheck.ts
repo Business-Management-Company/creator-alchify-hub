@@ -29,12 +29,11 @@ export const useAdminCheck = () => {
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id)
-          .eq('role', 'admin')
-          .maybeSingle();
+          .in('role', ['admin', 'super_admin']);
 
         if (error) throw error;
 
-        setIsAdmin(!!data);
+        setIsAdmin(!!data && data.length > 0);
         checkedRef.current = true;
         lastUserId.current = user.id;
       } catch (error) {
