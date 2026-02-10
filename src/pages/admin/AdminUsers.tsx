@@ -11,12 +11,15 @@ import {
   UserCog,
   Mail,
   Calendar,
-  Clock
+  Clock,
+  Trash2,
+  UserPlus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +27,25 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Table,
   TableBody,
@@ -35,7 +57,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
 import { useToast } from '@/hooks/use-toast';
-import { apiGet, apiPost } from '@/lib/api';
+import { apiGet, apiPost, apiDelete } from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 
 interface UserData {
@@ -56,6 +78,12 @@ const AdminUsers = () => {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<UserData | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [addingUser, setAddingUser] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -134,6 +162,43 @@ const AdminUsers = () => {
     }
   };
 
+  const deleteUser = async (userId: string) => {
+    try {
+      const { error } = await apiDelete(`/admin/users/${userId}`);
+      if (error) throw error;
+      toast({ title: 'User deleted', description: 'User has been removed.' });
+      setDeleteTarget(null);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast({ title: 'Error', description: 'Failed to delete user', variant: 'destructive' });
+    }
+  };
+
+  const addUser = async () => {
+    if (!newUserEmail || !newUserPassword) return;
+    setAddingUser(true);
+    try {
+      const { error } = await apiPost('/admin/users', {
+        email: newUserEmail,
+        password: newUserPassword,
+        display_name: newUserName || null,
+      });
+      if (error) throw error;
+      toast({ title: 'User created', description: `${newUserEmail} has been added.` });
+      setAddDialogOpen(false);
+      setNewUserEmail('');
+      setNewUserName('');
+      setNewUserPassword('');
+      fetchUsers();
+    } catch (error) {
+      console.error('Error adding user:', error);
+      toast({ title: 'Error', description: 'Failed to create user', variant: 'destructive' });
+    } finally {
+      setAddingUser(false);
+    }
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Never';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -171,19 +236,56 @@ const AdminUsers = () => {
       <AppLayout>
         <div className="space-y-6">
           {/* Header */}
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/admin')}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
-                <Users className="h-8 w-8 text-primary" />
-                User Management
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                {users.length} registered users
-              </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" onClick={() => navigate('/admin')}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
+                  <Users className="h-8 w-8 text-primary" />
+                  User Management
+                </h1>
+                <p className="text-muted-foreground mt-1">
+                  {users.length} registered users
+                </p>
+              </div>
             </div>
+            <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Add User
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New User</DialogTitle>
+                  <DialogDescription>Create a new user account.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="new-email">Email *</Label>
+                    <Input id="new-email" type="email" placeholder="user@example.com" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-name">Display Name</Label>
+                    <Input id="new-name" placeholder="John Doe" value={newUserName} onChange={(e) => setNewUserName(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-password">Password *</Label>
+                    <Input id="new-password" type="password" placeholder="Min 6 characters" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
+                  <Button onClick={addUser} disabled={addingUser || !newUserEmail || !newUserPassword}>
+                    {addingUser && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Create User
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
           
           {/* Search */}
@@ -284,6 +386,14 @@ const AdminUsers = () => {
                             <DropdownMenuItem onClick={() => assignRole(u.id, 'user')}>
                               Assign User Role
                             </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => setDeleteTarget(u)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete User
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -301,6 +411,26 @@ const AdminUsers = () => {
           </Card>
         </div>
       </AppLayout>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{deleteTarget?.email}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteTarget && deleteUser(deleteTarget.id)}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
