@@ -52,7 +52,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { apiPost } from '@/lib/api';
+
 import AppLayout from '@/components/layout/AppLayout';
 import { ClipGenerator } from '@/components/refiner/ClipGenerator';
 import { CaptionEditor } from '@/components/refiner/CaptionEditor';
@@ -1302,8 +1302,8 @@ const NotProcessedCTA = ({
         description: 'AI is transcribing your content.',
       });
 
-      const { data, error } = await apiPost<{ error?: string; transcript?: { wordCount?: number } }>('/transcribe-audio', {
-        projectId, audioData
+      const { data, error } = await supabase.functions.invoke('transcribe-audio', {
+        body: { projectId, audioData },
       });
 
       if (error) throw error;
