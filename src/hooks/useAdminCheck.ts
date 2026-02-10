@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiGet } from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useAdminCheck = () => {
   const { user, loading: authLoading } = useAuth();
@@ -11,7 +11,6 @@ export const useAdminCheck = () => {
 
   useEffect(() => {
     const checkAdmin = async () => {
-      // If no user, set not admin and done loading
       if (!user) {
         setIsAdmin(false);
         setLoading(false);
@@ -20,18 +19,22 @@ export const useAdminCheck = () => {
         return;
       }
 
-      // Skip if we already checked for this user
       if (checkedRef.current && lastUserId.current === user.id) {
         return;
       }
 
       try {
         setLoading(true);
-        const { data, error } = await apiGet<{ isAdmin: boolean }>('/auth/check-admin');
-        
+        const { data, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+
         if (error) throw error;
-        
-        setIsAdmin(data?.isAdmin === true);
+
+        setIsAdmin(!!data);
         checkedRef.current = true;
         lastUserId.current = user.id;
       } catch (error) {
@@ -42,7 +45,6 @@ export const useAdminCheck = () => {
       }
     };
 
-    // Only check when auth is done loading
     if (!authLoading) {
       checkAdmin();
     }
