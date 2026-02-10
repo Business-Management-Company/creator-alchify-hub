@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Heart,
   ThumbsDown,
@@ -96,6 +97,7 @@ export function ClipEditorModal({
   const videoRef = useRef<HTMLVideoElement>(null);
   const grades = getScoreGrades(clip.score);
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   // Update format when prop changes
   useEffect(() => {
@@ -292,7 +294,15 @@ export function ClipEditorModal({
           
           {/* Right sidebar - Actions */}
           <div className="w-48 border-l border-border p-4 space-y-2">
-            <Button variant="outline" className="w-full justify-start" size="sm">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start" 
+              size="sm"
+              onClick={() => {
+                onClose();
+                navigate('/integrations');
+              }}
+            >
               <Share2 className="mr-2 h-4 w-4" />
               Publish on Social
             </Button>
