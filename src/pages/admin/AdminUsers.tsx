@@ -57,7 +57,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
 import { useToast } from '@/hooks/use-toast';
-import { apiGet, apiPost, apiDelete } from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/layout/AppLayout';
 
 interface UserData {
@@ -105,7 +105,7 @@ const AdminUsers = () => {
 
   const fetchUsers = async () => {
     try {
-      const { data, error } = await apiGet<UserData[]>('/admin/users');
+      const { data, error } = await supabase.functions.invoke('admin-users', { method: 'GET' });
       if (error) throw error;
       setUsers(data || []);
     } catch (error) {
@@ -122,49 +122,40 @@ const AdminUsers = () => {
 
   const assignRole = async (userId: string, role: 'super_admin' | 'admin' | 'moderator' | 'user') => {
     try {
-      const { error } = await apiPost(`/admin/users/${userId}/roles`, { role, action: 'assign' });
-      
-      if (error) throw error;
-      
-      toast({
-        title: 'Role assigned',
-        description: `User has been assigned the ${role} role.`,
+      const { error } = await supabase.functions.invoke('admin-users', {
+        method: 'POST',
+        body: { userId, role, action: 'assign' },
       });
+      if (error) throw error;
+      toast({ title: 'Role assigned', description: `User has been assigned the ${role} role.` });
       fetchUsers();
     } catch (error) {
       console.error('Error assigning role:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to assign role',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Failed to assign role', variant: 'destructive' });
     }
   };
 
   const removeRole = async (userId: string, role: string) => {
     try {
-      const { error } = await apiPost(`/admin/users/${userId}/roles`, { role, action: 'remove' });
-      
-      if (error) throw error;
-      
-      toast({
-        title: 'Role removed',
-        description: `Role has been removed from user.`,
+      const { error } = await supabase.functions.invoke('admin-users', {
+        method: 'POST',
+        body: { userId, role, action: 'remove' },
       });
+      if (error) throw error;
+      toast({ title: 'Role removed', description: 'Role has been removed from user.' });
       fetchUsers();
     } catch (error) {
       console.error('Error removing role:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to remove role',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Failed to remove role', variant: 'destructive' });
     }
   };
 
   const deleteUser = async (userId: string) => {
     try {
-      const { error } = await apiDelete(`/admin/users/${userId}`);
+      const { error } = await supabase.functions.invoke('admin-users', {
+        method: 'DELETE',
+        body: { userId },
+      });
       if (error) throw error;
       toast({ title: 'User deleted', description: 'User has been removed.' });
       setDeleteTarget(null);
@@ -179,10 +170,9 @@ const AdminUsers = () => {
     if (!newUserEmail || !newUserPassword) return;
     setAddingUser(true);
     try {
-      const { error } = await apiPost('/admin/users', {
-        email: newUserEmail,
-        password: newUserPassword,
-        display_name: newUserName || null,
+      const { error } = await supabase.functions.invoke('admin-users', {
+        method: 'POST',
+        body: { email: newUserEmail, password: newUserPassword, display_name: newUserName || null },
       });
       if (error) throw error;
       toast({ title: 'User created', description: `${newUserEmail} has been added.` });
