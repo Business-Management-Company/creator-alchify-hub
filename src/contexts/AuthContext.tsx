@@ -1,9 +1,18 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { authService, AuthUser, AuthSession } from '@/lib/auth-service';
+import { supabase } from '@/integrations/supabase/client';
+import type { User, Session } from '@supabase/supabase-js';
+
+export interface AuthUser {
+  id: string;
+  email: string | null;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+  createdAt?: string;
+}
 
 interface AuthContextType {
   user: AuthUser | null;
-  session: AuthSession | null;
+  session: Session | null;
   loading: boolean;
   signUp: (email: string, password: string, displayName?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -12,32 +21,57 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function mapUser(user: User | null): AuthUser | null {
+  if (!user) return null;
+  return {
+    id: user.id,
+    email: user.email ?? null,
+    displayName: user.user_metadata?.display_name ?? user.user_metadata?.full_name ?? null,
+    avatarUrl: user.user_metadata?.avatar_url ?? null,
+    createdAt: user.created_at,
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [session, setSession] = useState<AuthSession | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Subscribe to auth state changes
-    const unsubscribe = authService.onAuthStateChange((state) => {
-      setUser(state.user);
-      setSession(state.session);
-      setLoading(state.loading);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(mapUser(session?.user ?? null));
+      setLoading(false);
     });
 
-    return () => unsubscribe();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(mapUser(session?.user ?? null));
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const signUp = async (email: string, password: string, displayName?: string) => {
-    return authService.signUp(email, password, displayName);
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { display_name: displayName },
+        emailRedirectTo: window.location.origin,
+      },
+    });
+    return { error: error ? new Error(error.message) : null };
   };
 
   const signIn = async (email: string, password: string) => {
-    return authService.signIn(email, password);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error: error ? new Error(error.message) : null };
   };
 
   const signOut = async () => {
-    await authService.signOut();
+    await supabase.auth.signOut();
   };
 
   return (
@@ -54,6 +88,3 @@ export function useAuth() {
   }
   return context;
 }
-
-// Re-export types for convenience
-export type { AuthUser, AuthSession };
