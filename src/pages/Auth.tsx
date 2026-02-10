@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Sparkles, Mail, Lock, User, ArrowRight, Loader2 } from 'lucide-react';
+import { Sparkles, Mail, Lock, User, ArrowRight, Loader2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { z } from 'zod';
+import { supabase } from '@/integrations/supabase/client';
 
 // Auth now uses Lovable Cloud authentication directly
 
@@ -21,6 +22,9 @@ const Auth = () => {
   const [displayName, setDisplayName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [forgotMode, setForgotMode] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
   
   const { user, loading, signIn, signUp } = useAuth();
   const navigate = useNavigate();
@@ -49,8 +53,41 @@ const Auth = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleForgotPassword = async () => {
+    const emailResult = emailSchema.safeParse(email);
+    if (!emailResult.success) {
+      setErrors({ email: emailResult.error.errors[0].message });
+      return;
+    }
+    setSendingReset(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+      if (error) throw error;
+      toast({
+        title: 'Reset email sent',
+        description: 'Check your inbox for the password reset link.',
+      });
+      setForgotMode(false);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to send reset email.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingReset(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (forgotMode) {
+      handleForgotPassword();
+      return;
+    }
     
     if (!validateForm()) return;
     
@@ -74,7 +111,6 @@ const Auth = () => {
             });
           }
         } else {
-          // Navigate with welcome flag to show centered dialog
           navigate('/dashboard?welcome=true');
         }
       } else {
@@ -116,7 +152,7 @@ const Auth = () => {
   return (
     <>
       <Helmet>
-        <title>{isLogin ? 'Sign In' : 'Sign Up'} | Alchify</title>
+        <title>{forgotMode ? 'Reset Password' : isLogin ? 'Sign In' : 'Sign Up'} | Alchify</title>
         <meta name="description" content="Sign in to Alchify to start refining your content with AI-powered post-production tools." />
       </Helmet>
       
@@ -140,17 +176,19 @@ const Auth = () => {
           <div className="bg-card/50 backdrop-blur-xl border border-border rounded-2xl p-8 shadow-2xl">
             <div className="text-center mb-6">
               <h1 className="text-2xl font-bold text-foreground mb-2">
-                {isLogin ? 'Welcome back' : 'Create your account'}
+                {forgotMode ? 'Reset your password' : isLogin ? 'Welcome back' : 'Create your account'}
               </h1>
               <p className="text-muted-foreground">
-                {isLogin 
-                  ? 'Sign in to continue refining your content' 
-                  : 'Start transforming your content with AI'}
+                {forgotMode
+                  ? 'Enter your email and we\'ll send you a reset link'
+                  : isLogin 
+                    ? 'Sign in to continue refining your content' 
+                    : 'Start transforming your content with AI'}
               </p>
             </div>
             
             <form onSubmit={handleSubmit} className="space-y-4">
-              {!isLogin && (
+              {!isLogin && !forgotMode && (
                 <div className="space-y-2">
                   <Label htmlFor="displayName" className="text-foreground">Display Name</Label>
                   <div className="relative">
@@ -188,54 +226,90 @@ const Auth = () => {
                 )}
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-foreground">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      setErrors(prev => ({ ...prev, password: undefined }));
-                    }}
-                    className="pl-10 bg-background/50 border-border"
-                  />
+              {!forgotMode && (
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-foreground">Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        setErrors(prev => ({ ...prev, password: undefined }));
+                      }}
+                      className="pl-10 pr-10 bg-background/50 border-border"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p className="text-sm text-destructive">{errors.password}</p>
+                  )}
+                  {isLogin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForgotMode(true);
+                        setErrors({});
+                      }}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  )}
                 </div>
-                {errors.password && (
-                  <p className="text-sm text-destructive">{errors.password}</p>
-                )}
-              </div>
+              )}
               
               <Button 
                 type="submit" 
                 variant="hero" 
                 className="w-full"
-                disabled={isSubmitting}
+                disabled={isSubmitting || sendingReset}
               >
-                {isSubmitting ? (
+                {(isSubmitting || sendingReset) ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 ) : null}
-                {isLogin ? 'Sign In' : 'Create Account'}
+                {forgotMode ? 'Send Reset Link' : isLogin ? 'Sign In' : 'Create Account'}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </form>
             
             <div className="mt-6 text-center">
               <p className="text-muted-foreground">
-                {isLogin ? "Don't have an account?" : 'Already have an account?'}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsLogin(!isLogin);
-                    setErrors({});
-                  }}
-                  className="ml-2 text-primary hover:underline font-medium"
-                >
-                  {isLogin ? 'Sign up' : 'Sign in'}
-                </button>
+                {forgotMode ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForgotMode(false);
+                      setErrors({});
+                    }}
+                    className="text-primary hover:underline font-medium"
+                  >
+                    ← Back to sign in
+                  </button>
+                ) : (
+                  <>
+                    {isLogin ? "Don't have an account?" : 'Already have an account?'}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsLogin(!isLogin);
+                        setErrors({});
+                      }}
+                      className="ml-2 text-primary hover:underline font-medium"
+                    >
+                      {isLogin ? 'Sign up' : 'Sign in'}
+                    </button>
+                  </>
+                )}
               </p>
             </div>
           </div>
