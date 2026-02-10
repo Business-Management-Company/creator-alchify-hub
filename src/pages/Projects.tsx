@@ -9,7 +9,8 @@ import {
   MoreVertical,
   Trash2,
   Wand2,
-  Download
+  Download,
+  Scissors
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +46,7 @@ interface Project {
   source_file_size: number | null;
   created_at: string;
   updated_at: string;
+  clip_count?: number;
 }
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
@@ -85,7 +87,23 @@ const Projects = () => {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      setProjects(data || []);
+
+      // Fetch clip counts per project
+      const projectIds = (data || []).map(p => p.id);
+      let clipCounts: Record<string, number> = {};
+      if (projectIds.length > 0) {
+        const { data: clips } = await supabase
+          .from('clips')
+          .select('project_id')
+          .in('project_id', projectIds);
+        if (clips) {
+          clips.forEach((c: any) => {
+            clipCounts[c.project_id] = (clipCounts[c.project_id] || 0) + 1;
+          });
+        }
+      }
+
+      setProjects((data || []).map(p => ({ ...p, clip_count: clipCounts[p.id] || 0 })));
     } catch (error) {
       console.error('Error fetching projects:', error);
       toast({
@@ -229,6 +247,15 @@ const Projects = () => {
                         </div>
                         <span className="text-muted-foreground/50">•</span>
                         <span>{formatFileSize(project.source_file_size)}</span>
+                        {(project.clip_count ?? 0) > 0 && (
+                          <>
+                            <span className="text-muted-foreground/50">•</span>
+                            <div className="flex items-center gap-1">
+                              <Scissors className="h-3.5 w-3.5 text-primary" />
+                              <span>{project.clip_count} clips</span>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                     

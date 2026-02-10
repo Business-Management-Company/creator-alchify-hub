@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Scissors, 
   Loader2, 
@@ -34,6 +35,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useConfetti } from '@/hooks/useConfetti';
 import { apiPost } from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { ClipEditorModal } from './ClipEditorModal';
 
 interface Clip {
@@ -277,6 +280,7 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [hasAutoRendered, setHasAutoRendered] = useState(false);
   const [selectedClipIndex, setSelectedClipIndex] = useState<number | null>(null);
+  const [loadedFromDb, setLoadedFromDb] = useState(false);
   const [captionStyle, setCaptionStyle] = useState<CaptionStyle>({
     font: 'Montserrat ExtraBold',
     color: '#FFFFFF',
@@ -287,6 +291,57 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
   });
   const { toast } = useToast();
   const { celebrate } = useConfetti();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Load saved clips from database on mount
+  useEffect(() => {
+    if (!projectId || loadedFromDb) return;
+    const loadSavedClips = async () => {
+      const { data } = await supabase
+        .from('clips')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: true });
+      if (data && data.length > 0) {
+        const loaded: Clip[] = data.map((row: any) => ({
+          title: row.title,
+          startTime: row.start_time,
+          endTime: row.end_time,
+          hook: row.hook || '',
+          platforms: row.platforms || [],
+          score: row.score || 0,
+          renderId: row.render_id || undefined,
+          renderStatus: (row.render_status as Clip['renderStatus']) || 'idle',
+          renderUrl: row.render_url || undefined,
+        }));
+        setClips(loaded);
+      }
+      setLoadedFromDb(true);
+    };
+    loadSavedClips();
+  }, [projectId, loadedFromDb]);
+
+  // Save clips to database
+  const saveClipsToDb = async (clipsToSave: Clip[]) => {
+    if (!user || !projectId) return;
+    // Delete existing clips for this project, then insert new ones
+    await supabase.from('clips').delete().eq('project_id', projectId);
+    const rows = clipsToSave.map(clip => ({
+      project_id: projectId,
+      user_id: user.id,
+      title: clip.title,
+      start_time: clip.startTime,
+      end_time: clip.endTime,
+      hook: clip.hook,
+      platforms: clip.platforms,
+      score: clip.score,
+      render_id: clip.renderId || null,
+      render_status: clip.renderStatus || 'idle',
+      render_url: clip.renderUrl || null,
+    }));
+    await supabase.from('clips').insert(rows);
+  };
 
   // Auto-generate clips when autoGenerate prop is true
   useEffect(() => {
@@ -371,12 +426,12 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
         ];
         
         setClips(demoClips);
+        saveClipsToDb(demoClips);
         celebrate('first_clip');
         toast({
           title: 'Clips generated!',
           description: `Found ${demoClips.length} potential viral moments from your content.`,
         });
-        // Call callback without causing navigation
         if (onClipGenerated) onClipGenerated();
         return;
       }
@@ -387,6 +442,7 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
       }));
       
       setClips(clipsWithStatus);
+      saveClipsToDb(clipsWithStatus);
       celebrate('first_clip');
 
       toast({
@@ -429,6 +485,7 @@ export function ClipGenerator({ projectId, transcriptContent, transcriptSegments
         },
       ];
       setClips(demoClips);
+      saveClipsToDb(demoClips);
       toast({
         title: 'Clips generated!',
         description: `Found ${demoClips.length} potential viral moments.`,
