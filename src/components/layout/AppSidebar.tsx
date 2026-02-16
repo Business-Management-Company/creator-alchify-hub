@@ -25,7 +25,8 @@ import {
   ClipboardList,
   Layers,
   Settings2,
-  Mail
+  Mail,
+  Mic,
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -70,6 +71,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Layers,
   Settings2,
   Mail,
+  Mic
 };
 
 // Nav item type
@@ -97,19 +99,20 @@ const creatorSections: NavSection[] = [
     ],
   },
   {
-    id: 'create',
-    label: 'Create',
+    id: 'workspace',
+    label: 'Workspace',
     items: [
       { id: 'studio', label: 'Recording Studio', icon: 'Video', path: '/studio' },
       { id: 'upload', label: 'Upload', icon: 'Upload', path: '/upload' },
+      { id: 'projects', label: 'Projects', icon: 'FolderOpen', path: '/projects' },
+      { id: 'media-library', label: 'Media Library', icon: 'Library', path: '/library' },
     ],
   },
   {
-    id: 'library',
-    label: 'Library',
+    id: 'podcast studio',
+    label: 'Podcast Studio',
     items: [
-      { id: 'projects', label: 'Projects', icon: 'FolderOpen', path: '/projects' },
-      { id: 'media-library', label: 'Media Library', icon: 'Library', path: '/library' },
+      { id: 'podcast', label: 'Podcast', icon: 'Mic', path: '/podcasts' },
     ],
   },
   {

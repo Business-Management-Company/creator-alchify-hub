@@ -38,6 +38,9 @@ import AdminTaskSettings from "./pages/admin/AdminTaskSettings";
 import AdminEmailTemplates from "./pages/admin/AdminEmailTemplates";
 import AdminEmailAnalytics from "./pages/admin/AdminEmailAnalytics";
 import BoardPortal from "./pages/BoardPortal";
+import Podcasts from "./pages/Podcast";
+import CreatePodcast from "./pages/CreatePodcast";
+import ImportPodcast from "./pages/ImportPodcast";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -86,6 +89,10 @@ const App = () => (
               <Route path="/admin/tasks/:id" element={<AdminTaskDetail />} />
               <Route path="/admin/emails" element={<AdminEmailTemplates />} />
               <Route path="/admin/emails/analytics" element={<AdminEmailAnalytics />} />
+              {/* Podcast Routes */}
+              <Route path="/podcasts" element={<Podcasts />} />
+              <Route path="/podcasts/create" element={<CreatePodcast />} />
+              <Route path="/podcasts/import" element={<ImportPodcast />} />
               {/* Board Portal - Public access for board members */}
               <Route path="/board" element={<BoardPortal />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
