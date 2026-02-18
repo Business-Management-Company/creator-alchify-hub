@@ -40,7 +40,6 @@ serve(async (req) => {
       });
     }
 
-    // Fetch the project to get the file URL
     const { data: project, error: projectError } = await supabase
       .from('projects')
       .select('*')
@@ -54,107 +53,84 @@ serve(async (req) => {
       });
     }
 
-    // Update project status
     await supabase.from('projects').update({ status: 'transcribing' }).eq('id', projectId);
 
-    let audioContent: string;
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY is not configured');
+    }
+
+    // Get audio as binary
+    let audioBytes: Uint8Array;
+    let fileName = 'audio.mp3';
 
     if (audioData) {
-      // Audio was extracted client-side and sent as base64
-      audioContent = audioData;
+      // Base64 audio from client
+      const binaryStr = atob(audioData);
+      audioBytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) {
+        audioBytes[i] = binaryStr.charCodeAt(i);
+      }
     } else if (project.source_file_url) {
-      // Download the file from storage and convert to base64
       const fileResponse = await fetch(project.source_file_url);
-      if (!fileResponse.ok) {
-        throw new Error('Failed to download source file');
-      }
-      const arrayBuffer = await fileResponse.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      
-      // Convert to base64
-      let binary = '';
-      const chunkSize = 8192;
-      for (let i = 0; i < uint8Array.length; i += chunkSize) {
-        const chunk = uint8Array.subarray(i, i + chunkSize);
-        binary += String.fromCharCode(...chunk);
-      }
-      audioContent = btoa(binary);
+      if (!fileResponse.ok) throw new Error('Failed to download source file');
+      audioBytes = new Uint8Array(await fileResponse.arrayBuffer());
+      fileName = project.source_file_name || 'audio.mp3';
     } else {
       return new Response(JSON.stringify({ error: 'No audio source available' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Call Lovable AI for transcription using Whisper-compatible endpoint
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
-    }
+    // Call OpenAI Whisper API with verbose_json for segments
+    const formData = new FormData();
+    formData.append('file', new Blob([audioBytes]), fileName);
+    formData.append('model', 'whisper-1');
+    formData.append('response_format', 'verbose_json');
+    formData.append('timestamp_granularities[]', 'segment');
 
-    // Use Gemini for transcription via chat completion
-    const transcriptionPrompt = `You are a professional transcription service. I will provide you with audio content encoded in base64. Please transcribe it accurately.
-
-Since I cannot send actual audio through this text interface, I'll use an alternative approach: Please analyze the project context and generate a realistic transcription response.
-
-For project "${project.title}", generate a structured transcription response in JSON format with:
-- "text": The full transcription text (generate realistic sample content based on the project title, about 200-500 words)
-- "segments": An array of segments, each with "start" (seconds), "end" (seconds), "text" (segment text), "confidence" (0.85-0.99)
-- "wordCount": Total word count
-- "fillerWordsDetected": Number of filler words found (um, uh, like, you know, etc.)
-- "avgConfidence": Average confidence score
-
-Return ONLY valid JSON, no markdown or explanation.`;
-
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const whisperResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: 'You are a transcription service. Return only valid JSON.' },
-          { role: 'user', content: transcriptionPrompt },
-        ],
-        temperature: 0.7,
-      }),
+      headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+      body: formData,
     });
 
-    if (!aiResponse.ok) {
-      const errText = await aiResponse.text();
-      console.error('AI API error:', errText);
-      throw new Error(`AI transcription failed: ${aiResponse.status}`);
+    if (!whisperResponse.ok) {
+      const errText = await whisperResponse.text();
+      console.error('OpenAI Whisper error:', errText);
+      throw new Error(`Whisper transcription failed: ${whisperResponse.status}`);
     }
 
-    const aiResult = await aiResponse.json();
-    const rawContent = aiResult.choices?.[0]?.message?.content || '';
-    
-    // Parse the JSON from the AI response (strip markdown code fences if present)
-    let transcriptionResult;
-    try {
-      const jsonStr = rawContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      transcriptionResult = JSON.parse(jsonStr);
-    } catch (parseError) {
-      console.error('Failed to parse AI response:', rawContent);
-      // Fallback transcription
-      transcriptionResult = {
-        text: `Transcription for "${project.title}" - AI transcription is being processed.`,
-        segments: [{ start: 0, end: 10, text: `Transcription for "${project.title}"`, confidence: 0.95 }],
-        wordCount: 10,
-        fillerWordsDetected: 0,
-        avgConfidence: 0.95,
-      };
-    }
+    const whisperResult = await whisperResponse.json();
 
-    // Save transcript to database
+    // Map Whisper segments to our format
+    const segments = (whisperResult.segments || []).map((seg: any) => ({
+      start: seg.start,
+      end: seg.end,
+      text: seg.text.trim(),
+      confidence: seg.avg_logprob ? Math.min(0.99, Math.max(0.5, 1 + seg.avg_logprob)) : 0.95,
+    }));
+
+    const fullText = whisperResult.text || '';
+    const wordCount = fullText.split(/\s+/).filter(Boolean).length;
+
+    // Detect filler words
+    const fillerPattern = /\b(um|uh|like|you know|so|basically|actually|literally|right|I mean)\b/gi;
+    const fillerMatches = fullText.match(fillerPattern);
+    const fillerWordsDetected = fillerMatches ? fillerMatches.length : 0;
+
+    const avgConfidence = segments.length > 0
+      ? segments.reduce((sum: number, s: any) => sum + s.confidence, 0) / segments.length
+      : 0.95;
+
+    // Save transcript
     const { error: transcriptError } = await supabase.from('transcripts').insert({
       project_id: projectId,
-      content: transcriptionResult.text,
-      segments: transcriptionResult.segments,
-      word_count: transcriptionResult.wordCount || 0,
-      filler_words_detected: transcriptionResult.fillerWordsDetected || 0,
-      avg_confidence: transcriptionResult.avgConfidence || 0.95,
+      content: fullText,
+      segments,
+      word_count: wordCount,
+      filler_words_detected: fillerWordsDetected,
+      avg_confidence: Math.round(avgConfidence * 1000) / 1000,
     });
 
     if (transcriptError) {
@@ -162,30 +138,18 @@ Return ONLY valid JSON, no markdown or explanation.`;
       throw new Error('Failed to save transcript');
     }
 
-    // Update project status
     await supabase.from('projects').update({ status: 'editing' }).eq('id', projectId);
 
-    // Log the AI action
     await supabase.from('ai_action_log').insert({
       project_id: projectId,
       user_id: user.id,
       action_type: 'transcribe',
-      action_details: {
-        wordCount: transcriptionResult.wordCount,
-        fillerWordsDetected: transcriptionResult.fillerWordsDetected,
-        avgConfidence: transcriptionResult.avgConfidence,
-      },
+      action_details: { wordCount, fillerWordsDetected, avgConfidence, provider: 'openai-whisper' },
     });
 
     return new Response(JSON.stringify({
       success: true,
-      transcript: {
-        text: transcriptionResult.text,
-        wordCount: transcriptionResult.wordCount,
-        fillerWordsDetected: transcriptionResult.fillerWordsDetected,
-        avgConfidence: transcriptionResult.avgConfidence,
-        segments: transcriptionResult.segments,
-      },
+      transcript: { text: fullText, wordCount, fillerWordsDetected, avgConfidence, segments },
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
