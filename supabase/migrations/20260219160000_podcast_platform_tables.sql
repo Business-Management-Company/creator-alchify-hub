@@ -68,10 +68,11 @@ CREATE POLICY "Creators can delete own podcasts"
 -- --------------------------------------------------------
 CREATE TABLE public.episodes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    podcast_id UUID NOT NULL REFERENCES public.podcasts(id) ON DELETE CASCADE,
+    podcast_id UUID NOT NULL REFERENCES public.podcasts(id) ON DELETE CASCADE UNIQUE,
     title TEXT NOT NULL,
     description TEXT,
     audio_url TEXT,
+    original_audio_url TEXT,
     duration_seconds INTEGER,
     file_size_bytes BIGINT,
     episode_number INTEGER,
@@ -81,7 +82,8 @@ CREATE TABLE public.episodes (
     publish_date TIMESTAMPTZ,
     status TEXT NOT NULL DEFAULT 'draft',
     source TEXT NOT NULL DEFAULT 'upload',
-    external_guid TEXT,
+    external_guid TEXT UNIQUE,
+    raw_rss JSON,
     project_id UUID REFERENCES public.projects(id) ON DELETE SET NULL,
     show_notes TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
