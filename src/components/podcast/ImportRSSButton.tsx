@@ -47,7 +47,7 @@ export const ImportRSSButton = ({ onImportComplete }: ImportRSSButtonProps) => {
         variant="default"
         size="lg"
         className="text-base font-semibold border-2"
-        onClick={() => navigate("/podcast/import")}
+        onClick={() => navigate("/podcasts/import")}
       >
         <CloudDownload className="w-5 h-5 mr-2" />
         Import from RSS
