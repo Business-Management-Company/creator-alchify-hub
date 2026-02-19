@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 import { Rss, Loader2, CloudDownload } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -11,7 +12,7 @@ interface ImportRSSButtonProps {
 }
 
 export const ImportRSSButton = ({ onImportComplete }: ImportRSSButtonProps) => {
-  const navigation = useNavigation();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [rssUrl, setRssUrl] = useState("");
   const [loading, setLoading] = useState(false);
@@ -46,7 +47,7 @@ export const ImportRSSButton = ({ onImportComplete }: ImportRSSButtonProps) => {
         variant="default"
         size="lg"
         className="text-base font-semibold border-2"
-        onClick={() => navigate("/podcasts/import")}
+        onClick={() => navigate("/podcast/import")}
       >
         <CloudDownload className="w-5 h-5 mr-2" />
         Import from RSS
