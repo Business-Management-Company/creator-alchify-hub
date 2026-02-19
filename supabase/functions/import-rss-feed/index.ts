@@ -1,30 +1,40 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { XMLParser } from "https://esm.sh/fast-xml-parser@4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const MAX_FEED_SIZE = 5_000_000; // 5MB
-const FETCH_TIMEOUT_MS = 8000; // 8 seconds
+const MAX_FEED_SIZE = 5_000_000;
+const FETCH_TIMEOUT_MS = 8000;
 
-// Supabase client inside Edge Function
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
+// Safely extract a string from parsed XML value (handles CDATA objects, nested values, etc.)
+function textOf(val: unknown): string {
+  if (val == null) return "";
+  if (typeof val === "string") return val;
+  if (typeof val === "number" || typeof val === "boolean") return String(val);
+  if (typeof val === "object") {
+    const obj = val as Record<string, unknown>;
+    if ("#text" in obj) return textOf(obj["#text"]);
+    if ("__cdata" in obj) return textOf(obj["__cdata"]);
+  }
+  return String(val);
+}
+
 serve(async (req) => {
-  // CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    // Validate auth
+    // Auth
     const authHeader = req.headers.get("Authorization") || "";
     const token = authHeader.replace("Bearer ", "");
     const { data: user, error: userError } = await supabase.auth.getUser(token);
@@ -45,31 +55,9 @@ serve(async (req) => {
       });
     }
 
-    // Validate URL
-    if (!rssUrl.startsWith("https://")) {
-      return new Response(
-        JSON.stringify({ error: "Only HTTPS URLs are allowed" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    // Block internal IPs (SSRF)
-    const blockedHosts = ["127.", "10.", "192.168.", "172.16.", "localhost"];
-    const urlObj = new URL(rssUrl);
-    if (blockedHosts.some((host) => urlObj.hostname.startsWith(host))) {
-      return new Response(JSON.stringify({ error: "Forbidden host" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Fetch RSS with timeout
+    // Fetch RSS
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
     const feedResponse = await fetch(rssUrl, { signal: controller.signal });
     clearTimeout(timeoutId);
 
@@ -77,192 +65,152 @@ serve(async (req) => {
       throw new Error(`Failed to fetch RSS feed: ${feedResponse.status}`);
     }
 
-    const contentLength = parseInt(
-      feedResponse.headers.get("content-length") || "0",
-    );
-    if (contentLength > MAX_FEED_SIZE) {
-      throw new Error("Feed too large");
-    }
-
     const xmlText = await feedResponse.text();
     if (xmlText.length > MAX_FEED_SIZE) {
       throw new Error("Feed too large");
     }
 
-    // Parse XML
-    const parser = new XMLParser({
-      ignoreAttributes: false,
-      attributeNamePrefix: "@_",
-      removeNSPrefix: true,
-      cdataPropName: "#text",
-    });
-    const feedJson = parser.parse(xmlText);
-
-    if (!feedJson.rss || !feedJson.rss.channel) {
-      throw new Error("Invalid RSS feed");
-    }
-
-    const channel = feedJson.rss.channel;
-
-    // Extract podcast metadata
-    const podcastMeta = {
-      title: channel.title ?? "",
-      description: channel.description ?? "",
-      cover_image_url:
-        channel["itunes:image"]?.["@_href"] ?? channel.image?.url ?? null,
-      website_url: channel.link ?? null,
-      language: channel.language ?? "en",
-      author_name: channel["itunes:author"] ?? channel.author ?? null,
-      author_email: channel["itunes:email"] ?? null,
-      category: channel["itunes:category"]?.["@_text"] ?? null,
-      is_explicit: channel["itunes:explicit"] === "yes",
+    // Parse XML using regex (no external XML lib needed)
+    const getTag = (text: string, tag: string): string => {
+      const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i");
+      const m = text.match(re);
+      if (!m) return "";
+      return m[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").replace(/<[^>]*>/g, "").trim();
+    };
+    const getAttr = (text: string, tag: string, attr: string): string => {
+      const re = new RegExp(`<${tag}[^>]*${attr}=["']([^"']*)["']`, "i");
+      const m = text.match(re);
+      return m ? m[1] : "";
     };
 
-    // Episodes array
-    const rawItems = Array.isArray(channel.item)
-      ? channel.item
-      : [channel.item];
-    const episodes = rawItems
-      .filter((item: any) => item && item.enclosure?.["@_url"])
-      .map((item: any) => {
-        // Duration parsing
+    const channelMatch = xmlText.match(/<channel>([\s\S]*?)<\/channel>/i);
+    if (!channelMatch) throw new Error("Invalid RSS feed - no channel element");
+    const ch = channelMatch[1];
+
+    const podcastTitle = getTag(ch, "title") || "Untitled Podcast";
+    const podcastMeta = {
+      title: podcastTitle,
+      description: getTag(ch, "description"),
+      image_url: getAttr(ch, "itunes:image", "href") || getTag(ch, "url") || null,
+      website_url: getTag(ch, "link") || null,
+      language: getTag(ch, "language") || "en",
+      author: getTag(ch, "itunes:author") || null,
+      author_email: getTag(ch, "itunes:email") || null,
+      category: getAttr(ch, "itunes:category", "text") || null,
+      is_explicit: getTag(ch, "itunes:explicit").toLowerCase() === "yes",
+    };
+
+    console.log("Parsed podcast:", podcastMeta.title);
+
+    // Parse episodes
+    const itemMatches = [...ch.matchAll(/<item>([\s\S]*?)<\/item>/gi)];
+    const episodes = itemMatches
+      .map((match) => {
+        const item = match[1];
+        const audioUrl = getAttr(item, "enclosure", "url");
+        if (!audioUrl) return null;
+
+        const durStr = getTag(item, "itunes:duration");
         let durationSeconds = 0;
-        const duration = item["itunes:duration"];
-        if (duration) {
-          if (duration.includes(":")) {
-            const parts = duration.split(":").map(Number);
-            if (parts.length === 3)
-              durationSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
-            else if (parts.length === 2)
-              durationSeconds = parts[0] * 60 + parts[1];
-          } else {
-            durationSeconds = parseInt(duration, 10) || 0;
-          }
+        if (durStr) {
+          const parts = durStr.split(":").map(Number);
+          if (parts.length === 3) durationSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+          else if (parts.length === 2) durationSeconds = parts[0] * 60 + parts[1];
+          else durationSeconds = parseInt(durStr) || 0;
         }
 
         return {
-          title: item.title ?? "Untitled Episode",
-          description: item.description ?? item["itunes:summary"] ?? "",
-          pubDate: item.pubDate ?? new Date().toISOString(),
-          guid: item.guid ?? null,
-          audioUrl: item.enclosure["@_url"],
-          fileSizeBytes: parseInt(item.enclosure["@_length"] || "0", 10),
-          durationSeconds,
-          episodeNumber: parseInt(item["itunes:episode"] || "0", 10) || null,
-          seasonNumber: parseInt(item["itunes:season"] || "0", 10) || null,
-          episodeType: item["itunes:episodeType"] ?? "full",
-          isExplicit: item["itunes:explicit"] === "yes",
+          title: getTag(item, "title") || "Untitled Episode",
+          description: getTag(item, "description"),
+          audio_url: audioUrl,
+          file_size_bytes: parseInt(getAttr(item, "enclosure", "length") || "0"),
+          duration_seconds: durationSeconds,
+          pub_date: getTag(item, "pubDate") ? new Date(getTag(item, "pubDate")).toISOString() : null,
+          episode_number: parseInt(getTag(item, "itunes:episode")) || null,
+          season_number: parseInt(getTag(item, "itunes:season")) || null,
+          guid: getTag(item, "guid") || null,
         };
-      });
+      })
+      .filter(Boolean);
 
-    // Transactional insert using Supabase
+    console.log(`Parsed ${episodes.length} episodes`);
+
+    // Check if already imported
     const { data: existingPodcast } = await supabase
       .from("podcasts")
       .select("id")
       .eq("rss_feed_url", rssUrl)
+      .eq("user_id", user.user.id)
       .maybeSingle();
 
     if (existingPodcast) {
       return new Response(
         JSON.stringify({ error: "Podcast already imported" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    // Generate slug (ensure unique)
-    let slugBase = podcastMeta.title.toLowerCase().replace(/\s+/g, "-");
-    let slug = slugBase;
-    let counter = 1;
-    while (true) {
-      const { data: exists } = await supabase
-        .from("podcasts")
-        .select("id")
-        .eq("slug", slug)
-        .maybeSingle();
-      if (!exists) break;
-      slug = `${slugBase}-${counter}`;
-      counter++;
-    }
-
-    // Create podcast record
+    // Insert podcast (matches actual DB schema)
     const { data: podcast, error: podcastError } = await supabase
       .from("podcasts")
       .insert({
-        creator_id: user.user.id,
-        slug,
+        user_id: user.user.id,
         title: podcastMeta.title,
         description: podcastMeta.description,
-        cover_image_url: podcastMeta.cover_image_url,
-        author_name: podcastMeta.author_name,
+        image_url: podcastMeta.image_url,
+        author: podcastMeta.author,
         author_email: podcastMeta.author_email,
         website_url: podcastMeta.website_url,
         language: podcastMeta.language,
         category: podcastMeta.category,
         is_explicit: podcastMeta.is_explicit,
-        status: "published",
         rss_feed_url: rssUrl,
+        status: "active",
       })
       .select()
       .single();
+
     if (podcastError) throw podcastError;
 
-    // Create rss_import record
+    // Insert rss_imports record
     await supabase.from("rss_imports").insert({
+      user_id: user.user.id,
       podcast_id: podcast.id,
-      feed_url: rssUrl,
-      sync_status: "success",
-      last_synced_at: new Date().toISOString(),
-      episodes_imported: 0,
-      auto_sync: true,
+      rss_url: rssUrl,
+      status: "completed",
+      episodes_imported: episodes.length,
     });
 
-    // Insert episodes with deduplication
-    const chunkSize = 100;
-    for (let i = 0; i < episodes.length; i += chunkSize) {
-      const chunk = episodes.slice(i, i + chunkSize);
-      await supabase.from("episodes").upsert(
-        chunk.map((ep: any) => ({
+    // Insert episodes
+    if (episodes.length > 0) {
+      const { error: epError } = await supabase.from("episodes").insert(
+        episodes.map((ep: any) => ({
           podcast_id: podcast.id,
+          user_id: user.user.id,
           title: ep.title,
           description: ep.description,
-          audio_url: ep.audioUrl,
-          file_size_bytes: ep.fileSizeBytes,
-          duration_seconds: ep.durationSeconds,
-          publish_date: new Date(ep.pubDate).toISOString(),
-          episode_number: ep.episodeNumber,
-          season_number: ep.seasonNumber,
-          episode_type: ep.episodeType,
-          is_explicit: ep.isExplicit,
+          audio_url: ep.audio_url,
+          file_size_bytes: ep.file_size_bytes,
+          duration_seconds: ep.duration_seconds,
+          pub_date: ep.pub_date,
+          episode_number: ep.episode_number,
+          season_number: ep.season_number,
+          guid: ep.guid,
           status: "published",
-          source: "rss",
-          external_guid: ep.guid,
         })),
-        { onConflict: "podcast_id,external_guid" },
       );
+      if (epError) console.error("Episode insert error:", epError);
     }
 
-    // Update import count
-    await supabase
-      .from("rss_imports")
-      .update({ episodes_imported: episodes.length })
-      .eq("podcast_id", podcast.id);
-
-    return new Response(JSON.stringify({ podcast, episodes }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ podcast, episodes, episodeCount: episodes.length }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (err) {
     console.error("RSS import error:", err);
     return new Response(
-      JSON.stringify({
-        error: err instanceof Error ? err.message : "Unknown error",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
+      JSON.stringify({ error: err instanceof Error ? err.message : "Unknown error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });
