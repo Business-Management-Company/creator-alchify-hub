@@ -15,11 +15,20 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, Plus, Download, Mic, Globe, Tag } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
-import { useCreatePodcast, generateSlug } from "@/hooks/usePodcasts";
+import { useCreatePodcast } from "@/hooks/usePodcasts";
 import { PODCAST_CATEGORIES, PODCAST_LANGUAGES } from "@/types/podcast";
 import podcastIcon from "@/assets/podcast-icon.jpg";
 import podcastImage from "@/assets/podcast-image.jpg";
 import podcastStudio from "@/assets/podcast-studio.jpg";
+
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
 
 const CreatePodcast = () => {
   const navigate = useNavigate();
@@ -29,30 +38,14 @@ const CreatePodcast = () => {
   const [category, setCategory] = useState("");
   const [language, setLanguage] = useState("en");
   const [isExplicit, setIsExplicit] = useState(false);
-  const [slug, setSlug] = useState("");
-  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [authorName, setAuthorName] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
 
   const createPodcast = useCreatePodcast();
 
-  const handleTitleChange = (value: string) => {
-    setTitle(value);
-    if (!slugManuallyEdited) {
-      setSlug(generateSlug(value));
-    }
-  };
-
-  const handleSlugChange = (value: string) => {
-    setSlugManuallyEdited(true);
-    setSlug(generateSlug(value));
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-
-    const finalSlug = slug || generateSlug(title);
 
     createPodcast.mutate(
       {
@@ -61,8 +54,7 @@ const CreatePodcast = () => {
         category: category || null,
         language,
         is_explicit: isExplicit,
-        slug: finalSlug,
-        author_name: authorName.trim() || null,
+        author: authorName.trim() || null,
         website_url: websiteUrl.trim() || null,
         status: "draft",
       },
@@ -89,7 +81,6 @@ const CreatePodcast = () => {
             </h1>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Create New */}
               <Card
                 className="p-12 flex flex-col items-center justify-center text-center cursor-pointer hover:shadow-xl transition-all hover:scale-105 border-2 bg-cover bg-center bg-no-repeat"
                 onClick={() => setStep("details")}
@@ -104,7 +95,6 @@ const CreatePodcast = () => {
                 <p className="text-gray-200">Have a new podcast idea? Let's go!</p>
               </Card>
 
-              {/* Import Existing */}
               <Card
                 className="p-12 flex flex-col items-center justify-center text-center cursor-pointer hover:shadow-xl transition-all hover:scale-105 border-2 bg-cover bg-center bg-no-repeat"
                 onClick={() => navigate("/podcasts/import")}
@@ -135,13 +125,8 @@ const CreatePodcast = () => {
           </Button>
 
           <div className="space-y-8">
-            {/* Podcast Icon */}
             <div className="flex justify-center">
-              <img
-                src={podcastIcon}
-                alt="Podcast"
-                className="w-32 h-32 rounded-2xl object-cover shadow-lg"
-              />
+              <img src={podcastIcon} alt="Podcast" className="w-32 h-32 rounded-2xl object-cover shadow-lg" />
             </div>
 
             <div>
@@ -152,151 +137,62 @@ const CreatePodcast = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Title */}
               <div>
                 <Label htmlFor="title" className="text-base font-semibold flex items-center gap-2">
                   <Mic className="w-4 h-4" /> Podcast Title *
                 </Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => handleTitleChange(e.target.value)}
-                  placeholder="My Awesome Podcast"
-                  className="mt-2"
-                  required
-                />
+                <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="My Awesome Podcast" className="mt-2" required />
               </div>
 
-              {/* Slug */}
               <div>
-                <Label htmlFor="slug" className="text-base font-semibold flex items-center gap-2">
-                  <Globe className="w-4 h-4" /> URL Slug
-                </Label>
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-sm text-muted-foreground whitespace-nowrap">
-                    alchify.com/podcast/
-                  </span>
-                  <Input
-                    id="slug"
-                    value={slug}
-                    onChange={(e) => handleSlugChange(e.target.value)}
-                    placeholder="my-awesome-podcast"
-                  />
-                </div>
+                <Label htmlFor="description" className="text-base font-semibold">Podcast Description</Label>
+                <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What is your podcast about?" rows={4} className="mt-2" />
               </div>
 
-              {/* Description */}
-              <div>
-                <Label htmlFor="description" className="text-base font-semibold">
-                  Podcast Description
-                </Label>
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What is your podcast about? Tell your listeners..."
-                  rows={4}
-                  className="mt-2"
-                />
-              </div>
-
-              {/* Category & Language row */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-base font-semibold flex items-center gap-2">
-                    <Tag className="w-4 h-4" /> Category
-                  </Label>
+                  <Label className="text-base font-semibold flex items-center gap-2"><Tag className="w-4 h-4" /> Category</Label>
                   <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger className="mt-2">
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
+                    <SelectTrigger className="mt-2"><SelectValue placeholder="Select a category" /></SelectTrigger>
                     <SelectContent>
-                      {PODCAST_CATEGORIES.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat}
-                        </SelectItem>
-                      ))}
+                      {PODCAST_CATEGORIES.map((cat) => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div>
-                  <Label className="text-base font-semibold flex items-center gap-2">
-                    <Globe className="w-4 h-4" /> Language
-                  </Label>
+                  <Label className="text-base font-semibold flex items-center gap-2"><Globe className="w-4 h-4" /> Language</Label>
                   <Select value={language} onValueChange={setLanguage}>
-                    <SelectTrigger className="mt-2">
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {PODCAST_LANGUAGES.map((lang) => (
-                        <SelectItem key={lang.code} value={lang.code}>
-                          {lang.label}
-                        </SelectItem>
-                      ))}
+                      {PODCAST_LANGUAGES.map((lang) => (<SelectItem key={lang.code} value={lang.code}>{lang.label}</SelectItem>))}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
-              {/* Author Name */}
               <div>
-                <Label htmlFor="authorName" className="text-base font-semibold">
-                  Author / Host Name
-                </Label>
-                <Input
-                  id="authorName"
-                  value={authorName}
-                  onChange={(e) => setAuthorName(e.target.value)}
-                  placeholder="Your name or show host name"
-                  className="mt-2"
-                />
+                <Label htmlFor="authorName" className="text-base font-semibold">Author / Host Name</Label>
+                <Input id="authorName" value={authorName} onChange={(e) => setAuthorName(e.target.value)} placeholder="Your name" className="mt-2" />
               </div>
 
-              {/* Website URL */}
               <div>
-                <Label htmlFor="websiteUrl" className="text-base font-semibold">
-                  Website URL (optional)
-                </Label>
-                <Input
-                  id="websiteUrl"
-                  value={websiteUrl}
-                  onChange={(e) => setWebsiteUrl(e.target.value)}
-                  placeholder="https://yourwebsite.com"
-                  className="mt-2"
-                  type="url"
-                />
+                <Label htmlFor="websiteUrl" className="text-base font-semibold">Website URL (optional)</Label>
+                <Input id="websiteUrl" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://yourwebsite.com" className="mt-2" type="url" />
               </div>
 
-              {/* Explicit toggle */}
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div>
                   <Label className="text-base font-semibold">Explicit Content</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Mark this podcast as containing explicit language or content
-                  </p>
+                  <p className="text-sm text-muted-foreground">Mark this podcast as containing explicit content</p>
                 </div>
                 <Switch checked={isExplicit} onCheckedChange={setIsExplicit} />
               </div>
 
-              {/* Submit */}
               <div className="flex items-center justify-between pt-6">
-                <Button
-                  type="submit"
-                  size="lg"
-                  disabled={createPodcast.isPending || !title.trim()}
-                  className="bg-black text-white hover:bg-black/90 px-12"
-                >
+                <Button type="submit" size="lg" disabled={createPodcast.isPending || !title.trim()} className="bg-black text-white hover:bg-black/90 px-12">
                   {createPodcast.isPending ? "Creating..." : "Create Podcast"}
                 </Button>
-                <Button
-                  type="button"
-                  variant="link"
-                  onClick={() => navigate("/podcasts")}
-                  className="text-muted-foreground"
-                >
-                  Cancel
-                </Button>
+                <Button type="button" variant="link" onClick={() => navigate("/podcasts")} className="text-muted-foreground">Cancel</Button>
               </div>
             </form>
           </div>

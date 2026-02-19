@@ -17,115 +17,56 @@ const Podcasts = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "published": return "bg-green-500/10 text-green-600 border-green-200";
+      case "active": return "bg-green-500/10 text-green-600 border-green-200";
       case "draft": return "bg-yellow-500/10 text-yellow-600 border-yellow-200";
       case "archived": return "bg-gray-500/10 text-gray-600 border-gray-200";
       default: return "";
     }
   };
 
-  const copyRssUrl = (e: React.MouseEvent, slug: string) => {
-    e.stopPropagation();
-    const rssUrl = `${window.location.origin}/feed/${slug}`;
-    navigator.clipboard.writeText(rssUrl);
-    toast.success("RSS feed URL copied!");
-  };
-
   return (
     <AppLayout>
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 p-6">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
-                <Mic className="w-8 h-8 text-primary" />
-                Podcasts
+                <Mic className="w-8 h-8 text-primary" /> Podcasts
               </h1>
-              <p className="text-muted-foreground mt-1">
-                Manage your podcast shows, episodes, and RSS feeds
-              </p>
+              <p className="text-muted-foreground mt-1">Manage your podcast shows, episodes, and RSS feeds</p>
             </div>
             <div className="flex gap-3">
-              <Button
-                size="lg"
-                variant="outline"
-                className="text-base font-semibold border-2"
-                onClick={() => navigate("/podcasts/create")}
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                Add New Podcast
+              <Button size="lg" variant="outline" className="text-base font-semibold border-2" onClick={() => navigate("/podcasts/create")}>
+                <Plus className="w-5 h-5 mr-2" /> Add New Podcast
               </Button>
-              <ImportRSSButton
-                onImportComplete={(podcastId) => {
-                  queryClient.invalidateQueries({ queryKey: ["podcasts"] });
-                  navigate(`/podcasts/${podcastId}`);
-                }}
-              />
+              <ImportRSSButton onImportComplete={(podcastId) => { queryClient.invalidateQueries({ queryKey: ["podcasts"] }); navigate(`/podcasts/${podcastId}`); }} />
             </div>
           </div>
 
-          {/* Podcast Grid */}
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <Card key={i} className="h-64 animate-pulse bg-muted/20" />
-              ))}
+              {[1, 2, 3].map((i) => (<Card key={i} className="h-64 animate-pulse bg-muted/20" />))}
             </div>
           ) : podcasts && podcasts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {podcasts.map((podcast) => (
-                <Card
-                  key={podcast.id}
-                  className="overflow-hidden hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer group"
-                  onClick={() => navigate(`/podcasts/${podcast.id}`)}
-                >
-                  {podcast.cover_image_url ? (
-                    <img
-                      src={podcast.cover_image_url}
-                      alt={podcast.title}
-                      className="w-full h-48 object-cover"
-                    />
+                <Card key={podcast.id} className="overflow-hidden hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer group" onClick={() => navigate(`/podcasts/${podcast.id}`)}>
+                  {podcast.image_url ? (
+                    <img src={podcast.image_url} alt={podcast.title} className="w-full h-48 object-cover" />
                   ) : (
                     <div className="w-full h-48 bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
                       <Music className="w-16 h-16 text-muted-foreground" />
                     </div>
                   )}
-
                   <div className="p-4">
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <h3 className="font-semibold text-lg line-clamp-1 flex-1">
-                        {podcast.title}
-                      </h3>
-                      <Badge variant="outline" className={`text-xs shrink-0 ${getStatusColor(podcast.status)}`}>
-                        {podcast.status}
-                      </Badge>
+                      <h3 className="font-semibold text-lg line-clamp-1 flex-1">{podcast.title}</h3>
+                      <Badge variant="outline" className={`text-xs shrink-0 ${getStatusColor(podcast.status)}`}>{podcast.status}</Badge>
                     </div>
-
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                      {podcast.description || "No description yet"}
-                    </p>
-
-                    {/* Category & Language */}
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{podcast.description || "No description yet"}</p>
                     <div className="flex items-center gap-2 mb-3 text-xs text-muted-foreground">
-                      {podcast.category && (
-                        <span className="px-2 py-0.5 rounded-full bg-muted">{podcast.category}</span>
-                      )}
-                      {podcast.language && (
-                        <span className="px-2 py-0.5 rounded-full bg-muted uppercase">{podcast.language}</span>
-                      )}
-                    </div>
-
-                    {/* RSS Feed quick copy */}
-                    <div
-                      className="flex items-center gap-2 p-2 bg-primary/5 border border-primary/20 rounded-md hover:bg-primary/10 transition-colors cursor-pointer"
-                      onClick={(e) => copyRssUrl(e, podcast.slug)}
-                    >
-                      <Rss className="h-3.5 w-3.5 text-primary shrink-0" />
-                      <code className="text-[11px] flex-1 truncate text-foreground font-mono">
-                        /feed/{podcast.slug}
-                      </code>
-                      <Copy className="h-3 w-3 text-primary shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      {podcast.category && <span className="px-2 py-0.5 rounded-full bg-muted">{podcast.category}</span>}
+                      {podcast.language && <span className="px-2 py-0.5 rounded-full bg-muted uppercase">{podcast.language}</span>}
                     </div>
                   </div>
                 </Card>
@@ -133,20 +74,11 @@ const Podcasts = () => {
             </div>
           ) : (
             <Card className="overflow-hidden">
-              <img
-                src={podcastStudio}
-                alt="Professional podcast studio"
-                className="w-full h-64 object-cover"
-              />
+              <img src={podcastStudio} alt="Professional podcast studio" className="w-full h-64 object-cover" />
               <div className="p-12 text-center">
                 <h3 className="text-2xl font-bold mb-2">No podcasts yet</h3>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  Create your first podcast on Alchify and start sharing your voice with the world
-                </p>
-                <Button size="lg" onClick={() => navigate("/podcasts/create")}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Your First Podcast
-                </Button>
+                <p className="text-muted-foreground mb-6 max-w-md mx-auto">Create your first podcast on Alchify</p>
+                <Button size="lg" onClick={() => navigate("/podcasts/create")}><Plus className="w-4 h-4 mr-2" /> Create Your First Podcast</Button>
               </div>
             </Card>
           )}
