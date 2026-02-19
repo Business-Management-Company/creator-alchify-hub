@@ -123,8 +123,8 @@ serve(async (req) => {
       ? channel.item
       : [channel.item];
     const episodes = rawItems
-      .filter((item) => item && item.enclosure?.["@_url"])
-      .map((item) => {
+      .filter((item: any) => item && item.enclosure?.["@_url"])
+      .map((item: any) => {
         // Duration parsing
         let durationSeconds = 0;
         const duration = item["itunes:duration"];
@@ -224,7 +224,7 @@ serve(async (req) => {
     for (let i = 0; i < episodes.length; i += chunkSize) {
       const chunk = episodes.slice(i, i + chunkSize);
       await supabase.from("episodes").upsert(
-        chunk.map((ep) => ({
+        chunk.map((ep: any) => ({
           podcast_id: podcast.id,
           title: ep.title,
           description: ep.description,
@@ -240,7 +240,7 @@ serve(async (req) => {
           source: "rss",
           external_guid: ep.guid,
         })),
-        { onConflict: ["podcast_id", "external_guid"] },
+        { onConflict: "podcast_id,external_guid" },
       );
     }
 

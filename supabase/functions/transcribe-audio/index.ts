@@ -84,7 +84,7 @@ serve(async (req) => {
 
     // Call OpenAI Whisper API with verbose_json for segments
     const formData = new FormData();
-    formData.append('file', new Blob([audioBytes]), fileName);
+    formData.append('file', new Blob([audioBytes as BlobPart]), fileName);
     formData.append('model', 'whisper-1');
     formData.append('response_format', 'verbose_json');
     formData.append('timestamp_granularities[]', 'segment');
