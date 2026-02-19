@@ -11,7 +11,7 @@ export function useEpisodes(podcastId: string | undefined) {
     return useQuery({
         queryKey: ["episodes", podcastId],
         queryFn: async () => {
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from("episodes")
                 .select("*")
                 .eq("podcast_id", podcastId!)
@@ -31,7 +31,7 @@ export function useEpisode(episodeId: string | undefined) {
     return useQuery({
         queryKey: ["episode", episodeId],
         queryFn: async () => {
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from("episodes")
                 .select("*")
                 .eq("id", episodeId!)
@@ -40,7 +40,7 @@ export function useEpisode(episodeId: string | undefined) {
             if (error) throw error;
 
             // Fetch transcription if exists
-            const { data: transcription } = await supabase
+            const { data: transcription } = await (supabase as any)
                 .from("transcriptions")
                 .select("*")
                 .eq("episode_id", episodeId!)
@@ -63,7 +63,7 @@ export function useCreateEpisode() {
 
     return useMutation({
         mutationFn: async (episode: EpisodeInsert) => {
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from("episodes")
                 .insert(episode)
                 .select()
@@ -72,7 +72,7 @@ export function useCreateEpisode() {
             if (error) throw error;
             return data as Episode;
         },
-        onSuccess: (data) => {
+        onSuccess: (data: Episode) => {
             queryClient.invalidateQueries({ queryKey: ["episodes", data.podcast_id] });
             queryClient.invalidateQueries({ queryKey: ["podcast", data.podcast_id] });
             toast.success("Episode created successfully!");
@@ -91,7 +91,7 @@ export function useUpdateEpisode() {
 
     return useMutation({
         mutationFn: async ({ id, ...updates }: EpisodeUpdate & { id: string }) => {
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from("episodes")
                 .update(updates)
                 .eq("id", id)
@@ -101,7 +101,7 @@ export function useUpdateEpisode() {
             if (error) throw error;
             return data as Episode;
         },
-        onSuccess: (data) => {
+        onSuccess: (data: Episode) => {
             queryClient.invalidateQueries({ queryKey: ["episodes", data.podcast_id] });
             queryClient.invalidateQueries({ queryKey: ["episode", data.id] });
             queryClient.invalidateQueries({ queryKey: ["podcast", data.podcast_id] });
@@ -121,7 +121,7 @@ export function useDeleteEpisode() {
 
     return useMutation({
         mutationFn: async ({ episodeId, podcastId }: { episodeId: string; podcastId: string }) => {
-            const { error } = await supabase
+            const { error } = await (supabase as any)
                 .from("episodes")
                 .delete()
                 .eq("id", episodeId);
@@ -129,7 +129,7 @@ export function useDeleteEpisode() {
             if (error) throw error;
             return { podcastId };
         },
-        onSuccess: ({ podcastId }) => {
+        onSuccess: ({ podcastId }: { podcastId: string }) => {
             queryClient.invalidateQueries({ queryKey: ["episodes", podcastId] });
             queryClient.invalidateQueries({ queryKey: ["podcast", podcastId] });
             toast.success("Episode deleted");
@@ -211,7 +211,7 @@ export function useNextEpisodeNumber(podcastId: string | undefined) {
     return useQuery({
         queryKey: ["next-episode-number", podcastId],
         queryFn: async () => {
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from("episodes")
                 .select("episode_number")
                 .eq("podcast_id", podcastId!)

@@ -13,7 +13,7 @@ export function usePodcasts() {
     return useQuery({
         queryKey: ["podcasts", user?.id],
         queryFn: async () => {
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from("podcasts")
                 .select("*")
                 .eq("creator_id", user!.id)
@@ -35,7 +35,7 @@ export function usePodcast(podcastId: string | undefined) {
     return useQuery({
         queryKey: ["podcast", podcastId],
         queryFn: async () => {
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from("podcasts")
                 .select("*")
                 .eq("id", podcastId!)
@@ -44,7 +44,7 @@ export function usePodcast(podcastId: string | undefined) {
             if (error) throw error;
 
             // Fetch episodes
-            const { data: episodes, error: episodesError } = await supabase
+            const { data: episodes, error: episodesError } = await (supabase as any)
                 .from("episodes")
                 .select("*")
                 .eq("podcast_id", podcastId!)
@@ -53,7 +53,7 @@ export function usePodcast(podcastId: string | undefined) {
             if (episodesError) throw episodesError;
 
             // Fetch RSS import if exists
-            const { data: rssImport } = await supabase
+            const { data: rssImport } = await (supabase as any)
                 .from("rss_imports")
                 .select("*")
                 .eq("podcast_id", podcastId!)
@@ -76,7 +76,7 @@ export function usePodcastBySlug(slug: string | undefined) {
     return useQuery({
         queryKey: ["podcast-public", slug],
         queryFn: async () => {
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from("podcasts")
                 .select("*")
                 .eq("slug", slug!)
@@ -86,7 +86,7 @@ export function usePodcastBySlug(slug: string | undefined) {
             if (error) throw error;
 
             // Fetch published episodes
-            const { data: episodes, error: episodesError } = await supabase
+            const { data: episodes, error: episodesError } = await (supabase as any)
                 .from("episodes")
                 .select("*")
                 .eq("podcast_id", data.id)
@@ -113,7 +113,7 @@ export function useCreatePodcast() {
 
     return useMutation({
         mutationFn: async (podcast: Omit<PodcastInsert, "creator_id">) => {
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from("podcasts")
                 .insert({ ...podcast, creator_id: user!.id })
                 .select()
@@ -140,7 +140,7 @@ export function useUpdatePodcast() {
 
     return useMutation({
         mutationFn: async ({ id, ...updates }: PodcastUpdate & { id: string }) => {
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from("podcasts")
                 .update(updates)
                 .eq("id", id)
@@ -150,7 +150,7 @@ export function useUpdatePodcast() {
             if (error) throw error;
             return data as Podcast;
         },
-        onSuccess: (data) => {
+        onSuccess: (data: Podcast) => {
             queryClient.invalidateQueries({ queryKey: ["podcasts"] });
             queryClient.invalidateQueries({ queryKey: ["podcast", data.id] });
             toast.success("Podcast updated!");
@@ -169,7 +169,7 @@ export function useDeletePodcast() {
 
     return useMutation({
         mutationFn: async (podcastId: string) => {
-            const { error } = await supabase
+            const { error } = await (supabase as any)
                 .from("podcasts")
                 .delete()
                 .eq("id", podcastId);
