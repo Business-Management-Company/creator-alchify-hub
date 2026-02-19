@@ -41,6 +41,8 @@ import BoardPortal from "./pages/BoardPortal";
 import Podcasts from "./pages/Podcast";
 import CreatePodcast from "./pages/CreatePodcast";
 import ImportPodcast from "./pages/ImportPodcast";
+import PodcastDetail from "./pages/PodcastDetail";
+import EpisodeForm from "./pages/EpisodeForm";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,52 +59,55 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/upload" element={<Upload />} />
-              <Route path="/projects" element={<Projects />} />
-              <Route path="/refiner" element={<Refiner />} />
-              <Route path="/refiner/:projectId" element={<Refiner />} />
-              <Route path="/studio" element={<RecordingStudio />} />
-              <Route path="/library" element={<Library />} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/integrations" element={<Integrations />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/transparency" element={<Transparency />} />
-              <Route path="/notifications" element={<Notifications />} />
-              {/* Creator Profile Routes */}
-              <Route path="/c/:handle" element={<CreatorPublicPage />} />
-              <Route path="/creator/profile" element={<CreatorProfileEditor />} />
-              {/* Admin Routes */}
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/users" element={<AdminUsers />} />
-              <Route path="/admin/content" element={<AdminContent />} />
-              <Route path="/admin/analytics" element={<AdminAnalytics />} />
-              <Route path="/admin/tech-stack" element={<AdminTechStack />} />
-              <Route path="/admin/ceo-vto" element={<AdminCEOVTO />} />
-              <Route path="/admin/contacts" element={<AdminContacts />} />
-              <Route path="/admin/insight-sources" element={<AdminInsightSources />} />
-              <Route path="/admin/cfo-dashboard" element={<AdminCFODashboard />} />
-              <Route path="/admin/tasks" element={<AdminTasks />} />
-              <Route path="/admin/tasks/settings" element={<AdminTaskSettings />} />
-              <Route path="/admin/tasks/:id" element={<AdminTaskDetail />} />
-              <Route path="/admin/emails" element={<AdminEmailTemplates />} />
-              <Route path="/admin/emails/analytics" element={<AdminEmailAnalytics />} />
-              {/* Podcast Routes */}
-              <Route path="/podcasts" element={<Podcasts />} />
-              <Route path="/podcasts/create" element={<CreatePodcast />} />
-              <Route path="/podcasts/import" element={<ImportPodcast />} />
-              {/* Board Portal - Public access for board members */}
-              <Route path="/board" element={<BoardPortal />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </AuthProvider>
-    </HelmetProvider>
-  </QueryClientProvider>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/upload" element={<Upload />} />
+                <Route path="/projects" element={<Projects />} />
+                <Route path="/refiner" element={<Refiner />} />
+                <Route path="/refiner/:projectId" element={<Refiner />} />
+                <Route path="/studio" element={<RecordingStudio />} />
+                <Route path="/library" element={<Library />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="/integrations" element={<Integrations />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/transparency" element={<Transparency />} />
+                <Route path="/notifications" element={<Notifications />} />
+                {/* Creator Profile Routes */}
+                <Route path="/c/:handle" element={<CreatorPublicPage />} />
+                <Route path="/creator/profile" element={<CreatorProfileEditor />} />
+                {/* Admin Routes */}
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/users" element={<AdminUsers />} />
+                <Route path="/admin/content" element={<AdminContent />} />
+                <Route path="/admin/analytics" element={<AdminAnalytics />} />
+                <Route path="/admin/tech-stack" element={<AdminTechStack />} />
+                <Route path="/admin/ceo-vto" element={<AdminCEOVTO />} />
+                <Route path="/admin/contacts" element={<AdminContacts />} />
+                <Route path="/admin/insight-sources" element={<AdminInsightSources />} />
+                <Route path="/admin/cfo-dashboard" element={<AdminCFODashboard />} />
+                <Route path="/admin/tasks" element={<AdminTasks />} />
+                <Route path="/admin/tasks/settings" element={<AdminTaskSettings />} />
+                <Route path="/admin/tasks/:id" element={<AdminTaskDetail />} />
+                <Route path="/admin/emails" element={<AdminEmailTemplates />} />
+                <Route path="/admin/emails/analytics" element={<AdminEmailAnalytics />} />
+                {/* Podcast Routes */}
+                <Route path="/podcasts" element={<Podcasts />} />
+                <Route path="/podcasts/create" element={<CreatePodcast />} />
+                <Route path="/podcasts/import" element={<ImportPodcast />} />
+                <Route path="/podcasts/:id" element={<PodcastDetail />} />
+                <Route path="/podcasts/:id/episodes/new" element={<EpisodeForm />} />
+                <Route path="/podcasts/:id/episodes/:eid" element={<EpisodeForm />} />
+                {/* Board Portal - Public access for board members */}
+                <Route path="/board" element={<BoardPortal />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AuthProvider>
+      </HelmetProvider>
+    </QueryClientProvider>
   </ErrorBoundary>
 );
 
