@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ImportRSSButtonProps {
   onImportComplete: (podcastId: string) => void;
@@ -23,14 +24,18 @@ export const ImportRSSButton = ({ onImportComplete }: ImportRSSButtonProps) => {
 
     setLoading(true);
     try {
-      console.log("Importing from RSS URL:", rssUrl);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const podcastId = `podcast_${Date.now()}`;
-      
-      toast.success("Podcast imported successfully!");
+      const { data, error } = await supabase.functions.invoke("import-rss-feed", {
+        body: { rssUrl: rssUrl.trim() },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const podcastId = data?.podcast?.id;
+      toast.success(`Podcast imported with ${data?.episodeCount || 0} episodes!`);
       setRssUrl("");
       setOpen(false);
-      onImportComplete(podcastId);
+      if (podcastId) onImportComplete(podcastId);
     } catch (error) {
       console.error("Import error:", error);
       toast.error("Failed to import podcast");
