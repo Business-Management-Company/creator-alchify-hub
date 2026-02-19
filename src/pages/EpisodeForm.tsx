@@ -6,30 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import {
-    ArrowLeft,
-    Upload,
-    Music,
-    X,
-    Loader2,
-    FileAudio,
-    Check,
-} from "lucide-react";
+import { ArrowLeft, Upload, X, Loader2, FileAudio, Check } from "lucide-react";
 import { toast } from "sonner";
 import AppLayout from "@/components/layout/AppLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import { useEpisode, useCreateEpisode, useUpdateEpisode, useUploadAudio, useNextEpisodeNumber } from "@/hooks/useEpisodes";
-import { EPISODE_TYPES } from "@/types/podcast";
 
 const EpisodeForm = () => {
     const { id: podcastId, eid: episodeId } = useParams<{ id: string; eid: string }>();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const isEditing = !!episodeId;
 
@@ -41,11 +27,8 @@ const EpisodeForm = () => {
 
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
-    const [showNotes, setShowNotes] = useState("");
     const [episodeNumber, setEpisodeNumber] = useState<number | "">("");
     const [seasonNumber, setSeasonNumber] = useState<number | "">("");
-    const [episodeType, setEpisodeType] = useState("full");
-    const [isExplicit, setIsExplicit] = useState(false);
     const [publishNow, setPublishNow] = useState(true);
     const [scheduledDate, setScheduledDate] = useState("");
 
@@ -53,25 +36,19 @@ const EpisodeForm = () => {
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [fileSize, setFileSize] = useState<number | null>(null);
     const [isUploading, setIsUploading] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState(0);
     const [formInitialized, setFormInitialized] = useState(false);
 
-    // Initialize form with existing episode data
     if (existingEpisode && !formInitialized) {
         setTitle(existingEpisode.title);
         setDescription(existingEpisode.description || "");
-        setShowNotes(existingEpisode.show_notes || "");
         setEpisodeNumber(existingEpisode.episode_number || "");
         setSeasonNumber(existingEpisode.season_number || "");
-        setEpisodeType(existingEpisode.episode_type);
-        setIsExplicit(existingEpisode.is_explicit || false);
         setAudioUrl(existingEpisode.audio_url);
         setFileSize(existingEpisode.file_size_bytes);
         setPublishNow(existingEpisode.status === "published");
         setFormInitialized(true);
     }
 
-    // Set next episode number for new episodes
     if (!isEditing && nextNumber && !episodeNumber && !formInitialized) {
         setEpisodeNumber(nextNumber);
         setFormInitialized(true);
@@ -98,10 +75,7 @@ const EpisodeForm = () => {
 
     const removeFile = () => {
         setAudioFile(null);
-        if (!isEditing) {
-            setAudioUrl(null);
-            setFileSize(null);
-        }
+        if (!isEditing) { setAudioUrl(null); setFileSize(null); }
     };
 
     const formatFileSize = (bytes: number) => {
@@ -111,62 +85,41 @@ const EpisodeForm = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!podcastId) return;
-        if (!title.trim()) {
-            toast.error("Please enter an episode title");
-            return;
-        }
+        if (!podcastId || !user) return;
+        if (!title.trim()) { toast.error("Please enter an episode title"); return; }
 
         let finalAudioUrl = audioUrl;
         let finalFileSize = fileSize;
 
-        // Upload audio file if a new one was selected
         if (audioFile) {
             setIsUploading(true);
             try {
-                const result = await uploadAudio.mutateAsync({
-                    file: audioFile,
-                    podcastId,
-                });
+                const result = await uploadAudio.mutateAsync({ file: audioFile, podcastId });
                 finalAudioUrl = result.url;
                 finalFileSize = result.fileSize;
-            } catch {
-                setIsUploading(false);
-                return;
-            }
+            } catch { setIsUploading(false); return; }
             setIsUploading(false);
         }
 
-        if (!finalAudioUrl && !isEditing) {
-            toast.error("Please upload an audio file");
-            return;
-        }
+        if (!finalAudioUrl && !isEditing) { toast.error("Please upload an audio file"); return; }
 
         const episodeData = {
             podcast_id: podcastId,
+            user_id: user.id,
             title: title.trim(),
             description: description.trim() || null,
-            show_notes: showNotes.trim() || null,
             episode_number: episodeNumber || null,
             season_number: seasonNumber || null,
-            episode_type: episodeType,
-            is_explicit: isExplicit,
             audio_url: finalAudioUrl,
             file_size_bytes: finalFileSize,
-            status: publishNow ? "published" as const : (scheduledDate ? "scheduled" as const : "draft" as const),
-            publish_date: publishNow ? new Date().toISOString() : (scheduledDate || null),
-            source: "upload" as const,
+            status: publishNow ? "published" : (scheduledDate ? "scheduled" : "draft"),
+            pub_date: publishNow ? new Date().toISOString() : (scheduledDate || null),
         };
 
         if (isEditing && episodeId) {
-            updateEpisode.mutate(
-                { id: episodeId, ...episodeData },
-                { onSuccess: () => navigate(`/podcasts/${podcastId}`) }
-            );
+            updateEpisode.mutate({ id: episodeId, ...episodeData }, { onSuccess: () => navigate(`/podcasts/${podcastId}`) });
         } else {
-            createEpisode.mutate(episodeData, {
-                onSuccess: () => navigate(`/podcasts/${podcastId}`),
-            });
+            createEpisode.mutate(episodeData, { onSuccess: () => navigate(`/podcasts/${podcastId}`) });
         }
     };
 
@@ -187,16 +140,12 @@ const EpisodeForm = () => {
             <div className="bg-background p-6 flex items-center justify-center">
                 <div className="max-w-3xl w-full">
                     <Button variant="ghost" onClick={() => navigate(`/podcasts/${podcastId}`)} className="mb-6">
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Back to Podcast
+                        <ArrowLeft className="w-4 h-4 mr-2" /> Back to Podcast
                     </Button>
 
-                    <h1 className="text-3xl font-bold mb-8">
-                        {isEditing ? "Edit Episode" : "New Episode"}
-                    </h1>
+                    <h1 className="text-3xl font-bold mb-8">{isEditing ? "Edit Episode" : "New Episode"}</h1>
 
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Audio Upload */}
                         <Card>
                             <CardContent className="p-6">
                                 <Label className="text-base font-semibold mb-3 block">Audio File</Label>
@@ -204,200 +153,74 @@ const EpisodeForm = () => {
                                     <div className="flex items-center gap-3 p-4 rounded-lg border bg-muted/50">
                                         <FileAudio className="w-8 h-8 text-primary shrink-0" />
                                         <div className="flex-1 min-w-0">
-                                            <p className="font-medium truncate">
-                                                {audioFile ? audioFile.name : "Current audio file"}
-                                            </p>
+                                            <p className="font-medium truncate">{audioFile ? audioFile.name : "Current audio file"}</p>
                                             <p className="text-sm text-muted-foreground">
                                                 {audioFile ? formatFileSize(audioFile.size) : (fileSize ? formatFileSize(fileSize) : "")}
                                             </p>
                                         </div>
-                                        {audioFile && (
-                                            <Check className="w-5 h-5 text-green-500 shrink-0" />
-                                        )}
-                                        <Button type="button" variant="ghost" size="icon" onClick={removeFile}>
-                                            <X className="w-4 h-4" />
-                                        </Button>
+                                        {audioFile && <Check className="w-5 h-5 text-green-500 shrink-0" />}
+                                        <Button type="button" variant="ghost" size="icon" onClick={removeFile}><X className="w-4 h-4" /></Button>
                                     </div>
                                 ) : (
                                     <div
                                         className="border-2 border-dashed rounded-lg p-12 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-all"
-                                        onDragOver={(e) => e.preventDefault()}
-                                        onDrop={handleFileDrop}
-                                        onClick={() => fileInputRef.current?.click()}
+                                        onDragOver={(e) => e.preventDefault()} onDrop={handleFileDrop} onClick={() => fileInputRef.current?.click()}
                                     >
                                         <Upload className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
                                         <p className="font-medium mb-1">Drop your audio file here</p>
-                                        <p className="text-sm text-muted-foreground">
-                                            or click to browse · MP3, M4A, WAV · Max 200MB
-                                        </p>
+                                        <p className="text-sm text-muted-foreground">or click to browse · MP3, M4A, WAV · Max 200MB</p>
                                     </div>
                                 )}
                                 {isUploading && (
                                     <div className="mt-3 flex items-center gap-2">
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                        <span className="text-sm">Uploading...</span>
+                                        <Loader2 className="w-4 h-4 animate-spin" /><span className="text-sm">Uploading...</span>
                                     </div>
                                 )}
-                                <input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    accept="audio/*"
-                                    className="hidden"
-                                    onChange={handleFileSelect}
-                                />
+                                <input ref={fileInputRef} type="file" accept="audio/*" className="hidden" onChange={handleFileSelect} />
                             </CardContent>
                         </Card>
 
-                        {/* Episode Details */}
                         <div className="space-y-4">
                             <div>
-                                <Label htmlFor="title" className="text-base font-semibold">
-                                    Episode Title *
-                                </Label>
-                                <Input
-                                    id="title"
-                                    value={title}
-                                    onChange={(e) => setTitle(e.target.value)}
-                                    placeholder="Episode title"
-                                    className="mt-2"
-                                    required
-                                />
+                                <Label htmlFor="title" className="text-base font-semibold">Episode Title *</Label>
+                                <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Episode title" className="mt-2" required />
                             </div>
-
                             <div>
-                                <Label htmlFor="description" className="text-base font-semibold">
-                                    Description
-                                </Label>
-                                <Textarea
-                                    id="description"
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    placeholder="Brief episode description for podcast apps"
-                                    rows={3}
-                                    className="mt-2"
-                                />
+                                <Label htmlFor="description" className="text-base font-semibold">Description</Label>
+                                <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief episode description" rows={3} className="mt-2" />
                             </div>
-
-                            <div>
-                                <Label htmlFor="showNotes" className="text-base font-semibold">
-                                    Show Notes
-                                </Label>
-                                <Textarea
-                                    id="showNotes"
-                                    value={showNotes}
-                                    onChange={(e) => setShowNotes(e.target.value)}
-                                    placeholder="Detailed show notes, links, timestamps..."
-                                    rows={5}
-                                    className="mt-2"
-                                />
-                            </div>
-
-                            {/* Episode/Season numbers + Type */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <Label htmlFor="episodeNumber">Episode #</Label>
-                                    <Input
-                                        id="episodeNumber"
-                                        type="number"
-                                        value={episodeNumber}
-                                        onChange={(e) => setEpisodeNumber(e.target.value ? parseInt(e.target.value) : "")}
-                                        placeholder="1"
-                                        min={1}
-                                        className="mt-1"
-                                    />
+                                    <Input id="episodeNumber" type="number" value={episodeNumber} onChange={(e) => setEpisodeNumber(e.target.value ? parseInt(e.target.value) : "")} placeholder="1" min={1} className="mt-1" />
                                 </div>
                                 <div>
                                     <Label htmlFor="seasonNumber">Season #</Label>
-                                    <Input
-                                        id="seasonNumber"
-                                        type="number"
-                                        value={seasonNumber}
-                                        onChange={(e) => setSeasonNumber(e.target.value ? parseInt(e.target.value) : "")}
-                                        placeholder="1"
-                                        min={1}
-                                        className="mt-1"
-                                    />
-                                </div>
-                                <div>
-                                    <Label>Episode Type</Label>
-                                    <Select value={episodeType} onValueChange={setEpisodeType}>
-                                        <SelectTrigger className="mt-1">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {EPISODE_TYPES.map((type) => (
-                                                <SelectItem key={type.value} value={type.value}>
-                                                    {type.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <Input id="seasonNumber" type="number" value={seasonNumber} onChange={(e) => setSeasonNumber(e.target.value ? parseInt(e.target.value) : "")} placeholder="1" min={1} className="mt-1" />
                                 </div>
                             </div>
-
-                            {/* Explicit */}
-                            <div className="flex items-center justify-between rounded-lg border p-4">
-                                <div>
-                                    <Label className="text-base font-semibold">Explicit Content</Label>
-                                    <p className="text-sm text-muted-foreground">
-                                        This episode contains explicit language or content
-                                    </p>
-                                </div>
-                                <Switch checked={isExplicit} onCheckedChange={setIsExplicit} />
-                            </div>
-
-                            {/* Publishing */}
                             <div className="rounded-lg border p-4 space-y-3">
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <Label className="text-base font-semibold">Publish Immediately</Label>
-                                        <p className="text-sm text-muted-foreground">
-                                            {publishNow ? "Episode will be published right away" : "Save as draft or schedule"}
-                                        </p>
+                                        <p className="text-sm text-muted-foreground">{publishNow ? "Episode will be published right away" : "Save as draft or schedule"}</p>
                                     </div>
                                     <Switch checked={publishNow} onCheckedChange={setPublishNow} />
                                 </div>
                                 {!publishNow && (
                                     <div>
                                         <Label htmlFor="scheduledDate">Schedule Date (optional)</Label>
-                                        <Input
-                                            id="scheduledDate"
-                                            type="datetime-local"
-                                            value={scheduledDate}
-                                            onChange={(e) => setScheduledDate(e.target.value)}
-                                            className="mt-1 w-auto"
-                                        />
+                                        <Input id="scheduledDate" type="datetime-local" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} className="mt-1 w-auto" />
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* Submit */}
                         <div className="flex items-center justify-between pt-4">
-                            <Button
-                                type="submit"
-                                size="lg"
-                                disabled={isSaving || !title.trim()}
-                                className="bg-black text-white hover:bg-black/90 px-8"
-                            >
-                                {isSaving ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        {isUploading ? "Uploading..." : "Saving..."}
-                                    </>
-                                ) : isEditing ? (
-                                    "Update Episode"
-                                ) : (
-                                    publishNow ? "Publish Episode" : "Save Episode"
-                                )}
+                            <Button type="submit" size="lg" disabled={isSaving || !title.trim()}>
+                                {isSaving ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>) : (isEditing ? "Update Episode" : "Create Episode")}
                             </Button>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                onClick={() => navigate(`/podcasts/${podcastId}`)}
-                            >
-                                Cancel
-                            </Button>
+                            <Button type="button" variant="link" onClick={() => navigate(`/podcasts/${podcastId}`)} className="text-muted-foreground">Cancel</Button>
                         </div>
                     </form>
                 </div>

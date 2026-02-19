@@ -484,6 +484,68 @@ export type Database = {
         }
         Relationships: []
       }
+      episodes: {
+        Row: {
+          audio_url: string | null
+          created_at: string | null
+          description: string | null
+          duration_seconds: number | null
+          episode_number: number | null
+          file_size_bytes: number | null
+          guid: string | null
+          id: string
+          podcast_id: string
+          pub_date: string | null
+          season_number: number | null
+          status: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          audio_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration_seconds?: number | null
+          episode_number?: number | null
+          file_size_bytes?: number | null
+          guid?: string | null
+          id?: string
+          podcast_id: string
+          pub_date?: string | null
+          season_number?: number | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          audio_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration_seconds?: number | null
+          episode_number?: number | null
+          file_size_bytes?: number | null
+          guid?: string | null
+          id?: string
+          podcast_id?: string
+          pub_date?: string | null
+          season_number?: number | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "episodes_podcast_id_fkey"
+            columns: ["podcast_id"]
+            isOneToOne: false
+            referencedRelation: "podcasts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       insight_documents: {
         Row: {
           applicable_metrics: string[] | null
@@ -650,6 +712,60 @@ export type Database = {
           },
         ]
       }
+      podcasts: {
+        Row: {
+          author: string | null
+          author_email: string | null
+          category: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_explicit: boolean | null
+          language: string | null
+          rss_feed_url: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+          website_url: string | null
+        }
+        Insert: {
+          author?: string | null
+          author_email?: string | null
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_explicit?: boolean | null
+          language?: string | null
+          rss_feed_url?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+          website_url?: string | null
+        }
+        Update: {
+          author?: string | null
+          author_email?: string | null
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_explicit?: boolean | null
+          language?: string | null
+          rss_feed_url?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       pricing_features: {
         Row: {
           display_order: number
@@ -795,6 +911,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      rss_imports: {
+        Row: {
+          created_at: string | null
+          episodes_imported: number | null
+          error_message: string | null
+          id: string
+          podcast_id: string | null
+          rss_url: string
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          episodes_imported?: number | null
+          error_message?: string | null
+          id?: string
+          podcast_id?: string | null
+          rss_url: string
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          episodes_imported?: number | null
+          error_message?: string | null
+          id?: string
+          podcast_id?: string | null
+          rss_url?: string
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rss_imports_podcast_id_fkey"
+            columns: ["podcast_id"]
+            isOneToOne: false
+            referencedRelation: "podcasts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       task_assignees: {
         Row: {

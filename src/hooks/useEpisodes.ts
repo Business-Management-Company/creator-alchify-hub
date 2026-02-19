@@ -2,11 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import type { Episode, EpisodeInsert, EpisodeUpdate, EpisodeWithTranscription } from "@/types/podcast";
+import type { Episode, EpisodeInsert, EpisodeUpdate } from "@/types/podcast";
 
-/**
- * Fetch all episodes for a podcast
- */
 export function useEpisodes(podcastId: string | undefined) {
     return useQuery({
         queryKey: ["episodes", podcastId],
@@ -16,7 +13,6 @@ export function useEpisodes(podcastId: string | undefined) {
                 .select("*")
                 .eq("podcast_id", podcastId!)
                 .order("episode_number", { ascending: false });
-
             if (error) throw error;
             return data as Episode[];
         },
@@ -24,9 +20,6 @@ export function useEpisodes(podcastId: string | undefined) {
     });
 }
 
-/**
- * Fetch a single episode by ID, with its transcription
- */
 export function useEpisode(episodeId: string | undefined) {
     return useQuery({
         queryKey: ["episode", episodeId],
@@ -36,31 +29,15 @@ export function useEpisode(episodeId: string | undefined) {
                 .select("*")
                 .eq("id", episodeId!)
                 .single();
-
             if (error) throw error;
-
-            // Fetch transcription if exists
-            const { data: transcription } = await (supabase as any)
-                .from("transcriptions")
-                .select("*")
-                .eq("episode_id", episodeId!)
-                .maybeSingle();
-
-            return {
-                ...data,
-                transcription,
-            } as EpisodeWithTranscription;
+            return data as Episode;
         },
         enabled: !!episodeId,
     });
 }
 
-/**
- * Create a new episode
- */
 export function useCreateEpisode() {
     const queryClient = useQueryClient();
-
     return useMutation({
         mutationFn: async (episode: EpisodeInsert) => {
             const { data, error } = await (supabase as any)
@@ -68,7 +45,6 @@ export function useCreateEpisode() {
                 .insert(episode)
                 .select()
                 .single();
-
             if (error) throw error;
             return data as Episode;
         },
@@ -83,12 +59,8 @@ export function useCreateEpisode() {
     });
 }
 
-/**
- * Update an existing episode
- */
 export function useUpdateEpisode() {
     const queryClient = useQueryClient();
-
     return useMutation({
         mutationFn: async ({ id, ...updates }: EpisodeUpdate & { id: string }) => {
             const { data, error } = await (supabase as any)
@@ -97,14 +69,12 @@ export function useUpdateEpisode() {
                 .eq("id", id)
                 .select()
                 .single();
-
             if (error) throw error;
             return data as Episode;
         },
         onSuccess: (data: Episode) => {
             queryClient.invalidateQueries({ queryKey: ["episodes", data.podcast_id] });
             queryClient.invalidateQueries({ queryKey: ["episode", data.id] });
-            queryClient.invalidateQueries({ queryKey: ["podcast", data.podcast_id] });
             toast.success("Episode updated!");
         },
         onError: (error: any) => {
@@ -113,19 +83,14 @@ export function useUpdateEpisode() {
     });
 }
 
-/**
- * Delete an episode
- */
 export function useDeleteEpisode() {
     const queryClient = useQueryClient();
-
     return useMutation({
         mutationFn: async ({ episodeId, podcastId }: { episodeId: string; podcastId: string }) => {
             const { error } = await (supabase as any)
                 .from("episodes")
                 .delete()
                 .eq("id", episodeId);
-
             if (error) throw error;
             return { podcastId };
         },
@@ -140,30 +105,19 @@ export function useDeleteEpisode() {
     });
 }
 
-/**
- * Upload audio file to Supabase Storage and return the public URL
- */
 export function useUploadAudio() {
     const { user } = useAuth();
-
     return useMutation({
         mutationFn: async ({ file, podcastId }: { file: File; podcastId: string }) => {
             const fileExt = file.name.split(".").pop();
             const fileName = `${user!.id}/${podcastId}/${crypto.randomUUID()}.${fileExt}`;
-
             const { error: uploadError } = await supabase.storage
-                .from("podcast-audio")
-                .upload(fileName, file, {
-                    cacheControl: "3600",
-                    upsert: false,
-                });
-
+                .from("media-uploads")
+                .upload(fileName, file, { cacheControl: "3600", upsert: false });
             if (uploadError) throw uploadError;
-
             const { data: { publicUrl } } = supabase.storage
-                .from("podcast-audio")
+                .from("media-uploads")
                 .getPublicUrl(fileName);
-
             return { url: publicUrl, fileSize: file.size };
         },
         onError: (error: any) => {
@@ -172,41 +126,6 @@ export function useUploadAudio() {
     });
 }
 
-/**
- * Upload cover image to Supabase Storage and return the public URL
- */
-export function useUploadCover() {
-    const { user } = useAuth();
-
-    return useMutation({
-        mutationFn: async ({ file, podcastId }: { file: File; podcastId: string }) => {
-            const fileExt = file.name.split(".").pop();
-            const fileName = `${user!.id}/${podcastId}/cover.${fileExt}`;
-
-            const { error: uploadError } = await supabase.storage
-                .from("podcast-covers")
-                .upload(fileName, file, {
-                    cacheControl: "3600",
-                    upsert: true,
-                });
-
-            if (uploadError) throw uploadError;
-
-            const { data: { publicUrl } } = supabase.storage
-                .from("podcast-covers")
-                .getPublicUrl(fileName);
-
-            return publicUrl;
-        },
-        onError: (error: any) => {
-            toast.error(error.message || "Failed to upload cover image");
-        },
-    });
-}
-
-/**
- * Get the next episode number for a podcast
- */
 export function useNextEpisodeNumber(podcastId: string | undefined) {
     return useQuery({
         queryKey: ["next-episode-number", podcastId],
@@ -217,7 +136,6 @@ export function useNextEpisodeNumber(podcastId: string | undefined) {
                 .eq("podcast_id", podcastId!)
                 .order("episode_number", { ascending: false })
                 .limit(1);
-
             if (error) throw error;
             return (data?.[0]?.episode_number || 0) + 1;
         },
