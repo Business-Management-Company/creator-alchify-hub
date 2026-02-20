@@ -143,67 +143,122 @@ serve(async (req) => {
       .eq("user_id", user.user.id)
       .maybeSingle();
 
+    let podcast;
+    let newEpisodesCount = 0;
+
     if (existingPodcast) {
-      return new Response(
-        JSON.stringify({ error: "Podcast already imported" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
+      // Podcast exists — sync new episodes only
+      podcast = existingPodcast;
 
-    // Insert podcast (matches actual DB schema)
-    const { data: podcast, error: podcastError } = await supabase
-      .from("podcasts")
-      .insert({
+      // Get existing GUIDs and audio URLs to detect duplicates
+      const { data: existingEpisodes } = await supabase
+        .from("episodes")
+        .select("guid, audio_url")
+        .eq("podcast_id", podcast.id);
+
+      const existingGuids = new Set((existingEpisodes || []).map((e: any) => e.guid).filter(Boolean));
+      const existingAudioUrls = new Set((existingEpisodes || []).map((e: any) => e.audio_url).filter(Boolean));
+
+      // Filter to only new episodes
+      const newEpisodes = episodes.filter((ep: any) => {
+        if (ep.guid && existingGuids.has(ep.guid)) return false;
+        if (ep.audio_url && existingAudioUrls.has(ep.audio_url)) return false;
+        return true;
+      });
+
+      newEpisodesCount = newEpisodes.length;
+      console.log(`Found ${newEpisodes.length} new episodes out of ${episodes.length} total`);
+
+      if (newEpisodes.length > 0) {
+        const { error: epError } = await supabase.from("episodes").insert(
+          newEpisodes.map((ep: any) => ({
+            podcast_id: podcast.id,
+            user_id: user.user.id,
+            title: ep.title,
+            description: ep.description,
+            audio_url: ep.audio_url,
+            file_size_bytes: ep.file_size_bytes,
+            duration_seconds: ep.duration_seconds,
+            pub_date: ep.pub_date,
+            episode_number: ep.episode_number,
+            season_number: ep.season_number,
+            guid: ep.guid,
+            status: "published",
+          })),
+        );
+        if (epError) console.error("Episode insert error:", epError);
+      }
+
+      // Log the sync
+      await supabase.from("rss_imports").insert({
         user_id: user.user.id,
-        title: podcastMeta.title,
-        description: podcastMeta.description,
-        image_url: podcastMeta.image_url,
-        author: podcastMeta.author,
-        author_email: podcastMeta.author_email,
-        website_url: podcastMeta.website_url,
-        language: podcastMeta.language,
-        category: podcastMeta.category,
-        is_explicit: podcastMeta.is_explicit,
-        rss_feed_url: rssUrl,
-        status: "active",
-      })
-      .select()
-      .single();
+        podcast_id: podcast.id,
+        rss_url: rssUrl,
+        status: "completed",
+        episodes_imported: newEpisodes.length,
+      });
 
-    if (podcastError) throw podcastError;
-
-    // Insert rss_imports record
-    await supabase.from("rss_imports").insert({
-      user_id: user.user.id,
-      podcast_id: podcast.id,
-      rss_url: rssUrl,
-      status: "completed",
-      episodes_imported: episodes.length,
-    });
-
-    // Insert episodes
-    if (episodes.length > 0) {
-      const { error: epError } = await supabase.from("episodes").insert(
-        episodes.map((ep: any) => ({
-          podcast_id: podcast.id,
+    } else {
+      // New podcast — full import
+      const { data: newPodcast, error: podcastError } = await supabase
+        .from("podcasts")
+        .insert({
           user_id: user.user.id,
-          title: ep.title,
-          description: ep.description,
-          audio_url: ep.audio_url,
-          file_size_bytes: ep.file_size_bytes,
-          duration_seconds: ep.duration_seconds,
-          pub_date: ep.pub_date,
-          episode_number: ep.episode_number,
-          season_number: ep.season_number,
-          guid: ep.guid,
-          status: "published",
-        })),
-      );
-      if (epError) console.error("Episode insert error:", epError);
+          title: podcastMeta.title,
+          description: podcastMeta.description,
+          image_url: podcastMeta.image_url,
+          author: podcastMeta.author,
+          author_email: podcastMeta.author_email,
+          website_url: podcastMeta.website_url,
+          language: podcastMeta.language,
+          category: podcastMeta.category,
+          is_explicit: podcastMeta.is_explicit,
+          rss_feed_url: rssUrl,
+          status: "active",
+        })
+        .select()
+        .single();
+
+      if (podcastError) throw podcastError;
+      podcast = newPodcast;
+      newEpisodesCount = episodes.length;
+
+      await supabase.from("rss_imports").insert({
+        user_id: user.user.id,
+        podcast_id: podcast.id,
+        rss_url: rssUrl,
+        status: "completed",
+        episodes_imported: episodes.length,
+      });
+
+      if (episodes.length > 0) {
+        const { error: epError } = await supabase.from("episodes").insert(
+          episodes.map((ep: any) => ({
+            podcast_id: podcast.id,
+            user_id: user.user.id,
+            title: ep.title,
+            description: ep.description,
+            audio_url: ep.audio_url,
+            file_size_bytes: ep.file_size_bytes,
+            duration_seconds: ep.duration_seconds,
+            pub_date: ep.pub_date,
+            episode_number: ep.episode_number,
+            season_number: ep.season_number,
+            guid: ep.guid,
+            status: "published",
+          })),
+        );
+        if (epError) console.error("Episode insert error:", epError);
+      }
     }
 
     return new Response(
-      JSON.stringify({ podcast, episodes, episodeCount: episodes.length }),
+      JSON.stringify({
+        podcast,
+        episodeCount: newEpisodesCount,
+        totalInFeed: episodes.length,
+        isSync: !!existingPodcast,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
