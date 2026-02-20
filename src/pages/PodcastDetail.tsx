@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,9 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Plus, Settings, List, Rss, Copy, Trash2, Pencil, Music, Clock, Calendar } from "lucide-react";
+import { ArrowLeft, Plus, Settings, List, Rss, Copy, Trash2, Pencil, Music, Clock, Calendar, Play } from "lucide-react";
 import { toast } from "sonner";
+import { AudioPlayer } from "@/components/ui/audio-player";
 import AppLayout from "@/components/layout/AppLayout";
+import { supabase } from "@/integrations/supabase/client";
 import { usePodcast, useUpdatePodcast, useDeletePodcast } from "@/hooks/usePodcasts";
 import { useDeleteEpisode } from "@/hooks/useEpisodes";
 import { PODCAST_CATEGORIES, PODCAST_LANGUAGES } from "@/types/podcast";
@@ -27,10 +29,35 @@ const PodcastDetail = () => {
     const deleteEpisode = useDeleteEpisode();
 
     const [isEditing, setIsEditing] = useState(false);
+    const [expandedEpisode, setExpandedEpisode] = useState<string | null>(null);
+    const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
     const [editForm, setEditForm] = useState({
         title: "", description: "", category: "", language: "en",
         is_explicit: false, author: "", website_url: "",
     });
+
+    const getSignedUrl = async (audioUrl: string) => {
+        if (signedUrls[audioUrl]) return;
+        try {
+            const { data } = await supabase.storage
+                .from("media-uploads")
+                .createSignedUrl(audioUrl, 3600);
+            if (data?.signedUrl) {
+                setSignedUrls(prev => ({ ...prev, [audioUrl]: data.signedUrl }));
+            }
+        } catch (err) {
+            console.error("Failed to get signed URL:", err);
+        }
+    };
+
+    const toggleEpisodePlayer = (episode: Episode) => {
+        if (expandedEpisode === episode.id) {
+            setExpandedEpisode(null);
+        } else {
+            setExpandedEpisode(episode.id);
+            if (episode.audio_url) getSignedUrl(episode.audio_url);
+        }
+    };
 
     const startEditing = () => {
         if (!podcast) return;
@@ -131,34 +158,55 @@ const PodcastDetail = () => {
                                 <div className="space-y-3">
                                     {podcast.episodes.map((episode: Episode) => (
                                         <Card key={episode.id} className="hover:shadow-md transition-shadow">
-                                            <CardContent className="flex items-center gap-4 p-4">
-                                                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0">{episode.episode_number || "—"}</div>
-                                                <div className="flex-1 min-w-0">
-                                                    <h3 className="font-semibold truncate">{episode.title}</h3>
-                                                    <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                                                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDuration(episode.duration_seconds)}</span>
-                                                        {episode.pub_date && (
-                                                            <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{new Date(episode.pub_date).toLocaleDateString()}</span>
-                                                        )}
-                                                        <Badge variant="outline" className={`text-xs ${getStatusColor(episode.status)}`}>{episode.status}</Badge>
+                                            <CardContent className="p-4 space-y-3">
+                                                <div className="flex items-center gap-4">
+                                                    {episode.audio_url ? (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="w-10 h-10 rounded-lg bg-primary/10 shrink-0"
+                                                            onClick={() => toggleEpisodePlayer(episode)}
+                                                        >
+                                                            <Play className={`w-4 h-4 text-primary ${expandedEpisode === episode.id ? 'hidden' : ''}`} />
+                                                            <Music className={`w-4 h-4 text-primary ${expandedEpisode === episode.id ? '' : 'hidden'}`} />
+                                                        </Button>
+                                                    ) : (
+                                                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0">{episode.episode_number || "—"}</div>
+                                                    )}
+                                                    <div className="flex-1 min-w-0">
+                                                        <h3 className="font-semibold truncate">{episode.title}</h3>
+                                                        <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                                                            <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDuration(episode.duration_seconds)}</span>
+                                                            {episode.pub_date && (
+                                                                <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{new Date(episode.pub_date).toLocaleDateString()}</span>
+                                                            )}
+                                                            <Badge variant="outline" className={`text-xs ${getStatusColor(episode.status)}`}>{episode.status}</Badge>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <Button variant="ghost" size="icon" onClick={() => navigate(`/podcasts/${id}/episodes/${episode.id}`)}><Pencil className="w-4 h-4" /></Button>
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="w-4 h-4" /></Button></AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>Delete Episode</AlertDialogTitle>
+                                                                    <AlertDialogDescription>Are you sure you want to delete "{episode.title}"?</AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => deleteEpisode.mutate({ episodeId: episode.id, podcastId: id! })}>Delete</AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-1">
-                                                    <Button variant="ghost" size="icon" onClick={() => navigate(`/podcasts/${id}/episodes/${episode.id}`)}><Pencil className="w-4 h-4" /></Button>
-                                                    <AlertDialog>
-                                                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="w-4 h-4" /></Button></AlertDialogTrigger>
-                                                        <AlertDialogContent>
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle>Delete Episode</AlertDialogTitle>
-                                                                <AlertDialogDescription>Are you sure you want to delete "{episode.title}"?</AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={() => deleteEpisode.mutate({ episodeId: episode.id, podcastId: id! })}>Delete</AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
-                                                </div>
+                                                {expandedEpisode === episode.id && episode.audio_url && signedUrls[episode.audio_url] && (
+                                                    <AudioPlayer
+                                                        src={signedUrls[episode.audio_url]}
+                                                        title={episode.title}
+                                                        className="border-0 bg-muted/50"
+                                                    />
+                                                )}
                                             </CardContent>
                                         </Card>
                                     ))}
