@@ -129,10 +129,12 @@ const ImportPodcast = () => {
                   <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
                   <div className="flex-1">
                     <h3 className="font-semibold text-green-500 mb-1">
-                      Podcast Imported Successfully!
+                      {parsedData.isSync ? "Podcast Synced Successfully!" : "Podcast Imported Successfully!"}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {parsedData.episodes.length} episodes imported.
+                      {parsedData.isSync
+                        ? `${parsedData.episodeCount ?? 0} new episodes synced (${parsedData.totalInFeed ?? 0} total in feed).`
+                        : `${parsedData.episodes?.length ?? 0} episodes imported.`}
                     </p>
                   </div>
                 </div>
@@ -171,6 +173,7 @@ const ImportPodcast = () => {
                 </div>
 
                 {/* Episodes Preview */}
+                {parsedData.episodes && parsedData.episodes.length > 0 && (
                 <div className="border rounded-lg p-6">
                   <h2 className="text-xl font-bold mb-4">
                     Episodes Preview (showing{" "}
@@ -207,6 +210,7 @@ const ImportPodcast = () => {
                     )}
                   </div>
                 </div>
+                )}
                 {rssFeedUrl && (
                   <div className="border rounded-lg p-4 bg-blue-50 mt-6 flex items-center justify-between">
                     <div className="flex-1">
