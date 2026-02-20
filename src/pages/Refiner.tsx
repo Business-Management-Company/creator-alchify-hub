@@ -52,6 +52,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { AudioPlayer } from '@/components/ui/audio-player';
 
 import AppLayout from '@/components/layout/AppLayout';
 import { ClipGenerator } from '@/components/refiner/ClipGenerator';
@@ -482,11 +483,11 @@ const Refiner = () => {
                         className={`w-full h-full object-contain bg-black transition-all duration-300 ${isProcessingActive ? 'opacity-60' : ''}`}
                       />
                     ) : mediaUrl && project.source_file_type === 'audio' ? (
-                      <div className="flex flex-col items-center gap-4 p-8">
+                      <div className="flex flex-col items-center gap-4 p-8 w-full">
                         <div className="p-6 rounded-full bg-primary/10">
                           <Volume2 className="h-12 w-12 text-primary" />
                         </div>
-                        <audio src={mediaUrl} controls className="w-full max-w-md" />
+                        <AudioPlayer src={mediaUrl} className="w-full max-w-lg" />
                       </div>
                     ) : (
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">

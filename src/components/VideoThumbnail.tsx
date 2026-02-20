@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Video, Music, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { AudioPlayer } from '@/components/ui/audio-player';
 
 interface VideoThumbnailProps {
   sourceFileUrl: string | null;
@@ -79,7 +80,7 @@ export const VideoThumbnail = ({
           </div>
           <p className="text-muted-foreground text-sm">Audio file</p>
           {showControls && (
-            <audio src={signedUrl} controls className="mt-4 max-w-full" />
+            <AudioPlayer src={signedUrl} compact className="mt-4 w-full max-w-md" />
           )}
         </div>
       </div>
