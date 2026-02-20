@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { GlobalAudioProvider } from "@/contexts/GlobalAudioContext";
+import GlobalAudioBar from "@/components/GlobalAudioBar";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -52,6 +54,7 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <HelmetProvider>
         <AuthProvider>
+          <GlobalAudioProvider>
           <TooltipProvider>
             <Toaster />
             <Sonner />
@@ -104,7 +107,9 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
+          <GlobalAudioBar />
           </TooltipProvider>
+          </GlobalAudioProvider>
         </AuthProvider>
       </HelmetProvider>
     </QueryClientProvider>
