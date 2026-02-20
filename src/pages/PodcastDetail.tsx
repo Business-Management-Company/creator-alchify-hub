@@ -10,13 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Plus, Settings, List, Rss, Copy, Trash2, Pencil, Music, Clock, Calendar, Play, Pause } from "lucide-react";
+import { ArrowLeft, Plus, Settings, List, Rss, Copy, Trash2, Pencil, Music, Clock, Calendar, Play } from "lucide-react";
 import { toast } from "sonner";
+import { AudioPlayer } from "@/components/ui/audio-player";
 import AppLayout from "@/components/layout/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { usePodcast, useUpdatePodcast, useDeletePodcast } from "@/hooks/usePodcasts";
 import { useDeleteEpisode } from "@/hooks/useEpisodes";
-import { useGlobalAudio } from "@/contexts/GlobalAudioContext";
 import { PODCAST_CATEGORIES, PODCAST_LANGUAGES } from "@/types/podcast";
 import type { Episode } from "@/types/podcast";
 
@@ -27,42 +27,36 @@ const PodcastDetail = () => {
     const updatePodcast = useUpdatePodcast();
     const deletePodcast = useDeletePodcast();
     const deleteEpisode = useDeleteEpisode();
-    const { play, currentTrack, isPlaying, togglePlay } = useGlobalAudio();
 
     const [isEditing, setIsEditing] = useState(false);
+    const [expandedEpisode, setExpandedEpisode] = useState<string | null>(null);
+    const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
     const [editForm, setEditForm] = useState({
         title: "", description: "", category: "", language: "en",
         is_explicit: false, author: "", website_url: "",
     });
 
-    const playEpisode = async (episode: Episode) => {
-        if (!episode.audio_url) return;
-
-        // If this episode is already the current track, toggle play/pause
-        if (currentTrack && currentTrack.title === episode.title) {
-            togglePlay();
-            return;
-        }
-
+    const getSignedUrl = async (audioUrl: string) => {
+        if (signedUrls[audioUrl]) return;
         try {
-            if (episode.audio_url.startsWith('http')) {
-                play({ src: episode.audio_url, title: episode.title, podcastTitle: podcast?.title });
-            } else {
-                const { data } = await supabase.storage
-                    .from("media-uploads")
-                    .createSignedUrl(episode.audio_url, 3600);
-                if (data?.signedUrl) {
-                    play({ src: data.signedUrl, title: episode.title, podcastTitle: podcast?.title });
-                }
+            const { data } = await supabase.storage
+                .from("media-uploads")
+                .createSignedUrl(audioUrl, 3600);
+            if (data?.signedUrl) {
+                setSignedUrls(prev => ({ ...prev, [audioUrl]: data.signedUrl }));
             }
         } catch (err) {
             console.error("Failed to get signed URL:", err);
-            toast.error("Failed to load audio");
         }
     };
 
-    const isEpisodePlaying = (episode: Episode) => {
-        return isPlaying && currentTrack?.title === episode.title;
+    const toggleEpisodePlayer = (episode: Episode) => {
+        if (expandedEpisode === episode.id) {
+            setExpandedEpisode(null);
+        } else {
+            setExpandedEpisode(episode.id);
+            if (episode.audio_url) getSignedUrl(episode.audio_url);
+        }
     };
 
     const startEditing = () => {
@@ -171,13 +165,10 @@ const PodcastDetail = () => {
                                                             variant="ghost"
                                                             size="icon"
                                                             className="w-10 h-10 rounded-lg bg-primary/10 shrink-0"
-                                                            onClick={() => playEpisode(episode)}
+                                                            onClick={() => toggleEpisodePlayer(episode)}
                                                         >
-                                                            {isEpisodePlaying(episode) ? (
-                                                                <Pause className="w-4 h-4 text-primary" />
-                                                            ) : (
-                                                                <Play className="w-4 h-4 text-primary" />
-                                                            )}
+                                                            <Play className={`w-4 h-4 text-primary ${expandedEpisode === episode.id ? 'hidden' : ''}`} />
+                                                            <Music className={`w-4 h-4 text-primary ${expandedEpisode === episode.id ? '' : 'hidden'}`} />
                                                         </Button>
                                                     ) : (
                                                         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0">{episode.episode_number || "—"}</div>
@@ -209,6 +200,13 @@ const PodcastDetail = () => {
                                                         </AlertDialog>
                                                     </div>
                                                 </div>
+                                                {expandedEpisode === episode.id && episode.audio_url && signedUrls[episode.audio_url] && (
+                                                    <AudioPlayer
+                                                        src={signedUrls[episode.audio_url]}
+                                                        title={episode.title}
+                                                        className="border-0 bg-muted/50"
+                                                    />
+                                                )}
                                             </CardContent>
                                         </Card>
                                     ))}
