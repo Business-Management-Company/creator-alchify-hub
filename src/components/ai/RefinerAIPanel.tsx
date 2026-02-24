@@ -538,10 +538,10 @@ export function RefinerAIPanel() {
   return (
     <>
       {/* Floating Button */}
-      <button
+      {/* <button
         onClick={() => setIsOpen(true)}
         className={cn(
-          "fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full",
+          "fixed bottom-12 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full",
           "bg-gradient-to-r from-primary to-accent text-primary-foreground",
           "shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200",
           "font-medium",
@@ -550,7 +550,7 @@ export function RefinerAIPanel() {
       >
         <Sparkles className="h-5 w-5" />
         <span>Refiner AI</span>
-      </button>
+      </button> */}
 
       {/* Slide-out Panel */}
       <div
