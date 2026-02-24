@@ -8,12 +8,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Play, Pause, Clock, Calendar, Music } from "lucide-react";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import AudioPlayer from "@/components/AudioPlayer";
+import Navbar from "@/components/Navbar";
 import type { Episode } from "@/types/podcast";
 
-function isPrivateStoragePath(url: string | null): boolean {
+function needsSignedUrl(url: string | null): boolean {
   if (!url) return false;
-  if (/^https?:\/\//i.test(url)) return false;
-  return true;
+  // Full Supabase storage URL (public bucket but needs signed URL to avoid ORB)
+  if (/supabase\.co\/storage\/v1\/object\/(?:public|sign)\/media-uploads\//i.test(url)) return true;
+  // Relative/private path
+  if (!/^https?:\/\//i.test(url)) return true;
+  return false;
 }
 
 function extractStoragePath(raw: string): string {
@@ -65,7 +69,7 @@ const PublicPodcastDetail = () => {
     if (!podcast?.episodes?.length) return;
 
     const privatePaths = podcast.episodes
-      .filter((ep: Episode) => isPrivateStoragePath(ep.audio_url))
+      .filter((ep: Episode) => needsSignedUrl(ep.audio_url))
       .map((ep: Episode) => extractStoragePath(ep.audio_url!));
 
     if (privatePaths.length === 0) return;
@@ -103,11 +107,8 @@ const PublicPodcastDetail = () => {
 
     let audioUrl = episode.audio_url;
 
-    // For full URLs (imported podcasts), use directly
-    if (/^https?:\/\//i.test(audioUrl)) {
-      // Use as-is
-    } else {
-      // Private storage file — use pre-fetched signed URL
+    if (needsSignedUrl(audioUrl)) {
+      // Storage file — use pre-fetched signed URL
       const path = extractStoragePath(audioUrl);
       audioUrl = signedUrls[path] || "";
 
@@ -150,7 +151,8 @@ const PublicPodcastDetail = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
+        <Navbar />
         <div className="max-w-4xl mx-auto p-6">
           <div className="space-y-6">
             <Skeleton className="h-64 w-full" />
@@ -167,8 +169,9 @@ const PublicPodcastDetail = () => {
 
   if (!podcast) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 p-6">
-        <div className="text-center">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
+        <Navbar />
+        <div className="text-center p-6">
           <Music className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
           <h2 className="text-2xl font-bold mb-2">Podcast not found</h2>
           <p className="text-muted-foreground">This podcast may not be published or doesn't exist.</p>
@@ -180,7 +183,8 @@ const PublicPodcastDetail = () => {
   const publishedEpisodes = podcast.episodes || [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
+      <Navbar />
       <div className="max-w-4xl mx-auto p-6">
         {/* Podcast Header */}
         <div className="mb-8 flex items-center gap-6">
@@ -282,9 +286,11 @@ const PublicPodcastDetail = () => {
       </div>
 
       {/* Audio Player */}
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-background">
-        <AudioPlayer />
-      </div>
+      {currentEpisode && (
+        <div className="fixed bottom-0 left-0 right-0 p-6 bg-background border-t border-border">
+          <AudioPlayer />
+        </div>
+      )}
     </div>
   );
 };
