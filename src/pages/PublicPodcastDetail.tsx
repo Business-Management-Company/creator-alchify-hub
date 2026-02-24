@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,20 @@ import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import AudioPlayer from "@/components/AudioPlayer";
 import type { Episode } from "@/types/podcast";
 
+function isPrivateStoragePath(url: string | null): boolean {
+  if (!url) return false;
+  if (/^https?:\/\//i.test(url)) return false;
+  return true;
+}
+
+function extractStoragePath(raw: string): string {
+  let p = raw.trim().replace(/^\/+/, "");
+  const match = p.match(/storage\/v1\/object\/(?:public|sign)\/media-uploads\/(.+)$/i);
+  if (match?.[1]) return match[1];
+  if (p.toLowerCase().startsWith("media-uploads/")) p = p.slice("media-uploads/".length);
+  return p;
+}
+
 const PublicPodcastDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const { playEpisode, pauseEpisode, resumeEpisode, currentEpisode } = useAudioPlayer();
@@ -18,103 +32,102 @@ const PublicPodcastDetail = () => {
   const { data: podcast, isLoading } = useQuery({
     queryKey: ["public-podcast", slug],
     queryFn: async () => {
-      // First get the podcast
-      const { data: podcastData, error: podcastError } = await supabase
-        .from("podcasts")
-        .select("id, title, description, image_url, category, language, status, author, website_url")
-        .eq("id", slug)
-        .eq("status", "active")
-        .single();
+      const [podcastRes, ] = await Promise.all([
+        supabase
+          .from("podcasts")
+          .select("id, title, description, image_url, category, language, status, author, website_url")
+          .eq("id", slug)
+          .eq("status", "active")
+          .single(),
+      ]);
 
-      if (podcastError) throw podcastError;
+      if (podcastRes.error) throw podcastRes.error;
 
-      // Then get its published episodes
       const { data: episodes, error: episodesError } = await supabase
         .from("episodes")
         .select("id, title, description, audio_url, duration_seconds, pub_date, status, created_at")
-        .eq("podcast_id", podcastData.id)
+        .eq("podcast_id", podcastRes.data.id)
         .eq("status", "published")
         .order("pub_date", { ascending: false });
 
       if (episodesError) throw episodesError;
 
       return {
-        ...podcastData,
+        ...podcastRes.data,
         episodes: episodes || []
       };
     },
     enabled: !!slug,
   });
 
+  // Pre-fetch signed URLs for private storage files via edge function
+  useEffect(() => {
+    if (!podcast?.episodes?.length) return;
+
+    const privatePaths = podcast.episodes
+      .filter((ep: Episode) => isPrivateStoragePath(ep.audio_url))
+      .map((ep: Episode) => extractStoragePath(ep.audio_url!));
+
+    if (privatePaths.length === 0) return;
+
+    const fetchSignedUrls = async () => {
+      try {
+        const res = await supabase.functions.invoke("public-signed-url", {
+          body: { paths: privatePaths },
+        });
+        if (res.data?.urls) {
+          setSignedUrls(res.data.urls);
+        }
+      } catch (err) {
+        console.error("Failed to fetch public signed URLs", err);
+      }
+    };
+
+    fetchSignedUrls();
+  }, [podcast?.episodes]);
+
   const handlePlayEpisode = async (episode: Episode) => {
     if (!episode.audio_url) return;
 
-    // If the DB already stores a full URL, use it directly (don't try to sign it)
-    if (/^https?:\/\//i.test(episode.audio_url)) {
-      playEpisode({
-        id: episode.id,
-        title: episode.title,
-        audioUrl: episode.audio_url,
-        podcastTitle: podcast?.title || "Unknown Podcast",
-        podcastId: podcast?.id,
-        duration: episode.duration_seconds || 0,
-      });
-      return;
-    }
-
-    // If clicking the same episode that's currently playing, pause it
+    // If the same episode is playing, pause it
     if (currentEpisode?.id === episode.id && currentEpisode?.isPlaying) {
       pauseEpisode();
       return;
     }
 
-    // If clicking the same episode that's paused, resume it
+    // If the same episode is paused, resume it
     if (currentEpisode?.id === episode.id && !currentEpisode?.isPlaying) {
       resumeEpisode();
       return;
     }
 
-    // If clicking a different episode, get a signed URL (if needed) and play it
-    const storagePath = (() => {
-      const raw = episode.audio_url ?? "";
-      let p = raw.trim().replace(/^\/+/, "");
+    let audioUrl = episode.audio_url;
 
-      const supabasePublicMatch = p.match(/storage\/v1\/object\/(?:public|sign)\/media-uploads\/(.+)$/i);
-      if (supabasePublicMatch?.[1]) return supabasePublicMatch[1];
+    // For full URLs (imported podcasts), use directly
+    if (/^https?:\/\//i.test(audioUrl)) {
+      // Use as-is
+    } else {
+      // Private storage file — use pre-fetched signed URL
+      const path = extractStoragePath(audioUrl);
+      audioUrl = signedUrls[path] || "";
 
-      if (p.toLowerCase().startsWith("media-uploads/")) {
-        p = p.slice("media-uploads/".length);
-      }
-
-      return p;
-    })();
-    let audioUrl = signedUrls[storagePath];
-
-    if (!audioUrl) {
-      try {
-        const { data, error } = await supabase.storage
-          .from("media-uploads")
-          .createSignedUrl(storagePath, 3600);
-
-        if (error || !data?.signedUrl) {
-          const { data: publicData } = supabase.storage
-            .from("media-uploads")
-            .getPublicUrl(storagePath);
-
-          if (publicData?.publicUrl) {
-            audioUrl = publicData.publicUrl;
-            setSignedUrls((prev) => ({ ...prev, [storagePath]: publicData.publicUrl }));
+      if (!audioUrl) {
+        // Fallback: try fetching on demand via edge function
+        try {
+          const res = await supabase.functions.invoke("public-signed-url", {
+            body: { paths: [path] },
+          });
+          if (res.data?.urls?.[path]) {
+            audioUrl = res.data.urls[path];
+            setSignedUrls((prev) => ({ ...prev, [path]: audioUrl }));
           } else {
-            console.error("Failed to get signed URL for public episode", error);
+            console.error("Could not get signed URL for episode");
             return;
           }
-        } else {
-          audioUrl = data.signedUrl;
-          setSignedUrls((prev) => ({ ...prev, [storagePath]: data.signedUrl }));
+        } catch {
+          console.error("Failed to get signed URL");
+          return;
         }
-      } catch (err) {
-        console.error("Unexpected error creating signed URL for public episode", err);
-        return;
       }
     }
 
