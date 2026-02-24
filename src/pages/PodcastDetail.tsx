@@ -136,29 +136,44 @@ const PodcastDetail = () => {
         deletePodcast.mutate(id, { onSuccess: () => navigate("/podcasts") });
     };
 
-    const handlePlayEpisode = (episode: Episode) => {
+    const getPlayableUrl = async (audioUrl: string): Promise<string> => {
+        // Check if this is a private supabase storage URL
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        if (audioUrl.includes(supabaseUrl) && audioUrl.includes('/media-uploads/')) {
+            // Extract the path after the bucket name
+            const pathMatch = audioUrl.match(/\/media-uploads\/(.+)$/);
+            if (pathMatch) {
+                const { data } = await supabase.storage
+                    .from("media-uploads")
+                    .createSignedUrl(pathMatch[1], 3600);
+                if (data?.signedUrl) return data.signedUrl;
+            }
+        }
+        // External URL (imported podcasts) — use directly
+        return audioUrl;
+    };
+
+    const handlePlayEpisode = async (episode: Episode) => {
         if (!episode.audio_url) {
             toast.error("No audio file available for this episode");
             return;
         }
 
-        // If clicking the same episode that's currently playing, pause it
         if (currentEpisode?.id === episode.id && currentEpisode?.isPlaying) {
             pauseEpisode();
             return;
         }
 
-        // If clicking the same episode that's paused, resume it
         if (currentEpisode?.id === episode.id && !currentEpisode?.isPlaying) {
             resumeEpisode();
             return;
         }
 
-        // If clicking a different episode, play it
+        const playableUrl = await getPlayableUrl(episode.audio_url);
         playEpisode({
             id: episode.id,
             title: episode.title,
-            audioUrl: episode.audio_url,
+            audioUrl: playableUrl,
             podcastTitle: podcast?.title || "Unknown Podcast",
             podcastId: id,
             duration: episode.duration_seconds || 0,
