@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -43,6 +44,8 @@ import CreatePodcast from "./pages/CreatePodcast";
 import ImportPodcast from "./pages/ImportPodcast";
 import PodcastDetail from "./pages/PodcastDetail";
 import EpisodeForm from "./pages/EpisodeForm";
+import PublicPodcasts from "./pages/PublicPodcasts";
+import PublicPodcastDetail from "./pages/PublicPodcastDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,8 +58,9 @@ const App = () => (
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <BrowserRouter>
-              <Routes>
+            <AudioPlayerProvider>
+              <BrowserRouter>
+                <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/dashboard" element={<Dashboard />} />
@@ -98,12 +102,15 @@ const App = () => (
                 <Route path="/podcasts/:id" element={<PodcastDetail />} />
                 <Route path="/podcasts/:id/episodes/new" element={<EpisodeForm />} />
                 <Route path="/podcasts/:id/episodes/:eid" element={<EpisodeForm />} />
+                <Route path="/discover" element={<PublicPodcasts />} />
+                <Route path="/podcast/:slug" element={<PublicPodcastDetail />} />
                 {/* Board Portal - Public access for board members */}
                 <Route path="/board" element={<BoardPortal />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
+            </AudioPlayerProvider>
           </TooltipProvider>
         </AuthProvider>
       </HelmetProvider>
