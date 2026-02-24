@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,6 +64,7 @@ const PodcastDetail = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [expandedEpisode, setExpandedEpisode] = useState<string | null>(null);
     const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+    const [playingLoading, setPlayingLoading] = useState(false);
     const [editForm, setEditForm] = useState({
         title: "", 
         description: "", 
@@ -74,28 +75,47 @@ const PodcastDetail = () => {
         website_url: "",
     });
 
-    const getSignedUrl = async (audioUrl: string) => {
-        if (signedUrls[audioUrl]) return;
-        try {
-            const { data } = await supabase.storage
-                .from("media-uploads")
-                .createSignedUrl(audioUrl, 3600);
-            if (data?.signedUrl) {
-                setSignedUrls(prev => ({ ...prev, [audioUrl]: data.signedUrl }));
-            }
-        } catch (err) {
-            console.error("Failed to get signed URL:", err);
-        }
-    };
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 
-    const toggleEpisodePlayer = (episode: Episode) => {
-        if (expandedEpisode === episode.id) {
-            setExpandedEpisode(null);
-        } else {
-            setExpandedEpisode(episode.id);
-            if (episode.audio_url) getSignedUrl(episode.audio_url);
-        }
-    };
+    const isPrivateStorageUrl = useCallback((url: string) => {
+        return url.includes(supabaseUrl) && url.includes('/media-uploads/');
+    }, [supabaseUrl]);
+
+    // Prefetch signed URLs for all private storage episodes when podcast loads
+    useEffect(() => {
+        if (!podcast?.episodes) return;
+        const privateEpisodes = podcast.episodes.filter(
+            (ep: Episode) => ep.audio_url && isPrivateStorageUrl(ep.audio_url) && !signedUrls[ep.audio_url]
+        );
+        if (privateEpisodes.length === 0) return;
+
+        const fetchUrls = async () => {
+            const paths = privateEpisodes.map((ep: Episode) => {
+                const match = ep.audio_url!.match(/\/media-uploads\/(.+)$/);
+                return match ? match[1] : null;
+            }).filter(Boolean) as string[];
+
+            if (paths.length === 0) return;
+
+            const results = await Promise.all(
+                paths.map(path =>
+                    supabase.storage.from("media-uploads").createSignedUrl(path, 3600)
+                )
+            );
+
+            const newUrls: Record<string, string> = {};
+            privateEpisodes.forEach((ep: Episode, i: number) => {
+                const signedUrl = results[i]?.data?.signedUrl;
+                if (signedUrl && ep.audio_url) {
+                    newUrls[ep.audio_url] = signedUrl;
+                }
+            });
+            if (Object.keys(newUrls).length > 0) {
+                setSignedUrls(prev => ({ ...prev, ...newUrls }));
+            }
+        };
+        fetchUrls();
+    }, [podcast?.episodes, isPrivateStorageUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const startEditing = () => {
         if (!podcast) return;
@@ -137,16 +157,20 @@ const PodcastDetail = () => {
     };
 
     const getPlayableUrl = async (audioUrl: string): Promise<string> => {
+        // Check if we already have a prefetched signed URL
+        if (signedUrls[audioUrl]) return signedUrls[audioUrl];
+
         // Check if this is a private supabase storage URL
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        if (audioUrl.includes(supabaseUrl) && audioUrl.includes('/media-uploads/')) {
-            // Extract the path after the bucket name
+        if (isPrivateStorageUrl(audioUrl)) {
             const pathMatch = audioUrl.match(/\/media-uploads\/(.+)$/);
             if (pathMatch) {
                 const { data } = await supabase.storage
                     .from("media-uploads")
                     .createSignedUrl(pathMatch[1], 3600);
-                if (data?.signedUrl) return data.signedUrl;
+                if (data?.signedUrl) {
+                    setSignedUrls(prev => ({ ...prev, [audioUrl]: data.signedUrl }));
+                    return data.signedUrl;
+                }
             }
         }
         // External URL (imported podcasts) — use directly
@@ -169,7 +193,9 @@ const PodcastDetail = () => {
             return;
         }
 
+        setPlayingLoading(true);
         const playableUrl = await getPlayableUrl(episode.audio_url);
+        setPlayingLoading(false);
         playEpisode({
             id: episode.id,
             title: episode.title,

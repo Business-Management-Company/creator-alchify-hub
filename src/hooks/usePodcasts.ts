@@ -26,27 +26,29 @@ export function usePodcast(podcastId: string | undefined) {
     return useQuery({
         queryKey: ["podcast", podcastId],
         queryFn: async () => {
-            const { data, error } = await (supabase as any)
-                .from("podcasts")
-                .select("*")
-                .eq("id", podcastId!)
-                .single();
-            if (error) throw error;
+            // Run all three queries in parallel
+            const [podcastResult, episodesResult, rssResult] = await Promise.all([
+                (supabase as any)
+                    .from("podcasts")
+                    .select("*")
+                    .eq("id", podcastId!)
+                    .single(),
+                (supabase as any)
+                    .from("episodes")
+                    .select("*")
+                    .eq("podcast_id", podcastId!)
+                    .order("pub_date", { ascending: false }),
+                (supabase as any)
+                    .from("rss_imports")
+                    .select("*")
+                    .eq("podcast_id", podcastId!)
+                    .maybeSingle(),
+            ]);
 
-            const { data: episodes, error: episodesError } = await (supabase as any)
-                .from("episodes")
-                .select("*")
-                .eq("podcast_id", podcastId!)
-                .order("pub_date", { ascending: false });
-            if (episodesError) throw episodesError;
+            if (podcastResult.error) throw podcastResult.error;
+            if (episodesResult.error) throw episodesResult.error;
 
-            const { data: rssImport } = await (supabase as any)
-                .from("rss_imports")
-                .select("*")
-                .eq("podcast_id", podcastId!)
-                .maybeSingle();
-
-            return { ...data, episodes: episodes || [], rss_import: rssImport } as PodcastWithEpisodes;
+            return { ...podcastResult.data, episodes: episodesResult.data || [], rss_import: rssResult.data } as PodcastWithEpisodes;
         },
         enabled: !!podcastId && !!user,
     });
