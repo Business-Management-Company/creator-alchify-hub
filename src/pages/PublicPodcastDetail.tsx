@@ -23,7 +23,7 @@ const PublicPodcastDetail = () => {
         .from("podcasts")
         .select("id, title, description, image_url, category, language, status, author, website_url")
         .eq("id", slug)
-        .eq("status", "published")
+        .eq("status", "active")
         .single();
 
       if (podcastError) throw podcastError;

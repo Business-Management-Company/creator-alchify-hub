@@ -143,7 +143,7 @@ serve(async (req) => {
       .eq("user_id", user.user.id)
       .maybeSingle();
 
-    let podcast;
+    let podcast: { id: string } | null = null;
     let newEpisodesCount = 0;
 
     if (existingPodcast) {

@@ -161,7 +161,6 @@ const PodcastDetail = () => {
             audioUrl: episode.audio_url,
             podcastTitle: podcast?.title || "Unknown Podcast",
             podcastId: id,
-            podcastSlug: podcast?.slug,
             duration: episode.duration_seconds || 0,
         });
     };
@@ -292,10 +291,10 @@ const PodcastDetail = () => {
                                                                 <Clock className="w-3 h-3" />
                                                                 {formatDuration(episode.duration_seconds)}
                                                             </span>
-                                                            {episode.publish_date && (
+                                                            {episode.pub_date && (
                                                                 <span className="flex items-center gap-1">
                                                                     <Calendar className="w-3 h-3" />
-                                                                    {new Date(episode.publish_date).toLocaleDateString()}
+                                                                    {new Date(episode.pub_date).toLocaleDateString()}
                                                                 </span>
                                                             )}
                                                             <Badge variant="outline" className={`text-xs ${getStatusColor(episode.status)}`}>
@@ -351,6 +350,46 @@ const PodcastDetail = () => {
                                 </div>
                             )}
                             
+                            {/* Public Podcast URL */}
+                            <Card className="mt-6">
+                                <CardHeader>
+                                    <CardTitle className="text-base flex items-center gap-2">
+                                        <ExternalLink className="w-4 h-4" /> Public Podcast Page
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="text-sm space-y-3">
+                                    <p className="text-muted-foreground">
+                                        Share this link or use it as your RSS redirect URL. Listeners can view all published episodes here.
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            readOnly
+                                            value={`${window.location.origin}/podcast/${id}`}
+                                            className="text-xs font-mono"
+                                        />
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(`${window.location.origin}/podcast/${id}`);
+                                                toast.success("Public URL copied to clipboard!");
+                                            }}
+                                        >
+                                            <Copy className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            asChild
+                                        >
+                                            <a href={`/podcast/${id}`} target="_blank" rel="noopener noreferrer">
+                                                <ExternalLink className="w-4 h-4" />
+                                            </a>
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
                             {podcast.rss_import && (
                                 <Card className="mt-6">
                                     <CardHeader>
