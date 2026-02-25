@@ -46,9 +46,9 @@ const ImportPodcast = () => {
       toast.success("Podcast imported successfully!");
       queryClient.invalidateQueries({ queryKey: ["podcasts"] });
 
-      // 3️⃣ Generate RSS feed URL (separate function)
-      const feedUrl = `https://zvajqjckngmkbhqiaefr.supabase.co/functions/v1/generate-rss?slug=${data.podcast.slug}`;
-      setRssFeedUrl(feedUrl); // <-- Add this state in your component: const [rssFeedUrl, setRssFeedUrl] = useState<string | null>(null);
+      // 3️⃣ Generate RSS feed URL
+      const feedUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-rss?id=${data.podcast.id}`;
+      setRssFeedUrl(feedUrl);
 
       // 4️⃣ Optional: You can navigate later or let user copy feed URL first
       // setTimeout(() => {
