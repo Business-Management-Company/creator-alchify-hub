@@ -28,7 +28,9 @@ const PLATFORMS: Platform[] = [
     description: "The world's largest audio streaming platform with 600M+ users.",
     steps: [
       "Go to Spotify for Podcasters and sign in or create an account",
-      "Click 'Add your podcast' and paste your RSS feed URL",
+      "Click 'Add a New Show'",
+      "Select 'Find an Existing Show' and then Select 'Somewhere Else'",
+      "Paste your RSS feed URL",
       "Verify ownership via email",
       "Wait 24-48 hours for review and approval",
       "Once live, copy your Spotify podcast URL below",
@@ -137,8 +139,7 @@ export default function DistributionHub({ podcastId, rssFeedUrl, isImported }: D
     setLoading(false);
   };
 
-  const getDistribution = (platformId: string) =>
-    distributions.find((d) => d.platform === platformId);
+  const getDistribution = (platformId: string) => distributions.find((d) => d.platform === platformId);
 
   const handleMarkSubmitted = async (platformId: string) => {
     if (!user) return;
@@ -149,15 +150,13 @@ export default function DistributionHub({ podcastId, rssFeedUrl, isImported }: D
         .update({ status: "submitted", submitted_at: new Date().toISOString() })
         .eq("id", existing.id);
     } else {
-      await (supabase as any)
-        .from("podcast_distributions")
-        .insert({
-          podcast_id: podcastId,
-          user_id: user.id,
-          platform: platformId,
-          status: "submitted",
-          submitted_at: new Date().toISOString(),
-        });
+      await (supabase as any).from("podcast_distributions").insert({
+        podcast_id: podcastId,
+        user_id: user.id,
+        platform: platformId,
+        status: "submitted",
+        submitted_at: new Date().toISOString(),
+      });
     }
     toast.success(`Marked as submitted to ${PLATFORMS.find((p) => p.id === platformId)?.name}`);
     fetchDistributions();
@@ -174,32 +173,51 @@ export default function DistributionHub({ podcastId, rssFeedUrl, isImported }: D
         .update({ status: "live", live_url: url })
         .eq("id", existing.id);
     } else {
-      await (supabase as any)
-        .from("podcast_distributions")
-        .insert({
-          podcast_id: podcastId,
-          user_id: user.id,
-          platform: platformId,
-          status: "live",
-          live_url: url,
-          submitted_at: new Date().toISOString(),
-        });
+      await (supabase as any).from("podcast_distributions").insert({
+        podcast_id: podcastId,
+        user_id: user.id,
+        platform: platformId,
+        status: "live",
+        live_url: url,
+        submitted_at: new Date().toISOString(),
+      });
     }
     toast.success(`${PLATFORMS.find((p) => p.id === platformId)?.name} marked as live!`);
     fetchDistributions();
   };
 
   const getStatusBadge = (dist: Distribution | undefined) => {
-    if (!dist) return <Badge variant="outline" className="text-xs">Not submitted</Badge>;
+    if (!dist)
+      return (
+        <Badge variant="outline" className="text-xs">
+          Not submitted
+        </Badge>
+      );
     switch (dist.status) {
       case "submitted":
-        return <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-600 border-yellow-200">Submitted</Badge>;
+        return (
+          <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-600 border-yellow-200">
+            Submitted
+          </Badge>
+        );
       case "live":
-        return <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-200">Live</Badge>;
+        return (
+          <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-200">
+            Live
+          </Badge>
+        );
       case "rejected":
-        return <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive/20">Rejected</Badge>;
+        return (
+          <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive/20">
+            Rejected
+          </Badge>
+        );
       default:
-        return <Badge variant="outline" className="text-xs">Not submitted</Badge>;
+        return (
+          <Badge variant="outline" className="text-xs">
+            Not submitted
+          </Badge>
+        );
     }
   };
 
@@ -227,7 +245,8 @@ export default function DistributionHub({ podcastId, rssFeedUrl, isImported }: D
             <Radio className="w-4 h-4" /> Your RSS Feed URL
           </CardTitle>
           <CardDescription>
-            Copy this URL and submit it to streaming platforms below. New episodes you add will automatically appear in the feed.
+            Copy this URL and submit it to streaming platforms below. New episodes you add will automatically appear in
+            the feed.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -260,9 +279,7 @@ export default function DistributionHub({ podcastId, rssFeedUrl, isImported }: D
                 onClick={() => setExpandedPlatform(isExpanded ? null : platform.id)}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${platform.color}`}>
-                    {platform.icon}
-                  </div>
+                  <div className={`p-2 rounded-lg ${platform.color}`}>{platform.icon}</div>
                   <div>
                     <h3 className="font-semibold text-sm">{platform.name}</h3>
                     <p className="text-xs text-muted-foreground">{platform.description}</p>
@@ -329,9 +346,7 @@ export default function DistributionHub({ podcastId, rssFeedUrl, isImported }: D
                       <Input
                         placeholder={`Paste your ${platform.name} podcast URL once live...`}
                         value={liveUrls[platform.id] || ""}
-                        onChange={(e) =>
-                          setLiveUrls((prev) => ({ ...prev, [platform.id]: e.target.value }))
-                        }
+                        onChange={(e) => setLiveUrls((prev) => ({ ...prev, [platform.id]: e.target.value }))}
                         className="text-xs"
                       />
                       <Button
