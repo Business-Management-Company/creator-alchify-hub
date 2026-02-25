@@ -41,6 +41,7 @@ import {
     Calendar,
     Play,
     Pause,
+    Radio,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AudioPlayer } from "@/components/ui/audio-player";
@@ -50,6 +51,7 @@ import { usePodcast, useUpdatePodcast, useDeletePodcast } from "@/hooks/usePodca
 import { useDeleteEpisode } from "@/hooks/useEpisodes";
 import { PODCAST_CATEGORIES, PODCAST_LANGUAGES } from "@/types/podcast";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
+import DistributionHub from "@/components/podcast/DistributionHub";
 import type { Episode } from "@/types/podcast";
 
 const PodcastDetail = () => {
@@ -281,6 +283,9 @@ const PodcastDetail = () => {
                             <TabsTrigger value="episodes" className="gap-2">
                                 <List className="w-4 h-4" /> Episodes
                             </TabsTrigger>
+                            <TabsTrigger value="distribution" className="gap-2">
+                                <Radio className="w-4 h-4" /> Distribution
+                            </TabsTrigger>
                             <TabsTrigger value="settings" className="gap-2">
                                 <Settings className="w-4 h-4" /> Settings
                             </TabsTrigger>
@@ -445,6 +450,14 @@ const PodcastDetail = () => {
                                     </CardContent>
                                 </Card>
                             )}
+                        </TabsContent>
+
+                        <TabsContent value="distribution" className="space-y-4">
+                            <DistributionHub
+                                podcastId={id!}
+                                rssFeedUrl={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-rss?slug=${id}`}
+                                isImported={!!podcast.rss_import}
+                            />
                         </TabsContent>
 
                         <TabsContent value="settings" className="space-y-6">
