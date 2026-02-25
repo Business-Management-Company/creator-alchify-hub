@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +42,9 @@ import {
     Play,
     Pause,
     Radio,
+    ImagePlus,
+    Upload,
+    X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AudioPlayer } from "@/components/ui/audio-player";
@@ -67,6 +70,8 @@ const PodcastDetail = () => {
     const [expandedEpisode, setExpandedEpisode] = useState<string | null>(null);
     const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
     const [playingLoading, setPlayingLoading] = useState(false);
+    const [coverUploading, setCoverUploading] = useState(false);
+    const coverInputRef = useRef<HTMLInputElement>(null);
     const [editForm, setEditForm] = useState({
         title: "", 
         description: "", 
@@ -74,7 +79,9 @@ const PodcastDetail = () => {
         language: "en",
         is_explicit: false, 
         author: "", 
+        author_email: "",
         website_url: "",
+        image_url: "",
     });
 
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -128,7 +135,9 @@ const PodcastDetail = () => {
             language: podcast.language || "en",
             is_explicit: podcast.is_explicit || false, 
             author: podcast.author || "",
+            author_email: podcast.author_email || "",
             website_url: podcast.website_url || "",
+            image_url: podcast.image_url || "",
         });
         setIsEditing(true);
     };
@@ -143,8 +152,59 @@ const PodcastDetail = () => {
             language: editForm.language,
             is_explicit: editForm.is_explicit, 
             author: editForm.author || null,
+            author_email: editForm.author_email || null,
             website_url: editForm.website_url || null,
+            image_url: editForm.image_url || null,
         }, { onSuccess: () => setIsEditing(false) });
+    };
+
+    const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !id) return;
+
+        if (!file.type.startsWith("image/")) {
+            toast.error("Please select an image file");
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            toast.error("Image must be under 10MB");
+            return;
+        }
+
+        setCoverUploading(true);
+        try {
+            const ext = file.name.split(".").pop();
+            const path = `podcast-covers/${id}/cover.${ext}`;
+            
+            const { error: uploadError } = await supabase.storage
+                .from("creator-assets")
+                .upload(path, file, { upsert: true });
+
+            if (uploadError) throw uploadError;
+
+            const { data: urlData } = supabase.storage
+                .from("creator-assets")
+                .getPublicUrl(path);
+
+            const imageUrl = urlData.publicUrl;
+            
+            // Update the podcast record
+            updatePodcast.mutate({ id, image_url: imageUrl });
+            setEditForm(prev => ({ ...prev, image_url: imageUrl }));
+            toast.success("Cover photo updated!");
+        } catch (err: any) {
+            toast.error(err.message || "Failed to upload cover photo");
+        } finally {
+            setCoverUploading(false);
+            if (coverInputRef.current) coverInputRef.current.value = "";
+        }
+    };
+
+    const handleRemoveCover = () => {
+        if (!id) return;
+        updatePodcast.mutate({ id, image_url: null });
+        setEditForm(prev => ({ ...prev, image_url: "" }));
+        toast.success("Cover photo removed");
     };
 
     const handlePublish = () => {
@@ -461,6 +521,77 @@ const PodcastDetail = () => {
                         </TabsContent>
 
                         <TabsContent value="settings" className="space-y-6">
+                            {/* Cover Photo Card */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-base">Cover Photo</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="flex items-start gap-6">
+                                        <div className="relative group">
+                                            {podcast.image_url ? (
+                                                <div className="relative w-40 h-40 rounded-lg overflow-hidden border">
+                                                    <img
+                                                        src={podcast.image_url}
+                                                        alt={podcast.title}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                                        <Button
+                                                            variant="secondary"
+                                                            size="icon"
+                                                            className="h-8 w-8"
+                                                            onClick={() => coverInputRef.current?.click()}
+                                                        >
+                                                            <Upload className="w-4 h-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="secondary"
+                                                            size="icon"
+                                                            className="h-8 w-8"
+                                                            onClick={handleRemoveCover}
+                                                        >
+                                                            <X className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={() => coverInputRef.current?.click()}
+                                                    className="w-40 h-40 rounded-lg border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:bg-muted/50 transition-colors"
+                                                >
+                                                    <ImagePlus className="w-8 h-8 text-muted-foreground" />
+                                                    <span className="text-xs text-muted-foreground">Upload Cover</span>
+                                                </button>
+                                            )}
+                                            <input
+                                                ref={coverInputRef}
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={handleCoverUpload}
+                                            />
+                                        </div>
+                                        <div className="flex-1 space-y-2 text-sm text-muted-foreground">
+                                            <p>Your podcast cover art is displayed on streaming platforms and RSS readers.</p>
+                                            <ul className="list-disc list-inside space-y-1">
+                                                <li>Recommended: 3000×3000 px (square)</li>
+                                                <li>Minimum: 1400×1400 px</li>
+                                                <li>Formats: JPG or PNG</li>
+                                                <li>Max size: 10MB</li>
+                                            </ul>
+                                            {coverUploading && (
+                                                <div className="flex items-center gap-2 text-primary">
+                                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+                                                    Uploading...
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Podcast Details Card */}
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between">
                                     <CardTitle>Podcast Details</CardTitle>
@@ -533,13 +664,25 @@ const PodcastDetail = () => {
                                                     </Select>
                                                 </div>
                                             </div>
-                                            <div>
-                                                <Label>Author / Host Name</Label>
-                                                <Input 
-                                                    value={editForm.author} 
-                                                    onChange={(e) => setEditForm({ ...editForm, author: e.target.value })} 
-                                                    className="mt-1" 
-                                                />
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <Label>Author / Host Name</Label>
+                                                    <Input 
+                                                        value={editForm.author} 
+                                                        onChange={(e) => setEditForm({ ...editForm, author: e.target.value })} 
+                                                        className="mt-1" 
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <Label>Author Email</Label>
+                                                    <Input 
+                                                        value={editForm.author_email} 
+                                                        onChange={(e) => setEditForm({ ...editForm, author_email: e.target.value })} 
+                                                        className="mt-1" 
+                                                        type="email"
+                                                        placeholder="contact@example.com"
+                                                    />
+                                                </div>
                                             </div>
                                             <div>
                                                 <Label>Website URL</Label>
@@ -548,10 +691,14 @@ const PodcastDetail = () => {
                                                     onChange={(e) => setEditForm({ ...editForm, website_url: e.target.value })} 
                                                     className="mt-1" 
                                                     type="url" 
+                                                    placeholder="https://yourpodcast.com"
                                                 />
                                             </div>
                                             <div className="flex items-center justify-between rounded-lg border p-3">
-                                                <Label>Explicit Content</Label>
+                                                <div>
+                                                    <Label>Explicit Content</Label>
+                                                    <p className="text-xs text-muted-foreground mt-0.5">Mark if your podcast contains explicit language or mature content</p>
+                                                </div>
                                                 <Switch 
                                                     checked={editForm.is_explicit} 
                                                     onCheckedChange={(v) => setEditForm({ ...editForm, is_explicit: v })} 
@@ -575,9 +722,18 @@ const PodcastDetail = () => {
                                                 
                                                 <span className="text-muted-foreground">Author</span>
                                                 <span>{podcast.author || "—"}</span>
+
+                                                <span className="text-muted-foreground">Author Email</span>
+                                                <span>{podcast.author_email || "—"}</span>
                                                 
                                                 <span className="text-muted-foreground">Website</span>
-                                                <span>{podcast.website_url || "—"}</span>
+                                                <span>
+                                                    {podcast.website_url ? (
+                                                        <a href={podcast.website_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
+                                                            {podcast.website_url} <ExternalLink className="w-3 h-3" />
+                                                        </a>
+                                                    ) : "—"}
+                                                </span>
                                                 
                                                 <span className="text-muted-foreground">Explicit</span>
                                                 <span>{podcast.is_explicit ? "Yes" : "No"}</span>
@@ -587,6 +743,38 @@ const PodcastDetail = () => {
                                 </CardContent>
                             </Card>
 
+                            {/* RSS Feed Card */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-base flex items-center gap-2">
+                                        <Rss className="w-4 h-4" /> RSS Feed
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                    <p className="text-sm text-muted-foreground">
+                                        Your Alchify-generated RSS feed URL. Use this to submit your podcast to streaming platforms.
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            readOnly
+                                            value={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-rss?id=${id}`}
+                                            className="text-xs font-mono"
+                                        />
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-rss?id=${id}`);
+                                                toast.success("RSS feed URL copied!");
+                                            }}
+                                        >
+                                            <Copy className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Danger Zone */}
                             <Card className="border-destructive/50">
                                 <CardHeader>
                                     <CardTitle className="text-base text-destructive">Danger Zone</CardTitle>
