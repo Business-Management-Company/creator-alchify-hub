@@ -455,7 +455,7 @@ const PodcastDetail = () => {
                         <TabsContent value="distribution" className="space-y-4">
                             <DistributionHub
                                 podcastId={id!}
-                                rssFeedUrl={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-rss?slug=${id}`}
+                                rssFeedUrl={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-rss?id=${id}`}
                                 isImported={!!podcast.rss_import}
                             />
                         </TabsContent>
