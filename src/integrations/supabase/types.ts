@@ -712,6 +712,53 @@ export type Database = {
           },
         ]
       }
+      podcast_distributions: {
+        Row: {
+          created_at: string
+          id: string
+          live_url: string | null
+          notes: string | null
+          platform: string
+          podcast_id: string
+          status: string
+          submitted_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          live_url?: string | null
+          notes?: string | null
+          platform: string
+          podcast_id: string
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          live_url?: string | null
+          notes?: string | null
+          platform?: string
+          podcast_id?: string
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "podcast_distributions_podcast_id_fkey"
+            columns: ["podcast_id"]
+            isOneToOne: false
+            referencedRelation: "podcasts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       podcasts: {
         Row: {
           author: string | null
