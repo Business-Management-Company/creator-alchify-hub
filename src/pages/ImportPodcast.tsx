@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, Download, Loader2, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Download, Loader2, CheckCircle2, ExternalLink, Copy } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import { getPublicPodcastUrl } from "@/lib/podcast-urls";
 
 const ImportPodcast = () => {
   const navigate = useNavigate();
@@ -46,9 +47,9 @@ const ImportPodcast = () => {
       toast.success("Podcast imported successfully!");
       queryClient.invalidateQueries({ queryKey: ["podcasts"] });
 
-      // 3️⃣ Generate RSS feed URL
-      const feedUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-rss?id=${data.podcast.id}`;
-      setRssFeedUrl(feedUrl);
+      // 3️⃣ Generate public page URL
+      const publicUrl = getPublicPodcastUrl(data.podcast.id);
+      setRssFeedUrl(publicUrl);
 
       // 4️⃣ Optional: You can navigate later or let user copy feed URL first
       // setTimeout(() => {
@@ -212,29 +213,42 @@ const ImportPodcast = () => {
                 </div>
                 )}
                 {rssFeedUrl && (
-                  <div className="border rounded-lg p-4 bg-blue-50 mt-6 flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-sm text-muted-foreground">
-                        Your RSS feed URL (ready for Apple Podcasts, Spotify,
-                        etc.):
-                      </p>
-                      <a
-                        href={rssFeedUrl}
-                        target="_blank"
-                        className="text-blue-600 font-medium break-all"
-                      >
-                        {rssFeedUrl}
-                      </a>
+                  <div className="border rounded-lg p-4 bg-primary/5 border-primary/20 mt-6 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <ExternalLink className="w-4 h-4 text-primary" />
+                      <p className="text-sm font-semibold">Your Public Podcast Page</p>
                     </div>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(rssFeedUrl);
-                        toast.success("RSS feed URL copied to clipboard!");
-                      }}
-                      className="ml-4 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                    <p className="text-sm text-muted-foreground">
+                      Share this link with your audience. You can manage episodes and distribution from the podcast dashboard.
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        readOnly
+                        value={rssFeedUrl}
+                        className="text-xs font-mono flex-1"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          navigator.clipboard.writeText(rssFeedUrl);
+                          toast.success("Public page URL copied!");
+                        }}
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                      <Button variant="outline" size="icon" asChild>
+                        <a href={rssFeedUrl} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      </Button>
+                    </div>
+                    <Button
+                      className="w-full"
+                      onClick={() => navigate(`/podcasts/${parsedData.podcast.id}`)}
                     >
-                      Copy
-                    </button>
+                      Go to Podcast Dashboard
+                    </Button>
                   </div>
                 )}
               </div>

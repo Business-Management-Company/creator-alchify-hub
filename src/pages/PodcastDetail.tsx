@@ -56,6 +56,7 @@ import { PODCAST_CATEGORIES, PODCAST_LANGUAGES } from "@/types/podcast";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import DistributionHub from "@/components/podcast/DistributionHub";
 import type { Episode } from "@/types/podcast";
+import { getRssFeedUrl } from "@/lib/podcast-urls";
 
 const PodcastDetail = () => {
     const { id } = useParams<{ id: string }>();
@@ -515,7 +516,7 @@ const PodcastDetail = () => {
                         <TabsContent value="distribution" className="space-y-4">
                             <DistributionHub
                                 podcastId={id!}
-                                rssFeedUrl={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-rss?id=${id}`}
+                                rssFeedUrl={getRssFeedUrl(id!)}
                                 isImported={!!podcast.rss_import}
                             />
                         </TabsContent>
@@ -757,14 +758,14 @@ const PodcastDetail = () => {
                                     <div className="flex items-center gap-2">
                                         <Input
                                             readOnly
-                                            value={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-rss?id=${id}`}
+                                            value={getRssFeedUrl(id!)}
                                             className="text-xs font-mono"
                                         />
                                         <Button
                                             variant="outline"
                                             size="icon"
                                             onClick={() => {
-                                                navigator.clipboard.writeText(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-rss?id=${id}`);
+                                                navigator.clipboard.writeText(getRssFeedUrl(id!));
                                                 toast.success("RSS feed URL copied!");
                                             }}
                                         >
