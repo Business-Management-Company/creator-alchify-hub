@@ -39,15 +39,19 @@ const AppLayout = ({ children, defaultSidebarOpen = true }: AppLayoutProps) => {
         <AppSidebar />
         <div className="flex-1 flex flex-col">
           <AppHeader />
-          <main className="flex-1 flex flex-col p-3 overflow-auto">
+          <main className="flex-1 flex flex-col p-3 overflow-auto pb-24">
             <div className="flex-1">
               {children}
             </div>
-            {/* Global audio player: mounted once, shown when an episode is active on podcast pages */}
-            {showAudioPlayer && <AudioPlayer />}
           </main>
         </div>
         <RefinerAIPanel />
+        {/* Global audio player: fixed to bottom, always visible while playing */}
+        {showAudioPlayer && (
+          <div className="fixed bottom-0 left-0 right-0 z-50">
+            <AudioPlayer />
+          </div>
+        )}
       </div>
     </SidebarProvider>
   );
