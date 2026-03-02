@@ -42,9 +42,13 @@ import {
   Youtube,
   Users,
   Headphones,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
+import { supabase } from '@/integrations/supabase/client';
+import { apiPost } from '@/lib/api';
 import {
   Dialog,
   DialogContent,
@@ -116,6 +120,8 @@ const RecordingStudio = () => {
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
   const [audioLevel, setAudioLevel] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveProgress, setSaveProgress] = useState(0);
   
   // Guest invite state
   const [showInviteDialog, setShowInviteDialog] = useState(false);
@@ -272,16 +278,107 @@ const RecordingStudio = () => {
         }
       };
 
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         const blobType = isAudio ? 'audio/webm' : 'video/webm';
-        const ext = isAudio ? 'webm' : 'webm';
         const blob = new Blob(recordedChunksRef.current, { type: blobType });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${isAudio ? 'audio' : 'recording'}-${Date.now()}.${ext}`;
-        a.click();
-        toast({ title: 'Recording saved', description: 'Your recording has been downloaded' });
+
+        if (isAudio && user) {
+          // Upload audio to storage, create project, navigate to Refiner
+          setIsSaving(true);
+          setSaveProgress(10);
+          try {
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.webm`;
+            const filePath = `${user.id}/${fileName}`;
+
+            // Upload audio file
+            const { data: session } = await supabase.auth.getSession();
+            if (!session?.session) throw new Error('Not authenticated');
+
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const uploadUrl = `${supabaseUrl}/storage/v1/object/media-uploads/${filePath}`;
+            const uploadRes = await fetch(uploadUrl, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${session.session.access_token}`,
+                'Content-Type': blobType,
+              },
+              body: blob,
+            });
+            if (!uploadRes.ok) throw new Error('Upload failed');
+            setSaveProgress(40);
+
+            // Upload cover image if provided
+            let coverUrl: string | undefined;
+            if (coverImageFile) {
+              const coverExt = coverImageFile.name.split('.').pop();
+              const coverPath = `episode-covers/${user.id}/${Date.now()}.${coverExt}`;
+              const coverUploadUrl = `${supabaseUrl}/storage/v1/object/creator-assets/${coverPath}`;
+              const coverRes = await fetch(coverUploadUrl, {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${session.session.access_token}`,
+                  'Content-Type': coverImageFile.type,
+                },
+                body: coverImageFile,
+              });
+              if (coverRes.ok) {
+                const { data: pubUrl } = supabase.storage.from('creator-assets').getPublicUrl(coverPath);
+                coverUrl = pubUrl.publicUrl;
+              }
+            }
+            setSaveProgress(55);
+
+            // Create project
+            const { data: project, error: projectError } = await supabase
+              .from('projects')
+              .insert({
+                user_id: user.id,
+                title: `Audio Recording ${new Date().toLocaleDateString()}`,
+                source_file_url: filePath,
+                source_file_name: `recording-${Date.now()}.webm`,
+                source_file_type: 'audio',
+                source_file_size: blob.size,
+                status: 'alchifying',
+              })
+              .select()
+              .single();
+
+            if (projectError) throw projectError;
+            setSaveProgress(70);
+
+            // Auto-transcribe
+            try {
+              await apiPost('/transcribe-audio', { projectId: project.id });
+            } catch (e) {
+              console.error('Auto-transcription error:', e);
+            }
+            setSaveProgress(100);
+
+            toast({ title: 'Recording saved! ✨', description: 'Heading to Refiner Studio...' });
+            setTimeout(() => {
+              setIsSaving(false);
+              navigate(`/refiner/${project.id}`);
+            }, 600);
+          } catch (err) {
+            console.error('Save error:', err);
+            setIsSaving(false);
+            toast({ title: 'Save failed', description: err instanceof Error ? err.message : 'Something went wrong', variant: 'destructive' });
+            // Fallback: download the file
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `audio-${Date.now()}.webm`;
+            a.click();
+          }
+        } else {
+          // Video: download as before
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `recording-${Date.now()}.webm`;
+          a.click();
+          toast({ title: 'Recording saved', description: 'Your recording has been downloaded' });
+        }
       };
 
       mediaRecorder.start(1000);
@@ -424,6 +521,16 @@ const RecordingStudio = () => {
       </Helmet>
 
       <AppLayout defaultSidebarOpen={false}>
+        {isSaving && (
+          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+            <Card className="w-80 p-6 space-y-4 text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+              <CardTitle className="text-lg">Saving Recording...</CardTitle>
+              <Progress value={saveProgress} className="h-2" />
+              <p className="text-sm text-muted-foreground">Uploading and preparing your content</p>
+            </Card>
+          </div>
+        )}
         <div className="p-4 space-y-4 bg-background min-h-screen">
           {/* Recording Type Toggle */}
           <div className="flex items-center gap-3">
