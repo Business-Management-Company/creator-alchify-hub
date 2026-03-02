@@ -138,6 +138,12 @@ const RecordingStudio = () => {
     { id: 'rtmp', name: 'Custom RTMP', icon: Radio, enabled: false, rtmpUrl: '' },
   ]);
   
+  // Device selection state
+  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedAudioDevice, setSelectedAudioDevice] = useState<string>('');
+  const [selectedVideoDevice, setSelectedVideoDevice] = useState<string>('');
+
   const webcamRef = useRef<HTMLVideoElement>(null);
   const screenRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -146,6 +152,28 @@ const RecordingStudio = () => {
   const coverImageInputRef = useRef<HTMLInputElement>(null);
   const audioAnalyserRef = useRef<AnalyserNode | null>(null);
   const audioAnimationRef = useRef<number | null>(null);
+
+  // Enumerate available devices
+  const enumerateDevices = async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const audio = devices.filter(d => d.kind === 'audioinput');
+      const video = devices.filter(d => d.kind === 'videoinput');
+      setAudioDevices(audio);
+      setVideoDevices(video);
+      if (!selectedAudioDevice && audio.length > 0) setSelectedAudioDevice(audio[0].deviceId);
+      if (!selectedVideoDevice && video.length > 0) setSelectedVideoDevice(video[0].deviceId);
+    } catch (e) {
+      console.error('Error enumerating devices:', e);
+    }
+  };
+
+  useEffect(() => {
+    enumerateDevices();
+    navigator.mediaDevices.addEventListener('devicechange', enumerateDevices);
+    return () => navigator.mediaDevices.removeEventListener('devicechange', enumerateDevices);
+  }, []);
+
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
@@ -173,13 +201,19 @@ const RecordingStudio = () => {
   const startWebcam = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 1920, height: 1080, facingMode: 'user' },
-        audio: true
+        video: selectedVideoDevice 
+          ? { deviceId: { exact: selectedVideoDevice }, width: 1920, height: 1080 }
+          : { width: 1920, height: 1080, facingMode: 'user' },
+        audio: selectedAudioDevice 
+          ? { deviceId: { exact: selectedAudioDevice } }
+          : true,
       });
       setWebcamStream(stream);
       if (webcamRef.current) {
         webcamRef.current.srcObject = stream;
       }
+      // Re-enumerate after permission grant to get labels
+      enumerateDevices();
       toast({ title: 'Camera ready', description: 'Webcam connected successfully' });
     } catch (error) {
       console.error('Error accessing webcam:', error);
@@ -209,8 +243,12 @@ const RecordingStudio = () => {
 
   const startAudioOnly = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      const audioConstraints = selectedAudioDevice 
+        ? { deviceId: { exact: selectedAudioDevice } }
+        : true;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints, video: false });
       setAudioOnlyStream(stream);
+      enumerateDevices();
       
       // Set up audio level meter
       const audioContext = new AudioContext();
@@ -837,16 +875,32 @@ const RecordingStudio = () => {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     {/* Source Buttons */}
-                    <div className="flex items-center gap-2">
+                     <div className="flex items-center gap-2">
                       {recordingType === 'audio' ? (
-                        <Button
-                          variant={audioOnlyStream ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={audioOnlyStream ? stopAudioOnly : startAudioOnly}
-                        >
-                          <Mic className="h-4 w-4 mr-2" />
-                          {audioOnlyStream ? 'Stop Mic' : 'Start Mic'}
-                        </Button>
+                        <>
+                          <Button
+                            variant={audioOnlyStream ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={audioOnlyStream ? stopAudioOnly : startAudioOnly}
+                          >
+                            <Mic className="h-4 w-4 mr-2" />
+                            {audioOnlyStream ? 'Stop Mic' : 'Start Mic'}
+                          </Button>
+                          {audioDevices.length > 0 && (
+                            <Select value={selectedAudioDevice} onValueChange={(val) => { setSelectedAudioDevice(val); if (audioOnlyStream) { stopAudioOnly(); setTimeout(() => startAudioOnly(), 100); } }}>
+                              <SelectTrigger className="w-48 h-8 text-xs">
+                                <SelectValue placeholder="Select Microphone" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {audioDevices.map(d => (
+                                  <SelectItem key={d.deviceId} value={d.deviceId}>
+                                    {d.label || `Microphone ${audioDevices.indexOf(d) + 1}`}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </>
                       ) : (
                         <>
                           <Button
@@ -865,6 +919,34 @@ const RecordingStudio = () => {
                             <ScreenShare className="h-4 w-4 mr-2" />
                             {screenStream ? 'Stop Share' : 'Share Screen'}
                           </Button>
+                          {videoDevices.length > 0 && (
+                            <Select value={selectedVideoDevice} onValueChange={setSelectedVideoDevice}>
+                              <SelectTrigger className="w-44 h-8 text-xs">
+                                <SelectValue placeholder="Camera" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {videoDevices.map(d => (
+                                  <SelectItem key={d.deviceId} value={d.deviceId}>
+                                    {d.label || `Camera ${videoDevices.indexOf(d) + 1}`}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          {audioDevices.length > 0 && (
+                            <Select value={selectedAudioDevice} onValueChange={setSelectedAudioDevice}>
+                              <SelectTrigger className="w-44 h-8 text-xs">
+                                <SelectValue placeholder="Microphone" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {audioDevices.map(d => (
+                                  <SelectItem key={d.deviceId} value={d.deviceId}>
+                                    {d.label || `Microphone ${audioDevices.indexOf(d) + 1}`}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
                         </>
                       )}
                     </div>
