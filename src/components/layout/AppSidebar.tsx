@@ -99,7 +99,7 @@ const creatorSections: NavSection[] = [
   {
     id: "podcast studio",
     label: "Podcast Studio",
-    items: [{ id: "podcast", label: "Podcast", icon: "Mic", path: "/podcasts" }],
+    items: [{ id: "podcasts", label: "Podcasts", icon: "Mic", path: "/podcasts" }],
   },
   {
     id: "workspace",
