@@ -157,12 +157,12 @@ const RecordingStudio = () => {
   const enumerateDevices = async () => {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
-      const audio = devices.filter(d => d.kind === 'audioinput');
-      const video = devices.filter(d => d.kind === 'videoinput');
+      const audio = devices.filter(d => d.kind === 'audioinput' && d.deviceId);
+      const video = devices.filter(d => d.kind === 'videoinput' && d.deviceId);
       setAudioDevices(audio);
       setVideoDevices(video);
-      if (!selectedAudioDevice && audio.length > 0) setSelectedAudioDevice(audio[0].deviceId);
-      if (!selectedVideoDevice && video.length > 0) setSelectedVideoDevice(video[0].deviceId);
+      if (!selectedAudioDevice && audio.length > 0 && audio[0].deviceId) setSelectedAudioDevice(audio[0].deviceId);
+      if (!selectedVideoDevice && video.length > 0 && video[0].deviceId) setSelectedVideoDevice(video[0].deviceId);
     } catch (e) {
       console.error('Error enumerating devices:', e);
     }
@@ -892,9 +892,9 @@ const RecordingStudio = () => {
                                 <SelectValue placeholder="Select Microphone" />
                               </SelectTrigger>
                               <SelectContent>
-                                {audioDevices.map(d => (
+                                {audioDevices.filter(d => d.deviceId).map((d, i) => (
                                   <SelectItem key={d.deviceId} value={d.deviceId}>
-                                    {d.label || `Microphone ${audioDevices.indexOf(d) + 1}`}
+                                    {d.label || `Microphone ${i + 1}`}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -925,9 +925,9 @@ const RecordingStudio = () => {
                                 <SelectValue placeholder="Camera" />
                               </SelectTrigger>
                               <SelectContent>
-                                {videoDevices.map(d => (
+                                {videoDevices.filter(d => d.deviceId).map((d, i) => (
                                   <SelectItem key={d.deviceId} value={d.deviceId}>
-                                    {d.label || `Camera ${videoDevices.indexOf(d) + 1}`}
+                                    {d.label || `Camera ${i + 1}`}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -939,9 +939,9 @@ const RecordingStudio = () => {
                                 <SelectValue placeholder="Microphone" />
                               </SelectTrigger>
                               <SelectContent>
-                                {audioDevices.map(d => (
+                                {audioDevices.filter(d => d.deviceId).map((d, i) => (
                                   <SelectItem key={d.deviceId} value={d.deviceId}>
-                                    {d.label || `Microphone ${audioDevices.indexOf(d) + 1}`}
+                                    {d.label || `Microphone ${i + 1}`}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
