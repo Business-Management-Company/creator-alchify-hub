@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { 
-  LayoutDashboard, 
-  Upload, 
-  FolderOpen, 
-  Wand2, 
+import { useState, useEffect, useMemo, useCallback } from "react";
+import {
+  LayoutDashboard,
+  Upload,
+  FolderOpen,
+  Wand2,
   Download,
   Plug,
   BarChart3,
@@ -27,8 +27,8 @@ import {
   Settings2,
   Mail,
   Mic,
-} from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+} from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -41,10 +41,10 @@ import {
   SidebarHeader,
   SidebarFooter,
   useSidebar,
-} from '@/components/ui/sidebar';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { useAdminCheck } from '@/hooks/useAdminCheck';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/sidebar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useAdminCheck } from "@/hooks/useAdminCheck";
+import { cn } from "@/lib/utils";
 
 // Icon map for dynamic icon rendering
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -71,7 +71,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Layers,
   Settings2,
   Mail,
-  Mic
+  Mic,
 };
 
 // Nav item type
@@ -92,51 +92,47 @@ interface NavSection {
 // Creator nav sections
 const creatorSections: NavSection[] = [
   {
-    id: 'home',
-    label: 'Home',
+    id: "home",
+    label: "Home",
+    items: [{ id: "dashboard", label: "Dashboard", icon: "LayoutDashboard", path: "/dashboard" }],
+  },
+  {
+    id: "podcast studio",
+    label: "Podcast Studio",
+    items: [{ id: "podcast", label: "Podcast", icon: "Mic", path: "/podcasts" }],
+  },
+  {
+    id: "workspace",
+    label: "Workspace",
     items: [
-      { id: 'dashboard', label: 'Dashboard', icon: 'LayoutDashboard', path: '/dashboard' },
+      { id: "studio", label: "Recording Studio", icon: "Video", path: "/studio" },
+      { id: "upload", label: "Upload", icon: "Upload", path: "/upload" },
+      { id: "projects", label: "Projects", icon: "FolderOpen", path: "/projects" },
+      { id: "media-library", label: "Media Library", icon: "Library", path: "/library" },
     ],
   },
   {
-    id: 'workspace',
-    label: 'Workspace',
+    id: "refine",
+    label: "Refine & Publish",
     items: [
-      { id: 'studio', label: 'Recording Studio', icon: 'Video', path: '/studio' },
-      { id: 'upload', label: 'Upload', icon: 'Upload', path: '/upload' },
-      { id: 'projects', label: 'Projects', icon: 'FolderOpen', path: '/projects' },
-      { id: 'media-library', label: 'Media Library', icon: 'Library', path: '/library' },
+      { id: "refiner", label: "Refiner Studio", icon: "Wand2", path: "/refiner" },
+      { id: "exports", label: "Exports", icon: "Download", path: "/exports" },
     ],
   },
   {
-    id: 'podcast studio',
-    label: 'Podcast Studio',
+    id: "grow",
+    label: "Grow & Profile",
     items: [
-      { id: 'podcast', label: 'Podcast', icon: 'Mic', path: '/podcasts' },
+      { id: "alchify-page", label: "Alchify Page", icon: "User", path: "/creator/profile" },
+      { id: "analytics", label: "Analytics", icon: "BarChart3", path: "/analytics" },
     ],
   },
   {
-    id: 'refine',
-    label: 'Refine & Publish',
+    id: "account",
+    label: "Account",
     items: [
-      { id: 'refiner', label: 'Refiner Studio', icon: 'Wand2', path: '/refiner' },
-      { id: 'exports', label: 'Exports', icon: 'Download', path: '/exports' },
-    ],
-  },
-  {
-    id: 'grow',
-    label: 'Grow & Profile',
-    items: [
-      { id: 'alchify-page', label: 'Alchify Page', icon: 'User', path: '/creator/profile' },
-      { id: 'analytics', label: 'Analytics', icon: 'BarChart3', path: '/analytics' },
-    ],
-  },
-  {
-    id: 'account',
-    label: 'Account',
-    items: [
-      { id: 'integrations', label: 'Integrations', icon: 'Plug', path: '/integrations' },
-      { id: 'settings', label: 'Settings', icon: 'Settings', path: '/settings' },
+      { id: "integrations", label: "Integrations", icon: "Plug", path: "/integrations" },
+      { id: "settings", label: "Settings", icon: "Settings", path: "/settings" },
     ],
   },
 ];
@@ -144,57 +140,53 @@ const creatorSections: NavSection[] = [
 // Admin nav sections
 const adminSections: NavSection[] = [
   {
-    id: 'admin-core',
-    label: 'Admin',
+    id: "admin-core",
+    label: "Admin",
+    items: [{ id: "admin-dashboard", label: "Admin Dashboard", icon: "Shield", path: "/admin" }],
+  },
+  {
+    id: "people",
+    label: "People & Accounts",
     items: [
-      { id: 'admin-dashboard', label: 'Admin Dashboard', icon: 'Shield', path: '/admin' },
+      { id: "admin-users", label: "Manage Users", icon: "Users", path: "/admin/users" },
+      { id: "admin-contacts", label: "Contacts", icon: "Contact", path: "/admin/contacts" },
     ],
   },
   {
-    id: 'people',
-    label: 'People & Accounts',
+    id: "content",
+    label: "Content & Data",
     items: [
-      { id: 'admin-users', label: 'Manage Users', icon: 'Users', path: '/admin/users' },
-      { id: 'admin-contacts', label: 'Contacts', icon: 'Contact', path: '/admin/contacts' },
+      { id: "admin-content", label: "Content", icon: "FileText", path: "/admin/content" },
+      { id: "admin-analytics", label: "Analytics", icon: "TrendingUp", path: "/admin/analytics" },
     ],
   },
   {
-    id: 'content',
-    label: 'Content & Data',
+    id: "tasks",
+    label: "Tasks & Workflow",
+    items: [{ id: "admin-tasks", label: "Tasks", icon: "ClipboardList", path: "/admin/tasks" }],
+  },
+  {
+    id: "email",
+    label: "Email Management",
     items: [
-      { id: 'admin-content', label: 'Content', icon: 'FileText', path: '/admin/content' },
-      { id: 'admin-analytics', label: 'Analytics', icon: 'TrendingUp', path: '/admin/analytics' },
+      { id: "admin-emails", label: "Templates", icon: "Mail", path: "/admin/emails" },
+      { id: "admin-email-analytics", label: "Email Analytics", icon: "TrendingUp", path: "/admin/emails/analytics" },
     ],
   },
   {
-    id: 'tasks',
-    label: 'Tasks & Workflow',
+    id: "system",
+    label: "System & Strategy",
     items: [
-      { id: 'admin-tasks', label: 'Tasks', icon: 'ClipboardList', path: '/admin/tasks' },
-    ],
-  },
-  {
-    id: 'email',
-    label: 'Email Management',
-    items: [
-      { id: 'admin-emails', label: 'Templates', icon: 'Mail', path: '/admin/emails' },
-      { id: 'admin-email-analytics', label: 'Email Analytics', icon: 'TrendingUp', path: '/admin/emails/analytics' },
-    ],
-  },
-  {
-    id: 'system',
-    label: 'System & Strategy',
-    items: [
-      { id: 'admin-tech', label: 'Tech Stack', icon: 'Server', path: '/admin/tech-stack' },
-      { id: 'admin-vto', label: 'CEO VTO', icon: 'Presentation', path: '/admin/ceo-vto' },
-      { id: 'admin-cfo', label: 'CFO Dashboard', icon: 'Calculator', path: '/admin/cfo-dashboard' },
+      { id: "admin-tech", label: "Tech Stack", icon: "Server", path: "/admin/tech-stack" },
+      { id: "admin-vto", label: "CEO VTO", icon: "Presentation", path: "/admin/ceo-vto" },
+      { id: "admin-cfo", label: "CFO Dashboard", icon: "Calculator", path: "/admin/cfo-dashboard" },
     ],
   },
 ];
 
-type NavMode = 'creator' | 'admin';
+type NavMode = "creator" | "admin";
 
-const STORAGE_KEY = 'alchify-sidebar-state';
+const STORAGE_KEY = "alchify-sidebar-state";
 
 interface SidebarState {
   mode: NavMode;
@@ -206,7 +198,7 @@ interface SidebarState {
 const findCreatorSectionForPath = (path: string): string | null => {
   for (const section of creatorSections) {
     for (const item of section.items) {
-      if (path === item.path || (item.path !== '/' && path.startsWith(item.path))) {
+      if (path === item.path || (item.path !== "/" && path.startsWith(item.path))) {
         return section.id;
       }
     }
@@ -218,7 +210,7 @@ const AppSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { state } = useSidebar();
-  const collapsed = state === 'collapsed';
+  const collapsed = state === "collapsed";
   const { isAdmin } = useAdminCheck();
 
   // Load persisted state from localStorage
@@ -229,9 +221,9 @@ const AppSidebar = () => {
         return JSON.parse(stored);
       }
     } catch (e) {
-      console.error('Failed to load sidebar state:', e);
+      console.error("Failed to load sidebar state:", e);
     }
-    return { mode: 'creator', openCreatorGroupId: null, adminExpanded: false };
+    return { mode: "creator", openCreatorGroupId: null, adminExpanded: false };
   };
 
   const [sidebarState, setSidebarState] = useState<SidebarState>(loadStoredState);
@@ -241,22 +233,22 @@ const AppSidebar = () => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(sidebarState));
     } catch (e) {
-      console.error('Failed to save sidebar state:', e);
+      console.error("Failed to save sidebar state:", e);
     }
   }, [sidebarState]);
 
   // Sync mode with route changes
   useEffect(() => {
-    const isAdminRoute = location.pathname.startsWith('/admin');
-    const currentMode = isAdminRoute ? 'admin' : 'creator';
-    
-    setSidebarState(prev => {
+    const isAdminRoute = location.pathname.startsWith("/admin");
+    const currentMode = isAdminRoute ? "admin" : "creator";
+
+    setSidebarState((prev) => {
       if (currentMode !== prev.mode) {
-        if (currentMode === 'admin') {
+        if (currentMode === "admin") {
           // Switching to admin: collapse creator, expand admin
           return {
             ...prev,
-            mode: 'admin',
+            mode: "admin",
             adminExpanded: true,
           };
         } else {
@@ -264,12 +256,12 @@ const AppSidebar = () => {
           const sectionId = findCreatorSectionForPath(location.pathname);
           return {
             ...prev,
-            mode: 'creator',
+            mode: "creator",
             openCreatorGroupId: sectionId || prev.openCreatorGroupId,
             adminExpanded: false,
           };
         }
-      } else if (currentMode === 'creator') {
+      } else if (currentMode === "creator") {
         // Already in creator mode, update open section if navigating
         const sectionId = findCreatorSectionForPath(location.pathname);
         if (sectionId && sectionId !== prev.openCreatorGroupId) {
@@ -287,14 +279,14 @@ const AppSidebar = () => {
   const handleAdminToggle = useCallback(() => {
     if (!sidebarState.adminExpanded) {
       // Expanding admin: collapse all creator groups
-      setSidebarState(prev => ({
+      setSidebarState((prev) => ({
         ...prev,
         adminExpanded: true,
         openCreatorGroupId: null,
       }));
     } else {
       // Collapsing admin
-      setSidebarState(prev => ({
+      setSidebarState((prev) => ({
         ...prev,
         adminExpanded: false,
       }));
@@ -303,7 +295,7 @@ const AppSidebar = () => {
 
   // Handle clicking a creator section
   const handleCreatorSectionClick = useCallback((sectionId: string) => {
-    setSidebarState(prev => ({
+    setSidebarState((prev) => ({
       ...prev,
       openCreatorGroupId: prev.openCreatorGroupId === sectionId ? null : sectionId,
       adminExpanded: false, // Collapse admin when interacting with creator sections
@@ -312,45 +304,43 @@ const AppSidebar = () => {
 
   // Handle clicking a creator nav item
   const handleCreatorItemClick = useCallback((sectionId: string) => {
-    setSidebarState(prev => ({
+    setSidebarState((prev) => ({
       ...prev,
-      mode: 'creator',
+      mode: "creator",
       openCreatorGroupId: sectionId,
       adminExpanded: false,
     }));
   }, []);
 
   // Check if a path is active
-  const isActive = useCallback((path: string) => {
-    if (path === '/refiner') {
-      return location.pathname.startsWith('/refiner');
-    }
-    if (path === '/admin') {
-      return location.pathname === '/admin';
-    }
-    if (path.startsWith('/admin/')) {
-      return location.pathname.startsWith(path);
-    }
-    return location.pathname === path;
-  }, [location.pathname]);
+  const isActive = useCallback(
+    (path: string) => {
+      if (path === "/refiner") {
+        return location.pathname.startsWith("/refiner");
+      }
+      if (path === "/admin") {
+        return location.pathname === "/admin";
+      }
+      if (path.startsWith("/admin/")) {
+        return location.pathname.startsWith(path);
+      }
+      return location.pathname === path;
+    },
+    [location.pathname],
+  );
 
   // Render a nav item - tighter spacing
   const renderNavItem = (item: NavItem, sectionId: string, isAdminItem = false) => {
     const Icon = iconMap[item.icon];
     return (
       <SidebarMenuItem key={item.id}>
-        <SidebarMenuButton
-          asChild
-          isActive={isActive(item.path)}
-          tooltip={item.label}
-          className="py-1 h-7 text-[13px]"
-        >
-          <Link 
-            to={item.path} 
+        <SidebarMenuButton asChild isActive={isActive(item.path)} tooltip={item.label} className="py-1 h-7 text-[13px]">
+          <Link
+            to={item.path}
             data-ui-element={item.id}
             onClick={() => !isAdminItem && handleCreatorItemClick(sectionId)}
           >
-            {Icon && <Icon className={cn('h-3.5 w-3.5', isAdminItem && 'text-primary')} />}
+            {Icon && <Icon className={cn("h-3.5 w-3.5", isAdminItem && "text-primary")} />}
             <span>{item.label}</span>
           </Link>
         </SidebarMenuButton>
@@ -361,7 +351,7 @@ const AppSidebar = () => {
   // Render a collapsible creator section - tighter spacing
   const renderCreatorSection = (section: NavSection) => {
     const isOpen = sidebarState.openCreatorGroupId === section.id;
-    
+
     if (collapsed) {
       return (
         <SidebarGroup key={section.id} className="py-px">
@@ -378,15 +368,9 @@ const AppSidebar = () => {
       <SidebarGroup key={section.id} className="py-px">
         <Collapsible open={isOpen} onOpenChange={() => handleCreatorSectionClick(section.id)}>
           <CollapsibleTrigger className="w-full">
-            <SidebarGroupLabel 
-              className="text-[9px] uppercase tracking-wider cursor-pointer flex items-center justify-between hover:text-foreground transition-colors py-0.5 text-muted-foreground"
-            >
+            <SidebarGroupLabel className="text-[9px] uppercase tracking-wider cursor-pointer flex items-center justify-between hover:text-foreground transition-colors py-0.5 text-muted-foreground">
               <span>{section.label}</span>
-              {isOpen ? (
-                <ChevronDown className="h-2.5 w-2.5" />
-              ) : (
-                <ChevronRight className="h-2.5 w-2.5" />
-              )}
+              {isOpen ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />}
             </SidebarGroupLabel>
           </CollapsibleTrigger>
           <CollapsibleContent>
@@ -417,9 +401,7 @@ const AppSidebar = () => {
 
     return (
       <SidebarGroup key={section.id} className="py-px">
-        <SidebarGroupLabel 
-          className="text-[9px] uppercase tracking-wider py-0.5 text-primary/70"
-        >
+        <SidebarGroupLabel className="text-[9px] uppercase tracking-wider py-0.5 text-primary/70">
           {section.label}
         </SidebarGroupLabel>
         <SidebarGroupContent>
@@ -457,9 +439,7 @@ const AppSidebar = () => {
       <SidebarGroup className="py-px">
         <Collapsible open={sidebarState.adminExpanded} onOpenChange={handleAdminToggle}>
           <CollapsibleTrigger className="w-full">
-            <SidebarGroupLabel 
-              className="text-[9px] uppercase tracking-wider cursor-pointer flex items-center justify-between hover:text-foreground transition-colors py-1 px-1.5 rounded-sm text-primary/70 bg-primary/5"
-            >
+            <SidebarGroupLabel className="text-[9px] uppercase tracking-wider cursor-pointer flex items-center justify-between hover:text-foreground transition-colors py-1 px-1.5 rounded-sm text-primary/70 bg-primary/5">
               <span className="flex items-center gap-1.5">
                 <Settings2 className="h-2.5 w-2.5" />
                 Admin & Settings
@@ -472,9 +452,7 @@ const AppSidebar = () => {
             </SidebarGroupLabel>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="mt-0.5 space-y-px">
-              {adminSections.map((section) => renderAdminSection(section))}
-            </div>
+            <div className="mt-0.5 space-y-px">{adminSections.map((section) => renderAdminSection(section))}</div>
           </CollapsibleContent>
         </Collapsible>
       </SidebarGroup>
@@ -505,35 +483,27 @@ const AppSidebar = () => {
 
     return (
       <SidebarGroup className="py-px">
-        <Collapsible 
-          open={hasOpenCreatorGroup} 
+        <Collapsible
+          open={hasOpenCreatorGroup}
           onOpenChange={() => {
             if (hasOpenCreatorGroup) {
-              setSidebarState(prev => ({ ...prev, openCreatorGroupId: null }));
+              setSidebarState((prev) => ({ ...prev, openCreatorGroupId: null }));
             } else {
-              setSidebarState(prev => ({ ...prev, openCreatorGroupId: 'home' }));
+              setSidebarState((prev) => ({ ...prev, openCreatorGroupId: "home" }));
             }
           }}
         >
           <CollapsibleTrigger className="w-full">
-            <SidebarGroupLabel 
-              className="text-[9px] uppercase tracking-wider cursor-pointer flex items-center justify-between hover:text-foreground transition-colors py-1 px-1.5 rounded-sm text-muted-foreground bg-muted/50"
-            >
+            <SidebarGroupLabel className="text-[9px] uppercase tracking-wider cursor-pointer flex items-center justify-between hover:text-foreground transition-colors py-1 px-1.5 rounded-sm text-muted-foreground bg-muted/50">
               <span className="flex items-center gap-1.5">
                 <Layers className="h-2.5 w-2.5" />
                 Creator View
               </span>
-              {hasOpenCreatorGroup ? (
-                <ChevronDown className="h-2.5 w-2.5" />
-              ) : (
-                <ChevronRight className="h-2.5 w-2.5" />
-              )}
+              {hasOpenCreatorGroup ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />}
             </SidebarGroupLabel>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="mt-0.5 space-y-px">
-              {creatorSections.map((section) => renderCreatorSection(section))}
-            </div>
+            <div className="mt-0.5 space-y-px">{creatorSections.map((section) => renderCreatorSection(section))}</div>
           </CollapsibleContent>
         </Collapsible>
       </SidebarGroup>
@@ -541,7 +511,7 @@ const AppSidebar = () => {
   };
 
   // Determine what to render based on current mode
-  const isAdminMode = sidebarState.mode === 'admin' || location.pathname.startsWith('/admin');
+  const isAdminMode = sidebarState.mode === "admin" || location.pathname.startsWith("/admin");
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border">
@@ -550,18 +520,16 @@ const AppSidebar = () => {
           <div className="relative flex-shrink-0">
             <Sparkles className="h-5 w-5 text-primary" />
           </div>
-          {!collapsed && (
-            <span className="text-base font-bold gradient-text">Alchify</span>
-          )}
+          {!collapsed && <span className="text-base font-bold gradient-text">Alchify</span>}
         </Link>
       </SidebarHeader>
-      
+
       <SidebarContent className="px-1">
         {isAdminMode && isAdmin ? (
           <>
             {/* Admin mode: Show admin sections expanded */}
             {adminSections.map((section) => renderAdminSection(section))}
-            
+
             {/* Collapsed Creator View toggle */}
             <div className="my-1 mx-0.5 h-px bg-border" />
             {renderCreatorViewToggle()}
@@ -570,7 +538,7 @@ const AppSidebar = () => {
           <>
             {/* Creator mode: Show creator sections */}
             {creatorSections.map((section) => renderCreatorSection(section))}
-            
+
             {/* Admin toggle - only for admins */}
             {isAdmin && (
               <>
@@ -581,13 +549,9 @@ const AppSidebar = () => {
           </>
         )}
       </SidebarContent>
-      
+
       <SidebarFooter className="p-1.5">
-        {!collapsed && (
-          <div className="text-[9px] text-muted-foreground text-center">
-            The Crucible for Creators
-          </div>
-        )}
+        {!collapsed && <div className="text-[9px] text-muted-foreground text-center">The Crucible for Creators</div>}
       </SidebarFooter>
     </Sidebar>
   );
