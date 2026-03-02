@@ -394,9 +394,21 @@ const PodcastDetail = () => {
                         <TabsContent value="episodes" className="space-y-4">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-xl font-semibold">Episodes</h2>
-                                <Button onClick={() => navigate(`/podcasts/${id}/episodes/new`)}>
-                                    <Plus className="w-4 h-4 mr-2" /> New Episode
-                                </Button>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button>
+                                            <Plus className="w-4 h-4 mr-2" /> New Episode <ChevronDown className="w-3 h-3 ml-1" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => navigate("/studio")}>
+                                            <Radio className="w-4 h-4 mr-2" /> Record Your Podcast
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => navigate(`/podcasts/${id}/episodes/new`)}>
+                                            <Upload className="w-4 h-4 mr-2" /> Upload Episode
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
 
                             {podcast.episodes.length === 0 ? (
@@ -404,9 +416,21 @@ const PodcastDetail = () => {
                                     <Music className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                                     <h3 className="text-lg font-semibold mb-2">No episodes yet</h3>
                                     <p className="text-muted-foreground mb-6">Upload your first episode to get started</p>
-                                    <Button onClick={() => navigate(`/podcasts/${id}/episodes/new`)}>
-                                        <Plus className="w-4 h-4 mr-2" /> Add Episode
-                                    </Button>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button>
+                                                <Plus className="w-4 h-4 mr-2" /> Add Episode <ChevronDown className="w-3 h-3 ml-1" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="center">
+                                            <DropdownMenuItem onClick={() => navigate("/studio")}>
+                                                <Radio className="w-4 h-4 mr-2" /> Record Your Podcast
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => navigate(`/podcasts/${id}/episodes/new`)}>
+                                                <Upload className="w-4 h-4 mr-2" /> Upload Episode
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </Card>
                             ) : (
                                 <div className="space-y-3">
