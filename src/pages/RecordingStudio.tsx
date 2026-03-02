@@ -26,6 +26,7 @@ import {
   Layout,
   Type,
   Image,
+  ImagePlus,
   Camera,
   ScreenShare,
   User,
@@ -39,7 +40,9 @@ import {
   Facebook,
   Linkedin,
   Youtube,
-  Users
+  Users,
+  Headphones,
+  X
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
@@ -51,6 +54,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 
+type RecordingType = 'video' | 'audio';
 type RecordingMode = 'webcam' | 'screen' | 'screen-webcam';
 type LayoutType = 'fullscreen' | 'pip-bottom-right' | 'pip-bottom-left' | 'pip-top-right' | 'pip-top-left' | 'split';
 type SessionMode = 'record' | 'stream-record';
@@ -93,6 +97,7 @@ const RecordingStudio = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
+  const [recordingType, setRecordingType] = useState<RecordingType>('video');
   const [recordingMode, setRecordingMode] = useState<RecordingMode>('webcam');
   const [sessionMode, setSessionMode] = useState<SessionMode>('record');
   const [layout, setLayout] = useState<LayoutType>('fullscreen');
@@ -107,6 +112,10 @@ const RecordingStudio = () => {
   const [teleprompterSpeed, setTeleprompterSpeed] = useState(2);
   const [webcamStream, setWebcamStream] = useState<MediaStream | null>(null);
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
+  const [audioOnlyStream, setAudioOnlyStream] = useState<MediaStream | null>(null);
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
+  const [audioLevel, setAudioLevel] = useState(0);
   
   // Guest invite state
   const [showInviteDialog, setShowInviteDialog] = useState(false);
@@ -128,7 +137,9 @@ const RecordingStudio = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
-
+  const coverImageInputRef = useRef<HTMLInputElement>(null);
+  const audioAnalyserRef = useRef<AnalyserNode | null>(null);
+  const audioAnimationRef = useRef<number | null>(null);
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
@@ -145,8 +156,12 @@ const RecordingStudio = () => {
   const stopAllStreams = () => {
     webcamStream?.getTracks().forEach(track => track.stop());
     screenStream?.getTracks().forEach(track => track.stop());
+    audioOnlyStream?.getTracks().forEach(track => track.stop());
+    if (audioAnimationRef.current) cancelAnimationFrame(audioAnimationRef.current);
     setWebcamStream(null);
     setScreenStream(null);
+    setAudioOnlyStream(null);
+    setAudioLevel(0);
   };
 
   const startWebcam = async () => {
@@ -186,15 +201,68 @@ const RecordingStudio = () => {
     }
   };
 
+  const startAudioOnly = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      setAudioOnlyStream(stream);
+      
+      // Set up audio level meter
+      const audioContext = new AudioContext();
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      audioAnalyserRef.current = analyser;
+      
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      const updateLevel = () => {
+        analyser.getByteFrequencyData(dataArray);
+        const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+        setAudioLevel(avg / 255);
+        audioAnimationRef.current = requestAnimationFrame(updateLevel);
+      };
+      updateLevel();
+      
+      toast({ title: 'Microphone ready', description: 'Audio input connected' });
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      toast({ title: 'Microphone error', description: 'Could not access microphone', variant: 'destructive' });
+    }
+  };
+
+  const stopAudioOnly = () => {
+    audioOnlyStream?.getTracks().forEach(track => track.stop());
+    setAudioOnlyStream(null);
+    if (audioAnimationRef.current) cancelAnimationFrame(audioAnimationRef.current);
+    setAudioLevel(0);
+  };
+
+  const handleCoverImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast({ title: 'Invalid file', description: 'Please select an image', variant: 'destructive' }); return; }
+    setCoverImageFile(file);
+    setCoverImagePreview(URL.createObjectURL(file));
+  };
+
+  const removeCoverImage = () => {
+    setCoverImageFile(null);
+    setCoverImagePreview(null);
+  };
+
   const startRecording = () => {
-    const streamToRecord = recordingMode === 'screen' ? screenStream : webcamStream;
+    const streamToRecord = recordingType === 'audio' 
+      ? audioOnlyStream 
+      : (recordingMode === 'screen' ? screenStream : webcamStream);
     if (!streamToRecord) {
-      toast({ title: 'No source', description: 'Please start camera or screen share first', variant: 'destructive' });
+      toast({ title: 'No source', description: recordingType === 'audio' ? 'Please start microphone first' : 'Please start camera or screen share first', variant: 'destructive' });
       return;
     }
 
     try {
-      const mediaRecorder = new MediaRecorder(streamToRecord, { mimeType: 'video/webm;codecs=vp9' });
+      const isAudio = recordingType === 'audio';
+      const mimeType = isAudio ? 'audio/webm;codecs=opus' : 'video/webm;codecs=vp9';
+      const mediaRecorder = new MediaRecorder(streamToRecord, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
       recordedChunksRef.current = [];
 
@@ -205,12 +273,13 @@ const RecordingStudio = () => {
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+        const blobType = isAudio ? 'audio/webm' : 'video/webm';
+        const ext = isAudio ? 'webm' : 'webm';
+        const blob = new Blob(recordedChunksRef.current, { type: blobType });
         const url = URL.createObjectURL(blob);
-        // For now, just download - later integrate with post-production
         const a = document.createElement('a');
         a.href = url;
-        a.download = `recording-${Date.now()}.webm`;
+        a.download = `${isAudio ? 'audio' : 'recording'}-${Date.now()}.${ext}`;
         a.click();
         toast({ title: 'Recording saved', description: 'Your recording has been downloaded' });
       };
@@ -356,6 +425,31 @@ const RecordingStudio = () => {
 
       <AppLayout defaultSidebarOpen={false}>
         <div className="p-4 space-y-4 bg-background min-h-screen">
+          {/* Recording Type Toggle */}
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">Type:</span>
+            <div className="flex gap-2">
+              <Button
+                variant={recordingType === 'video' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setRecordingType('video')}
+                disabled={isRecording}
+              >
+                <Video className="h-4 w-4 mr-1" />
+                Video Podcast
+              </Button>
+              <Button
+                variant={recordingType === 'audio' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setRecordingType('audio')}
+                disabled={isRecording}
+              >
+                <Headphones className="h-4 w-4 mr-1" />
+                Audio Podcast
+              </Button>
+            </div>
+          </div>
+
           {/* Session Mode & Invite - Single Row Header */}
           <div className="flex items-center gap-4 flex-wrap">
             <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
@@ -531,76 +625,103 @@ const RecordingStudio = () => {
             <div className="xl:col-span-3 space-y-4">
               <Card className="overflow-hidden">
                 <CardContent className="p-0">
-                  <div className="relative aspect-video bg-muted">
-                    {/* Main Video Preview */}
-                    {recordingMode === 'webcam' || recordingMode === 'screen-webcam' ? (
-                      layout === 'split' ? (
-                        <div className="flex h-full">
-                          <video
-                            ref={screenRef}
-                            autoPlay
-                            muted
-                            playsInline
-                            className="w-1/2 h-full object-cover"
-                          />
-                          <video
-                            ref={webcamRef}
-                            autoPlay
-                            muted
-                            playsInline
-                            className="w-1/2 h-full object-cover"
-                          />
+                  {recordingType === 'audio' ? (
+                    /* Audio Podcast Preview */
+                    <div className="aspect-video bg-muted flex flex-col items-center justify-center p-8 gap-6">
+                      {/* Cover Image */}
+                      <div
+                        className="w-48 h-48 rounded-2xl border-2 border-dashed border-border flex items-center justify-center cursor-pointer overflow-hidden hover:border-primary transition-colors shrink-0"
+                        onClick={() => coverImageInputRef.current?.click()}
+                      >
+                        {coverImagePreview ? (
+                          <img src={coverImagePreview} alt="Episode cover" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                            <ImagePlus className="w-10 h-10" />
+                            <span className="text-sm">Episode Cover</span>
+                            <span className="text-xs">1400×1400px</span>
+                          </div>
+                        )}
+                      </div>
+                      {coverImagePreview && (
+                        <Button variant="ghost" size="sm" onClick={removeCoverImage}>
+                          <X className="w-4 h-4 mr-1" /> Remove Cover
+                        </Button>
+                      )}
+                      <input ref={coverImageInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverImageSelect} />
+
+                      {/* Audio Level Visualizer */}
+                      {audioOnlyStream ? (
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="flex items-center gap-1 h-16">
+                            {Array.from({ length: 20 }).map((_, i) => (
+                              <div
+                                key={i}
+                                className="w-2 rounded-full bg-primary transition-all duration-75"
+                                style={{
+                                  height: `${Math.max(4, audioLevel * 64 * (0.5 + Math.random() * 0.5))}px`,
+                                  opacity: audioLevel > 0.02 ? 1 : 0.3,
+                                }}
+                              />
+                            ))}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {isRecording ? (isPaused ? 'Paused' : 'Recording...') : 'Microphone connected — ready to record'}
+                          </p>
                         </div>
                       ) : (
-                        <>
-                          <video
-                            ref={recordingMode === 'screen-webcam' ? screenRef : webcamRef}
-                            autoPlay
-                            muted
-                            playsInline
-                            className="w-full h-full object-cover"
-                          />
-                          {recordingMode === 'screen-webcam' && layout !== 'fullscreen' && (
-                            <div className={`absolute ${getPipPositionClass(layout)} w-48 aspect-video rounded-lg overflow-hidden shadow-lg border-2 border-background`}>
-                              <video
-                                ref={webcamRef}
-                                autoPlay
-                                muted
-                                playsInline
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          )}
-                        </>
-                      )
-                    ) : (
-                      <video
-                        ref={screenRef}
-                        autoPlay
-                        muted
-                        playsInline
-                        className="w-full h-full object-cover"
-                      />
-                    )}
-
-                    {/* Teleprompter Overlay */}
-                    {showTeleprompter && teleprompterText && (
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-6">
-                        <div className="text-white text-xl font-medium text-center max-w-3xl mx-auto leading-relaxed">
-                          {teleprompterText}
+                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                          <Mic className="h-12 w-12 opacity-50" />
+                          <p className="text-lg">Start your microphone to begin</p>
+                          <p className="text-sm">Click "Start Mic" below</p>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
+                  ) : (
+                    /* Video Podcast Preview */
+                    <div className="relative aspect-video bg-muted">
+                      {recordingMode === 'webcam' || recordingMode === 'screen-webcam' ? (
+                        layout === 'split' ? (
+                          <div className="flex h-full">
+                            <video ref={screenRef} autoPlay muted playsInline className="w-1/2 h-full object-cover" />
+                            <video ref={webcamRef} autoPlay muted playsInline className="w-1/2 h-full object-cover" />
+                          </div>
+                        ) : (
+                          <>
+                            <video
+                              ref={recordingMode === 'screen-webcam' ? screenRef : webcamRef}
+                              autoPlay muted playsInline className="w-full h-full object-cover"
+                            />
+                            {recordingMode === 'screen-webcam' && layout !== 'fullscreen' && (
+                              <div className={`absolute ${getPipPositionClass(layout)} w-48 aspect-video rounded-lg overflow-hidden shadow-lg border-2 border-background`}>
+                                <video ref={webcamRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+                              </div>
+                            )}
+                          </>
+                        )
+                      ) : (
+                        <video ref={screenRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+                      )}
 
-                    {/* No Source Placeholder */}
-                    {!webcamStream && !screenStream && (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
-                        <Camera className="h-16 w-16 mb-4 opacity-50" />
-                        <p className="text-lg">Select a source to begin</p>
-                        <p className="text-sm">Click the buttons below to start your camera or screen share</p>
-                      </div>
-                    )}
-                  </div>
+                      {/* Teleprompter Overlay */}
+                      {showTeleprompter && teleprompterText && (
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-6">
+                          <div className="text-white text-xl font-medium text-center max-w-3xl mx-auto leading-relaxed">
+                            {teleprompterText}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* No Source Placeholder */}
+                      {!webcamStream && !screenStream && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
+                          <Camera className="h-16 w-16 mb-4 opacity-50" />
+                          <p className="text-lg">Select a source to begin</p>
+                          <p className="text-sm">Click the buttons below to start your camera or screen share</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -610,61 +731,61 @@ const RecordingStudio = () => {
                   <div className="flex items-center justify-between">
                     {/* Source Buttons */}
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant={webcamStream ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={webcamStream ? () => { webcamStream.getTracks().forEach(t => t.stop()); setWebcamStream(null); } : startWebcam}
-                      >
-                        <User className="h-4 w-4 mr-2" />
-                        {webcamStream ? 'Stop Camera' : 'Start Camera'}
-                      </Button>
-                      <Button
-                        variant={screenStream ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={screenStream ? () => { screenStream.getTracks().forEach(t => t.stop()); setScreenStream(null); } : startScreenShare}
-                      >
-                        <ScreenShare className="h-4 w-4 mr-2" />
-                        {screenStream ? 'Stop Share' : 'Share Screen'}
-                      </Button>
+                      {recordingType === 'audio' ? (
+                        <Button
+                          variant={audioOnlyStream ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={audioOnlyStream ? stopAudioOnly : startAudioOnly}
+                        >
+                          <Mic className="h-4 w-4 mr-2" />
+                          {audioOnlyStream ? 'Stop Mic' : 'Start Mic'}
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            variant={webcamStream ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={webcamStream ? () => { webcamStream.getTracks().forEach(t => t.stop()); setWebcamStream(null); } : startWebcam}
+                          >
+                            <User className="h-4 w-4 mr-2" />
+                            {webcamStream ? 'Stop Camera' : 'Start Camera'}
+                          </Button>
+                          <Button
+                            variant={screenStream ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={screenStream ? () => { screenStream.getTracks().forEach(t => t.stop()); setScreenStream(null); } : startScreenShare}
+                          >
+                            <ScreenShare className="h-4 w-4 mr-2" />
+                            {screenStream ? 'Stop Share' : 'Share Screen'}
+                          </Button>
+                        </>
+                      )}
                     </div>
 
                     {/* Recording Controls */}
                     <div className="flex items-center gap-4">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={toggleMic}
-                        disabled={!webcamStream}
-                      >
-                        {isMicOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5 text-destructive" />}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={toggleCamera}
-                        disabled={!webcamStream}
-                      >
-                        {isCameraOn ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5 text-destructive" />}
-                      </Button>
-
-                      <div className="h-6 w-px bg-border" />
+                      {recordingType === 'video' && (
+                        <>
+                          <Button variant="ghost" size="icon" onClick={toggleMic} disabled={!webcamStream}>
+                            {isMicOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5 text-destructive" />}
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={toggleCamera} disabled={!webcamStream}>
+                            {isCameraOn ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5 text-destructive" />}
+                          </Button>
+                          <div className="h-6 w-px bg-border" />
+                        </>
+                      )}
 
                       {!isRecording ? (
                         <Button
                           variant="destructive"
                           onClick={startRecording}
-                          disabled={!webcamStream && !screenStream}
+                          disabled={recordingType === 'audio' ? !audioOnlyStream : (!webcamStream && !screenStream)}
                         >
                           {sessionMode === 'stream-record' ? (
-                            <>
-                              <Radio className="h-4 w-4 mr-2" />
-                              Go Live
-                            </>
+                            <><Radio className="h-4 w-4 mr-2" /> Go Live</>
                           ) : (
-                            <>
-                              <Circle className="h-4 w-4 mr-2 fill-current" />
-                              Start Recording
-                            </>
+                            <><Circle className="h-4 w-4 mr-2 fill-current" /> Start Recording</>
                           )}
                         </Button>
                       ) : (
@@ -673,24 +794,27 @@ const RecordingStudio = () => {
                             {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
                           </Button>
                           <Button variant="destructive" onClick={stopRecording}>
-                            <Square className="h-4 w-4 mr-2 fill-current" />
-                            Stop
+                            <Square className="h-4 w-4 mr-2 fill-current" /> Stop
                           </Button>
                         </>
                       )}
                     </div>
 
-                    {/* Mode Selection */}
-                    <Select value={recordingMode} onValueChange={(v: RecordingMode) => setRecordingMode(v)}>
-                      <SelectTrigger className="w-48">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="webcam">Webcam Only</SelectItem>
-                        <SelectItem value="screen">Screen Only</SelectItem>
-                        <SelectItem value="screen-webcam">Screen + Webcam</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    {/* Mode Selection - only for video */}
+                    {recordingType === 'video' ? (
+                      <Select value={recordingMode} onValueChange={(v: RecordingMode) => setRecordingMode(v)}>
+                        <SelectTrigger className="w-48">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="webcam">Webcam Only</SelectItem>
+                          <SelectItem value="screen">Screen Only</SelectItem>
+                          <SelectItem value="screen-webcam">Screen + Webcam</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="w-48" /> /* spacer */
+                    )}
                   </div>
                 </CardContent>
               </Card>
