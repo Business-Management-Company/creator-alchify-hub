@@ -494,6 +494,7 @@ export type Database = {
           file_size_bytes: number | null
           guid: string | null
           id: string
+          image_url: string | null
           podcast_id: string
           pub_date: string | null
           season_number: number | null
@@ -511,6 +512,7 @@ export type Database = {
           file_size_bytes?: number | null
           guid?: string | null
           id?: string
+          image_url?: string | null
           podcast_id: string
           pub_date?: string | null
           season_number?: number | null
@@ -528,6 +530,7 @@ export type Database = {
           file_size_bytes?: number | null
           guid?: string | null
           id?: string
+          image_url?: string | null
           podcast_id?: string
           pub_date?: string | null
           season_number?: number | null

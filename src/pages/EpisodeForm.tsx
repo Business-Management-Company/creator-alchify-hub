@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Upload, X, Loader2, FileAudio, Check } from "lucide-react";
+import { ArrowLeft, Upload, X, Loader2, FileAudio, Check, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 import AppLayout from "@/components/layout/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEpisode, useCreateEpisode, useUpdateEpisode, useUploadAudio, useNextEpisodeNumber } from "@/hooks/useEpisodes";
+import { supabase } from "@/integrations/supabase/client";
 
 const EpisodeForm = () => {
     const { id: podcastId, eid: episodeId } = useParams<{ id: string; eid: string }>();
@@ -37,6 +38,10 @@ const EpisodeForm = () => {
     const [fileSize, setFileSize] = useState<number | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [formInitialized, setFormInitialized] = useState(false);
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
+    const imageInputRef = useRef<HTMLInputElement>(null);
 
     if (existingEpisode && !formInitialized) {
         setTitle(existingEpisode.title);
@@ -46,6 +51,10 @@ const EpisodeForm = () => {
         setAudioUrl(existingEpisode.audio_url);
         setFileSize(existingEpisode.file_size_bytes);
         setPublishNow(existingEpisode.status === "published");
+        if ((existingEpisode as any).image_url) {
+            setImageUrl((existingEpisode as any).image_url);
+            setImagePreview((existingEpisode as any).image_url);
+        }
         setFormInitialized(true);
     }
 
@@ -78,6 +87,30 @@ const EpisodeForm = () => {
         if (!isEditing) { setAudioUrl(null); setFileSize(null); }
     };
 
+    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith("image/")) { toast.error("Please select an image file"); return; }
+        setImageFile(file);
+        setImagePreview(URL.createObjectURL(file));
+    };
+
+    const removeImage = () => {
+        setImageFile(null);
+        setImagePreview(null);
+        if (!isEditing) setImageUrl(null);
+    };
+
+    const uploadImage = async (): Promise<string | null> => {
+        if (!imageFile || !user) return imageUrl;
+        const ext = imageFile.name.split(".").pop();
+        const path = `episode-covers/${user.id}/${Date.now()}.${ext}`;
+        const { error } = await supabase.storage.from("creator-assets").upload(path, imageFile, { upsert: true });
+        if (error) { toast.error("Failed to upload image"); return imageUrl; }
+        const { data: urlData } = supabase.storage.from("creator-assets").getPublicUrl(path);
+        return urlData.publicUrl;
+    };
+
     const formatFileSize = (bytes: number) => {
         if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
         return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -98,12 +131,16 @@ const EpisodeForm = () => {
                 finalAudioUrl = result.url;
                 finalFileSize = result.fileSize;
             } catch { setIsUploading(false); return; }
-            setIsUploading(false);
         }
 
-        if (!finalAudioUrl && !isEditing) { toast.error("Please upload an audio file"); return; }
+        let finalImageUrl = imageUrl;
+        if (imageFile) {
+            finalImageUrl = await uploadImage();
+        }
 
-        const episodeData = {
+        if (!finalAudioUrl && !isEditing) { toast.error("Please upload an audio file"); setIsUploading(false); return; }
+
+        const episodeData: any = {
             podcast_id: podcastId,
             user_id: user.id,
             title: title.trim(),
@@ -114,7 +151,10 @@ const EpisodeForm = () => {
             file_size_bytes: finalFileSize,
             status: publishNow ? "published" : (scheduledDate ? "scheduled" : "draft"),
             pub_date: publishNow ? new Date().toISOString() : (scheduledDate || null),
+            image_url: finalImageUrl || null,
         };
+
+        setIsUploading(false);
 
         if (isEditing && episodeId) {
             updateEpisode.mutate({ id: episodeId, ...episodeData }, { onSuccess: () => navigate(`/podcasts/${podcastId}`) });
@@ -177,6 +217,35 @@ const EpisodeForm = () => {
                                     </div>
                                 )}
                                 <input ref={fileInputRef} type="file" accept="audio/*" className="hidden" onChange={handleFileSelect} />
+                            </CardContent>
+                        </Card>
+
+                        {/* Episode Cover Image */}
+                        <Card>
+                            <CardContent className="p-6">
+                                <Label className="text-base font-semibold mb-3 block">Episode Cover Image (optional)</Label>
+                                <p className="text-sm text-muted-foreground mb-3">Override the podcast cover for this episode. Recommended: 1400×1400px, square.</p>
+                                <div className="flex items-center gap-4">
+                                    <div
+                                        className="w-28 h-28 rounded-xl border-2 border-dashed border-border flex items-center justify-center cursor-pointer overflow-hidden hover:border-primary transition-colors shrink-0"
+                                        onClick={() => imageInputRef.current?.click()}
+                                    >
+                                        {imagePreview ? (
+                                            <img src={imagePreview} alt="Episode cover" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                                                <ImagePlus className="w-6 h-6" />
+                                                <span className="text-xs">Upload</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    {imagePreview && (
+                                        <Button type="button" variant="ghost" size="sm" onClick={removeImage}>
+                                            <X className="w-4 h-4 mr-1" /> Remove
+                                        </Button>
+                                    )}
+                                </div>
+                                <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
                             </CardContent>
                         </Card>
 
