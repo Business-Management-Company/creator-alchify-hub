@@ -72,10 +72,17 @@ serve(async (req) => {
         audioBytes[i] = binaryStr.charCodeAt(i);
       }
     } else if (project.source_file_url) {
-      const fileResponse = await fetch(project.source_file_url);
-      if (!fileResponse.ok) throw new Error('Failed to download source file');
-      audioBytes = new Uint8Array(await fileResponse.arrayBuffer());
-      fileName = project.source_file_name || 'audio.mp3';
+      // source_file_url is a storage path like "user-id/filename.webm"
+      // Download from Supabase Storage
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('media-uploads')
+        .download(project.source_file_url);
+      if (downloadError || !fileData) {
+        console.error('Storage download error:', downloadError);
+        throw new Error('Failed to download source file from storage');
+      }
+      audioBytes = new Uint8Array(await fileData.arrayBuffer());
+      fileName = project.source_file_name || 'audio.webm';
     } else {
       return new Response(JSON.stringify({ error: 'No audio source available' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
