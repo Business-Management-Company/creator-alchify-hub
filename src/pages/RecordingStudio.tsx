@@ -305,8 +305,19 @@ const RecordingStudio = () => {
 
     try {
       const isAudio = recordingType === 'audio';
-      const mimeType = isAudio ? 'audio/webm;codecs=opus' : 'video/webm;codecs=vp9';
-      const mediaRecorder = new MediaRecorder(streamToRecord, { mimeType });
+      
+      // Find a supported MIME type with fallbacks
+      let mimeType: string;
+      if (isAudio) {
+        const audioTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
+        mimeType = audioTypes.find(t => MediaRecorder.isTypeSupported(t)) || '';
+      } else {
+        const videoTypes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
+        mimeType = videoTypes.find(t => MediaRecorder.isTypeSupported(t)) || '';
+      }
+      
+      const recorderOptions: MediaRecorderOptions = mimeType ? { mimeType } : {};
+      const mediaRecorder = new MediaRecorder(streamToRecord, recorderOptions);
       mediaRecorderRef.current = mediaRecorder;
       recordedChunksRef.current = [];
 
@@ -317,7 +328,7 @@ const RecordingStudio = () => {
       };
 
       mediaRecorder.onstop = async () => {
-        const blobType = isAudio ? 'audio/webm' : 'video/webm';
+        const blobType = mimeType || (isAudio ? 'audio/webm' : 'video/webm');
         const blob = new Blob(recordedChunksRef.current, { type: blobType });
 
         if (isAudio && user) {
