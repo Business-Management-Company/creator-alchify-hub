@@ -340,17 +340,41 @@ const PodcastDetail = () => {
                     </div>
 
                     <Tabs defaultValue="episodes" className="space-y-6">
-                        <TabsList>
-                            <TabsTrigger value="episodes" className="gap-2">
-                                <List className="w-4 h-4" /> Episodes
-                            </TabsTrigger>
-                            <TabsTrigger value="distribution" className="gap-2">
-                                <Radio className="w-4 h-4" /> Distribution
-                            </TabsTrigger>
-                            <TabsTrigger value="settings" className="gap-2">
-                                <Settings className="w-4 h-4" /> Settings
-                            </TabsTrigger>
-                        </TabsList>
+                        <div className="flex items-center justify-between">
+                            <TabsList>
+                                <TabsTrigger value="episodes" className="gap-2">
+                                    <List className="w-4 h-4" /> Episodes
+                                </TabsTrigger>
+                                <TabsTrigger value="distribution" className="gap-2">
+                                    <Radio className="w-4 h-4" /> Distribution
+                                </TabsTrigger>
+                                <TabsTrigger value="settings" className="gap-2">
+                                    <Settings className="w-4 h-4" /> Settings
+                                </TabsTrigger>
+                            </TabsList>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(`${window.location.origin}/podcast/${id}`);
+                                        toast.success("Public URL copied to clipboard!");
+                                    }}
+                                >
+                                    <ExternalLink className="w-4 h-4 mr-2" /> Public Page
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(getRssFeedUrl(id!));
+                                        toast.success("RSS feed URL copied!");
+                                    }}
+                                >
+                                    <Rss className="w-4 h-4 mr-2" /> RSS Feed
+                                </Button>
+                            </div>
+                        </div>
 
                         <TabsContent value="episodes" className="space-y-4">
                             <div className="flex items-center justify-between">
@@ -457,46 +481,6 @@ const PodcastDetail = () => {
                                 </div>
                             )}
                             
-                            {/* Public Podcast URL */}
-                            <Card className="mt-6">
-                                <CardHeader>
-                                    <CardTitle className="text-base flex items-center gap-2">
-                                        <ExternalLink className="w-4 h-4" /> Public Podcast Page
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="text-sm space-y-3">
-                                    <p className="text-muted-foreground">
-                                        Share this link or use it as your RSS redirect URL. Listeners can view all published episodes here.
-                                    </p>
-                                    <div className="flex items-center gap-2">
-                                        <Input
-                                            readOnly
-                                            value={`${window.location.origin}/podcast/${id}`}
-                                            className="text-xs font-mono"
-                                        />
-                                        <Button
-                                            variant="outline"
-                                            size="icon"
-                                            onClick={() => {
-                                                navigator.clipboard.writeText(`${window.location.origin}/podcast/${id}`);
-                                                toast.success("Public URL copied to clipboard!");
-                                            }}
-                                        >
-                                            <Copy className="w-4 h-4" />
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="icon"
-                                            asChild
-                                        >
-                                            <a href={`/podcast/${id}`} target="_blank" rel="noopener noreferrer">
-                                                <ExternalLink className="w-4 h-4" />
-                                            </a>
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-
                             {podcast.rss_import && (
                                 <Card className="mt-6">
                                     <CardHeader>
@@ -741,37 +725,6 @@ const PodcastDetail = () => {
                                             </div>
                                         </div>
                                     )}
-                                </CardContent>
-                            </Card>
-
-                            {/* RSS Feed Card */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-base flex items-center gap-2">
-                                        <Rss className="w-4 h-4" /> RSS Feed
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-3">
-                                    <p className="text-sm text-muted-foreground">
-                                        Your Alchify-generated RSS feed URL. Use this to submit your podcast to streaming platforms.
-                                    </p>
-                                    <div className="flex items-center gap-2">
-                                        <Input
-                                            readOnly
-                                            value={getRssFeedUrl(id!)}
-                                            className="text-xs font-mono"
-                                        />
-                                        <Button
-                                            variant="outline"
-                                            size="icon"
-                                            onClick={() => {
-                                                navigator.clipboard.writeText(getRssFeedUrl(id!));
-                                                toast.success("RSS feed URL copied!");
-                                            }}
-                                        >
-                                            <Copy className="w-4 h-4" />
-                                        </Button>
-                                    </div>
                                 </CardContent>
                             </Card>
 
