@@ -27,6 +27,12 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
     ArrowLeft,
     Plus,
     Settings,
@@ -45,6 +51,7 @@ import {
     ImagePlus,
     Upload,
     X,
+    ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AudioPlayer } from "@/components/ui/audio-player";
@@ -353,16 +360,24 @@ const PodcastDetail = () => {
                                 </TabsTrigger>
                             </TabsList>
                             <div className="flex items-center gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                        navigator.clipboard.writeText(`${window.location.origin}/podcast/${id}`);
-                                        toast.success("Public URL copied to clipboard!");
-                                    }}
-                                >
-                                    <ExternalLink className="w-4 h-4 mr-2" /> Public Page
-                                </Button>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" size="sm">
+                                            <ExternalLink className="w-4 h-4 mr-2" /> Public Page <ChevronDown className="w-3 h-3 ml-1" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => {
+                                            navigator.clipboard.writeText(`${window.location.origin}/podcast/${id}`);
+                                            toast.success("Public URL copied to clipboard!");
+                                        }}>
+                                            <Copy className="w-4 h-4 mr-2" /> Copy URL
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => window.open(`${window.location.origin}/podcast/${id}`, '_blank')}>
+                                            <ExternalLink className="w-4 h-4 mr-2" /> Open in New Tab
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                                 <Button
                                     variant="outline"
                                     size="sm"
