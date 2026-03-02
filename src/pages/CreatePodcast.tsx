@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,26 +12,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Download, Mic, Globe, Tag } from "lucide-react";
+import { ArrowLeft, Mic, Globe, Tag, ImagePlus } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { useCreatePodcast } from "@/hooks/usePodcasts";
 import { PODCAST_CATEGORIES, PODCAST_LANGUAGES } from "@/types/podcast";
-import podcastIcon from "@/assets/podcast-icon.jpg";
-import podcastImage from "@/assets/podcast-image.jpg";
-import podcastStudio from "@/assets/podcast-studio.jpg";
-
-function generateSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-}
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const CreatePodcast = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState<"choice" | "details">("choice");
+  const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
@@ -40,12 +30,51 @@ const CreatePodcast = () => {
   const [isExplicit, setIsExplicit] = useState(false);
   const [authorName, setAuthorName] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const createPodcast = useCreatePodcast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const uploadImage = async (): Promise<string | null> => {
+    if (!imageFile || !user) return null;
+    const ext = imageFile.name.split(".").pop();
+    const path = `podcast-covers/${user.id}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage
+      .from("media-uploads")
+      .upload(path, imageFile, { upsert: true });
+    if (error) {
+      toast.error("Failed to upload image");
+      return null;
+    }
+    const { data: urlData } = supabase.storage
+      .from("media-uploads")
+      .getPublicUrl(path);
+    return urlData.publicUrl;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
+
+    setUploading(true);
+    let imageUrl: string | null = null;
+    if (imageFile) {
+      imageUrl = await uploadImage();
+    }
+    setUploading(false);
 
     createPodcast.mutate(
       {
@@ -56,6 +85,7 @@ const CreatePodcast = () => {
         is_explicit: isExplicit,
         author: authorName.trim() || null,
         website_url: websiteUrl.trim() || null,
+        image_url: imageUrl,
         status: "draft",
       },
       {
@@ -66,69 +96,16 @@ const CreatePodcast = () => {
     );
   };
 
-  if (step === "choice") {
-    return (
-      <AppLayout>
-        <div className="bg-background p-6 flex items-center justify-center">
-          <div className="max-w-5xl w-full">
-            <Button variant="ghost" onClick={() => navigate("/podcasts")} className="mb-8">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Podcasts
-            </Button>
-
-            <h1 className="text-4xl font-bold mb-12 text-center">
-              Add a new podcast to Alchify
-            </h1>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <Card
-                className="p-12 flex flex-col items-center justify-center text-center cursor-pointer hover:shadow-xl transition-all hover:scale-105 border-2 bg-cover bg-center bg-no-repeat"
-                onClick={() => setStep("details")}
-                style={{
-                  backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.55)), url(${podcastImage})`,
-                }}
-              >
-                <div className="w-24 h-24 rounded-full bg-primary flex items-center justify-center mb-6">
-                  <Plus className="w-12 h-12 text-primary-foreground" />
-                </div>
-                <h2 className="text-2xl font-bold mb-3 text-white">Create a New Podcast</h2>
-                <p className="text-gray-200">Have a new podcast idea? Let's go!</p>
-              </Card>
-
-              <Card
-                className="p-12 flex flex-col items-center justify-center text-center cursor-pointer hover:shadow-xl transition-all hover:scale-105 border-2 bg-cover bg-center bg-no-repeat"
-                onClick={() => navigate("/podcasts/import")}
-                style={{
-                  backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.75)), url(${podcastStudio})`,
-                }}
-              >
-                <div className="w-24 h-24 rounded-full bg-primary flex items-center justify-center mb-6">
-                  <Download className="w-12 h-12 text-primary-foreground" />
-                </div>
-                <h2 className="text-2xl font-bold mb-3 text-white">Copy in an Existing Podcast</h2>
-                <p className="text-gray-200">Have a podcast hosted elsewhere? Bring it over.</p>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </AppLayout>
-    );
-  }
-
   return (
     <AppLayout>
       <div className="bg-background p-6 flex items-center justify-center">
         <div className="max-w-3xl w-full">
-          <Button variant="ghost" onClick={() => setStep("choice")} className="mb-8">
+          <Button variant="ghost" onClick={() => navigate("/podcasts")} className="mb-8">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+            Back to Podcasts
           </Button>
 
           <div className="space-y-8">
-            <div className="flex justify-center">
-              <img src={podcastIcon} alt="Podcast" className="w-32 h-32 rounded-2xl object-cover shadow-lg" />
-            </div>
-
             <div>
               <h1 className="text-4xl font-bold mb-2 text-center">Create Your Podcast</h1>
               <p className="text-center text-muted-foreground">
@@ -137,6 +114,32 @@ const CreatePodcast = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Cover Image */}
+              <div className="flex flex-col items-center gap-3">
+                <Label className="text-base font-semibold">Cover Image</Label>
+                <div
+                  className="w-40 h-40 rounded-2xl border-2 border-dashed border-border flex items-center justify-center cursor-pointer overflow-hidden hover:border-primary transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {imagePreview ? (
+                    <img src={imagePreview} alt="Cover" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <ImagePlus className="w-8 h-8" />
+                      <span className="text-xs">Upload Image</span>
+                    </div>
+                  )}
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageSelect}
+                />
+                <p className="text-xs text-muted-foreground">Recommended: 1400×1400px, square, JPG or PNG</p>
+              </div>
+
               <div>
                 <Label htmlFor="title" className="text-base font-semibold flex items-center gap-2">
                   <Mic className="w-4 h-4" /> Podcast Title *
@@ -189,8 +192,8 @@ const CreatePodcast = () => {
               </div>
 
               <div className="flex items-center justify-between pt-6">
-                <Button type="submit" size="lg" disabled={createPodcast.isPending || !title.trim()} className="bg-black text-white hover:bg-black/90 px-12">
-                  {createPodcast.isPending ? "Creating..." : "Create Podcast"}
+                <Button type="submit" size="lg" disabled={createPodcast.isPending || uploading || !title.trim()}>
+                  {uploading ? "Uploading image..." : createPodcast.isPending ? "Creating..." : "Create Podcast"}
                 </Button>
                 <Button type="button" variant="link" onClick={() => navigate("/podcasts")} className="text-muted-foreground">Cancel</Button>
               </div>
