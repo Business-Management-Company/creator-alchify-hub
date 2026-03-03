@@ -36,6 +36,7 @@ const EpisodeForm = () => {
     const [audioFile, setAudioFile] = useState<File | null>(null);
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [fileSize, setFileSize] = useState<number | null>(null);
+    const [durationSeconds, setDurationSeconds] = useState<number | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [formInitialized, setFormInitialized] = useState(false);
     const [imageFile, setImageFile] = useState<File | null>(null);
@@ -63,22 +64,41 @@ const EpisodeForm = () => {
         setFormInitialized(true);
     }
 
-    const handleFileDrop = useCallback((e: React.DragEvent) => {
+    const getAudioDuration = (file: File): Promise<number> => {
+        return new Promise((resolve) => {
+            const audio = new Audio();
+            audio.addEventListener('loadedmetadata', () => {
+                resolve(Math.round(audio.duration));
+                URL.revokeObjectURL(audio.src);
+            });
+            audio.addEventListener('error', () => {
+                resolve(0);
+                URL.revokeObjectURL(audio.src);
+            });
+            audio.src = URL.createObjectURL(file);
+        });
+    };
+
+    const handleFileDrop = useCallback(async (e: React.DragEvent) => {
         e.preventDefault();
         const file = e.dataTransfer.files[0];
         if (file && file.type.startsWith("audio/")) {
             setAudioFile(file);
             if (!title) setTitle(file.name.replace(/\.[^/.]+$/, ""));
+            const dur = await getAudioDuration(file);
+            if (dur > 0) setDurationSeconds(dur);
         } else {
             toast.error("Please drop an audio file (MP3, M4A, WAV)");
         }
     }, [title]);
 
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             setAudioFile(file);
             if (!title) setTitle(file.name.replace(/\.[^/.]+$/, ""));
+            const dur = await getAudioDuration(file);
+            if (dur > 0) setDurationSeconds(dur);
         }
     };
 
@@ -149,6 +169,7 @@ const EpisodeForm = () => {
             season_number: seasonNumber || null,
             audio_url: finalAudioUrl,
             file_size_bytes: finalFileSize,
+            duration_seconds: durationSeconds || null,
             status: publishNow ? "published" : (scheduledDate ? "scheduled" : "draft"),
             pub_date: publishNow ? new Date().toISOString() : (scheduledDate || null),
             image_url: finalImageUrl || null,
