@@ -18,7 +18,7 @@ import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { apiPost } from '@/lib/api';
+
 import AppLayout from '@/components/layout/AppLayout';
 
 const ACCEPTED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'];
@@ -227,7 +227,7 @@ const Upload = () => {
       
       // Auto-start transcription via backend API
       try {
-        const { data, error } = await apiPost<{ transcript?: { wordCount?: number; fillerCount?: number } }>('/transcribe-audio', { projectId: project.id });
+        const { data, error } = await supabase.functions.invoke('transcribe-audio', { body: { projectId: project.id } });
         
         setUploadProgress(95);
         
@@ -239,10 +239,11 @@ const Upload = () => {
           });
         } else {
           // Log AI action via backend
-          await apiPost('/ai-action-log', {
-            projectId: project.id,
-            actionType: 'auto_alchify',
-            actionDetails: {
+          await supabase.from('ai_action_log').insert({
+            project_id: project.id,
+            user_id: user.id,
+            action_type: 'auto_alchify',
+            action_details: {
               word_count: data?.transcript?.wordCount,
               filler_count: data?.transcript?.fillerCount,
               auto_processed: true

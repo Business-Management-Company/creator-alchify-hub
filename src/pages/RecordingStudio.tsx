@@ -48,7 +48,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
-import { apiPost } from '@/lib/api';
+
 import {
   Dialog,
   DialogContent,
@@ -397,7 +397,10 @@ const RecordingStudio = () => {
 
             // Auto-transcribe
             try {
-              await apiPost('/transcribe-audio', { projectId: project.id });
+              const { data, error } = await supabase.functions.invoke('transcribe-audio', {
+                body: { projectId: project.id },
+              });
+              if (error) console.error('Auto-transcription error:', error);
             } catch (e) {
               console.error('Auto-transcription error:', e);
             }
