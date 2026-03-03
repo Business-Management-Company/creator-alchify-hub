@@ -60,7 +60,7 @@ import {
 
 type RecordingType = 'video' | 'audio';
 type RecordingMode = 'webcam' | 'screen' | 'screen-webcam';
-type LayoutType = 'fullscreen' | 'pip-bottom-right' | 'pip-bottom-left' | 'pip-top-right' | 'pip-top-left' | 'split';
+type LayoutType = 'fullscreen' | 'pip-bottom-right' | 'pip-bottom-left' | 'pip-top-right' | 'pip-top-left' | 'split' | 'presentation';
 type SessionMode = 'record' | 'stream-record';
 
 interface StreamingDestination {
@@ -85,6 +85,7 @@ const LAYOUTS: { id: LayoutType; label: string; description: string }[] = [
   { id: 'pip-top-right', label: 'PiP Top Right', description: 'Webcam overlay top right' },
   { id: 'pip-top-left', label: 'PiP Top Left', description: 'Webcam overlay top left' },
   { id: 'split', label: 'Split Screen', description: 'Side by side view' },
+  { id: 'presentation', label: 'Presentation', description: 'Content focus with cam' },
 ];
 
 const VIRTUAL_BACKGROUNDS = [
@@ -499,6 +500,9 @@ const RecordingStudio = () => {
       case 'pip-bottom-left': return 'bottom-4 left-4';
       case 'pip-top-right': return 'top-4 right-4';
       case 'pip-top-left': return 'top-4 left-4';
+      case 'presentation':
+        // presentation mirrors bottom-right PiP by default; adjust if needed later
+        return 'bottom-4 right-4';
       default: return 'bottom-4 right-4';
     }
   };
@@ -581,161 +585,167 @@ const RecordingStudio = () => {
           </div>
         )}
         <div className="p-4 space-y-4 bg-background min-h-screen">
-          {/* Recording Type Toggle */}
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">Type:</span>
-            <div className="flex gap-2">
-              <Button
-                variant={recordingType === 'video' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setRecordingType('video')}
-                disabled={isRecording}
-              >
-                <Video className="h-4 w-4 mr-1" />
-                Video Podcast
-              </Button>
-              <Button
-                variant={recordingType === 'audio' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setRecordingType('audio')}
-                disabled={isRecording}
-              >
-                <Headphones className="h-4 w-4 mr-1" />
-                Audio Podcast
-              </Button>
+          {/* Studio Header: Type, Invite, and Session Mode in one row */}
+          <div className="flex items-center gap-4 flex-wrap border-b pb-4">
+            <div className="flex items-center gap-2">
+              <div className='h-8 w-8 justify-center bg-primary rounded-md flex items-center'>
+                <Mic className="h-5 w-5 text-white" />
+              </div>
+              <span className="font-bold text-base">Studio</span>
             </div>
-          </div>
-
-          {/* Session Mode & Invite - Single Row Header */}
-          <div className="flex items-center gap-4 flex-wrap">
-            <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Invite Guest
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Invite Guest to Session</DialogTitle>
-                  <DialogDescription>
-                    Share a link or send an email invitation
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 pt-4">
-                  {/* Share Link */}
-                  <div className="space-y-2">
-                    <Label>Shareable Link</Label>
-                    <div className="flex gap-2">
-                      <Input 
-                        value={generateInviteLink()} 
-                        readOnly 
-                        className="text-sm"
-                      />
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        onClick={copyInviteLink}
-                      >
-                        {inviteLinkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-background px-2 text-muted-foreground">or send email</span>
-                    </div>
-                  </div>
-                  
-                  {/* Email Invite */}
-                  <div className="space-y-3">
-                    <div>
-                      <Label htmlFor="guest-name">Guest Name</Label>
-                      <Input 
-                        id="guest-name"
-                        placeholder="Enter name"
-                        value={inviteName}
-                        onChange={e => setInviteName(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="guest-email">Guest Email</Label>
-                      <Input 
-                        id="guest-email"
-                        type="email"
-                        placeholder="Enter email"
-                        value={inviteEmail}
-                        onChange={e => setInviteEmail(e.target.value)}
-                      />
-                    </div>
-                    <Button className="w-full" onClick={sendEmailInvite}>
-                      <Mail className="h-4 w-4 mr-2" />
-                      Send Invitation
-                    </Button>
-                  </div>
-                  
-                  {/* Invited Guests List */}
-                  {invitedGuests.length > 0 && (
-                    <div className="space-y-2 pt-2">
-                      <Label>Invited Guests</Label>
-                      <div className="space-y-2">
-                        {invitedGuests.map(guest => (
-                          <div key={guest.id} className="flex items-center justify-between p-2 rounded-lg bg-muted">
-                            <div>
-                              <div className="font-medium text-sm">{guest.name}</div>
-                              <div className="text-xs text-muted-foreground">{guest.email}</div>
-                            </div>
-                            <Badge variant={guest.status === 'joined' ? 'default' : 'secondary'}>
-                              {guest.status}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">Session Mode:</span>
+            <div className="flex items-center gap-3 ms-8">
               <div className="flex gap-2">
                 <Button
-                  variant={sessionMode === 'record' ? 'default' : 'outline'}
+                  variant={recordingType === 'video' ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setSessionMode('record')}
+                  onClick={() => setRecordingType('video')}
+                  disabled={isRecording}
                 >
-                  <Save className="h-4 w-4 mr-1" />
-                  Record Only
+                  <Video className="h-4 w-4 mr-1" />
+                  Video Podcast
                 </Button>
                 <Button
-                  variant={sessionMode === 'stream-record' ? 'default' : 'outline'}
+                  variant={recordingType === 'audio' ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setSessionMode('stream-record')}
+                  onClick={() => setRecordingType('audio')}
+                  disabled={isRecording}
                 >
-                  <Radio className="h-4 w-4 mr-1" />
-                  Stream + Record
+                  <Headphones className="h-4 w-4 mr-1" />
+                  Audio Podcast
                 </Button>
               </div>
             </div>
 
-            {invitedGuests.length > 0 && (
-              <Badge variant="secondary" className="flex items-center gap-1">
-                <Users className="h-3 w-3" />
-                {invitedGuests.length} guest{invitedGuests.length > 1 ? 's' : ''}
-              </Badge>
-            )}
-            {isRecording && (
-              <Badge variant="destructive" className="animate-pulse flex items-center gap-2">
-                <Circle className="h-3 w-3 fill-current" />
-                {sessionMode === 'stream-record' && 'LIVE • '}
-                REC {formatTime(recordingTime)}
-              </Badge>
-            )}
+            <div className="flex items-center gap-4 ms-auto">
+              <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Invite Guest
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Invite Guest to Session</DialogTitle>
+                    <DialogDescription>
+                      Share a link or send an email invitation
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-4">
+                    {/* Share Link */}
+                    <div className="space-y-2">
+                      <Label>Shareable Link</Label>
+                      <div className="flex gap-2">
+                        <Input 
+                          value={generateInviteLink()} 
+                          readOnly 
+                          className="text-sm"
+                        />
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          onClick={copyInviteLink}
+                        >
+                          {inviteLinkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">or send email</span>
+                      </div>
+                    </div>
+                    
+                    {/* Email Invite */}
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="guest-name">Guest Name</Label>
+                        <Input 
+                          id="guest-name"
+                          placeholder="Enter name"
+                          value={inviteName}
+                          onChange={e => setInviteName(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="guest-email">Guest Email</Label>
+                        <Input 
+                          id="guest-email"
+                          type="email"
+                          placeholder="Enter email"
+                          value={inviteEmail}
+                          onChange={e => setInviteEmail(e.target.value)}
+                        />
+                      </div>
+                      <Button className="w-full" onClick={sendEmailInvite}>
+                        <Mail className="h-4 w-4 mr-2" />
+                        Send Invitation
+                      </Button>
+                    </div>
+                    
+                    {/* Invited Guests List */}
+                    {invitedGuests.length > 0 && (
+                      <div className="space-y-2 pt-2">
+                        <Label>Invited Guests</Label>
+                        <div className="space-y-2">
+                          {invitedGuests.map(guest => (
+                            <div key={guest.id} className="flex items-center justify-between p-2 rounded-lg bg-muted">
+                              <div>
+                                <div className="font-medium text-sm">{guest.name}</div>
+                                <div className="text-xs text-muted-foreground">{guest.email}</div>
+                              </div>
+                              <Badge variant={guest.status === 'joined' ? 'default' : 'secondary'}>
+                                {guest.status}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground"> | </span>
+                <div className="flex gap-2">
+                  <Button
+                    variant={sessionMode === 'record' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSessionMode('record')}
+                  >
+                    <Save className="h-4 w-4 mr-1" />
+                    Record Only
+                  </Button>
+                  <Button
+                    variant={sessionMode === 'stream-record' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSessionMode('stream-record')}
+                  >
+                    <Radio className="h-4 w-4 mr-1" />
+                    Stream + Record
+                  </Button>
+                </div>
+              </div>
+
+              {invitedGuests.length > 0 && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  {invitedGuests.length} guest{invitedGuests.length > 1 ? 's' : ''}
+                </Badge>
+              )}
+              {isRecording && (
+                <Badge variant="destructive" className="animate-pulse flex items-center gap-2">
+                  <Circle className="h-3 w-3 fill-current" />
+                  {sessionMode === 'stream-record' && 'LIVE • '}
+                  REC {formatTime(recordingTime)}
+                </Badge>
+              )}
+            </div>
           </div>
 
           {/* Streaming Destinations (show only when stream mode selected) */}
@@ -783,55 +793,88 @@ const RecordingStudio = () => {
                 <CardContent className="p-0">
                   {recordingType === 'audio' ? (
                     /* Audio Podcast Preview */
-                    <div className="aspect-video bg-muted flex flex-col items-center justify-center p-8 gap-6">
-                      {/* Cover Image */}
-                      <div
-                        className="w-48 h-48 rounded-2xl border-2 border-dashed border-border flex items-center justify-center cursor-pointer overflow-hidden hover:border-primary transition-colors shrink-0"
-                        onClick={() => coverImageInputRef.current?.click()}
-                      >
-                        {coverImagePreview ? (
-                          <img src={coverImagePreview} alt="Episode cover" className="w-full h-full object-cover" />
+                    <div className="aspect-video bg-gradient-to-br from-background via-background to-muted/30 flex flex-col p-8">
+                      {/* Header */}
+                      <div className="flex items-center gap-3 mb-8 pb-4 border-b border-border/50">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Headphones className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-base">Audio Podcast</h3>
+                          <p className="text-xs text-muted-foreground">Professional podcast recording</p>
+                        </div>
+                      </div>
+
+                      {/* Main Content */}
+                      <div className="flex-grow flex flex-col items-center justify-center gap-8">
+                        {/* Cover Image */}
+                        <div
+                          className="relative group cursor-pointer"
+                          onClick={() => coverImageInputRef.current?.click()}
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl blur-xl group-hover:blur-2xl transition-all opacity-0 group-hover:opacity-100" />
+                          <div
+                            className="w-56 h-56 rounded-xl border border-border bg-background shadow-lg flex items-center justify-center cursor-pointer overflow-hidden hover:border-primary/50 transition-all relative z-10"
+                          >
+                            {coverImagePreview ? (
+                              <img src={coverImagePreview} alt="Episode cover" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                                <div className="p-3 rounded-lg bg-muted">
+                                  <ImagePlus className="w-8 h-8" />
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-sm font-medium">Click to upload cover</p>
+                                  <p className="text-xs text-muted-foreground/70">1400×1400px</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {coverImagePreview && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={removeCoverImage}
+                            className="hover:bg-destructive/5"
+                          >
+                            <X className="w-4 h-4 mr-2" /> Remove Cover
+                          </Button>
+                        )}
+                        <input ref={coverImageInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverImageSelect} />
+                      </div>
+
+                      {/* Audio Visualizer / Status - Bottom */}
+                      <div className="mt-auto pt-6 border-t border-border/50 flex flex-col items-center gap-4">
+                        {audioOnlyStream ? (
+                          <>
+                            <div className="flex items-end justify-center gap-1 h-12 w-full">
+                              {Array.from({ length: 20 }).map((_, i) => (
+                                <div
+                                  key={i}
+                                  className="flex-1 max-w-2 rounded-full bg-gradient-to-t from-primary to-primary/60 transition-all duration-75"
+                                  style={{
+                                    height: `${Math.max(4, audioLevel * 48 * (0.5 + Math.random() * 0.5))}px`,
+                                    opacity: audioLevel > 0.02 ? 1 : 0.25,
+                                  }}
+                                />
+                              ))}
+                            </div>
+                            <p className="text-xs font-medium text-muted-foreground">
+                              {isRecording ? (isPaused ? '⏸ Paused' : '🔴 Recording...') : '✓ Microphone connected'}
+                            </p>
+                          </>
                         ) : (
                           <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                            <ImagePlus className="w-10 h-10" />
-                            <span className="text-sm">Episode Cover</span>
-                            <span className="text-xs">1400×1400px</span>
+                            <div className='w-9 h-9 shahdow-lg justify-center bg-muted rounded-full flex items-center'>
+                              <Mic className="h-5 w-5 opacity-40 text-white" />
+                            </div>
+                            <p className="text-sm font-medium">Ready to <span className='font-bold text-primary'>broadcast?</span></p>
+                            <p className="text-xs">Click "Start Mic" to begin recording</p>
                           </div>
                         )}
                       </div>
-                      {coverImagePreview && (
-                        <Button variant="ghost" size="sm" onClick={removeCoverImage}>
-                          <X className="w-4 h-4 mr-1" /> Remove Cover
-                        </Button>
-                      )}
-                      <input ref={coverImageInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverImageSelect} />
-
-                      {/* Audio Level Visualizer */}
-                      {audioOnlyStream ? (
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="flex items-center gap-1 h-16">
-                            {Array.from({ length: 20 }).map((_, i) => (
-                              <div
-                                key={i}
-                                className="w-2 rounded-full bg-primary transition-all duration-75"
-                                style={{
-                                  height: `${Math.max(4, audioLevel * 64 * (0.5 + Math.random() * 0.5))}px`,
-                                  opacity: audioLevel > 0.02 ? 1 : 0.3,
-                                }}
-                              />
-                            ))}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {isRecording ? (isPaused ? 'Paused' : 'Recording...') : 'Microphone connected — ready to record'}
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                          <Mic className="h-12 w-12 opacity-50" />
-                          <p className="text-lg">Start your microphone to begin</p>
-                          <p className="text-sm">Click "Start Mic" below</p>
-                        </div>
-                      )}
                     </div>
                   ) : (
                     /* Video Podcast Preview */
@@ -1039,14 +1082,57 @@ const RecordingStudio = () => {
                         <button
                           key={l.id}
                           onClick={() => setLayout(l.id)}
-                          className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                          className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors ${
                             layout === l.id 
-                              ? 'border-primary bg-primary/10' 
-                              : 'border-border hover:border-primary/50'
+                              ? 'border-blue-500 bg-blue-500/10' 
+                              : 'border-border hover:border-blue-500/50'
                           }`}
                         >
-                          <div className="font-medium text-sm">{l.label}</div>
-                          <div className="text-xs text-muted-foreground">{l.description}</div>
+                          {/* small preview graphic */}
+                          <div className="w-12 h-8 relative bg-muted rounded">
+                            {l.id === 'fullscreen' && <div className="absolute inset-0 bg-blue-500/50 rounded" />}
+                            {l.id === 'pip-bottom-right' && (
+                              <>
+                                <div className="absolute inset-0 rounded" />
+                                <div className="absolute w-4 h-3 bg-blue-500/50 rounded border border-border bottom-1 right-1" />
+                              </>
+                            )}
+                            {l.id === 'pip-bottom-left' && (
+                              <>
+                                <div className="absolute inset-0 rounded" />
+                                <div className="absolute w-4 h-3 bg-blue-500/50 rounded border border-border bottom-1 left-1" />
+                              </>
+                            )}
+                            {l.id === 'pip-top-right' && (
+                              <>
+                                <div className="absolute inset-0 rounded" />
+                                <div className="absolute w-4 h-3 bg-blue-500/50 rounded border border-border top-1 right-1" />
+                              </>
+                            )}
+                            {l.id === 'pip-top-left' && (
+                              <>
+                                <div className="absolute inset-0 rounded" />
+                                <div className="absolute w-4 h-3 bg-blue-500/50 rounded border border-border top-1 left-1" />
+                              </>
+                            )}
+                            {l.id === 'split' && (
+                              <>
+                                <div className="absolute inset-y-0 left-0 w-1/2" />
+                                <div className="absolute inset-y-0 right-0 w-1/2 bg-blue-500/30" />
+                              </>
+                            )}
+                            {l.id === 'presentation' && (
+                              <>
+                                <div className="absolute inset-0 rounded" />
+                                <div className="absolute w-12 h-3 bg-blue-500/50 border border-border bottom-0 left-1/2 transform -translate-x-1/2" />
+                              </>
+                            )}
+                          </div>
+
+                          <div className="flex flex-col text-left">
+                            <div className="font-medium text-sm">{l.label}</div>
+                            <div className="text-xs text-muted-foreground">{l.description}</div>
+                          </div>
                         </button>
                       ))}
                     </CardContent>
@@ -1123,7 +1209,7 @@ const RecordingStudio = () => {
               </Tabs>
             </div>
           </div>
-        </div>
+        </div> 
       </AppLayout>
     </div>
   );
