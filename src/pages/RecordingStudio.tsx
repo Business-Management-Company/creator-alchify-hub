@@ -12,15 +12,15 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Video, 
-  Monitor, 
-  Mic, 
-  MicOff, 
-  VideoOff, 
-  Circle, 
-  Square, 
-  Pause, 
+import {
+  Video,
+  Monitor,
+  Mic,
+  MicOff,
+  VideoOff,
+  Circle,
+  Square,
+  Pause,
   Play,
   Settings,
   Layout,
@@ -100,7 +100,7 @@ const RecordingStudio = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const [recordingType, setRecordingType] = useState<RecordingType>('video');
   const [recordingMode, setRecordingMode] = useState<RecordingMode>('webcam');
   const [sessionMode, setSessionMode] = useState<SessionMode>('record');
@@ -122,23 +122,17 @@ const RecordingStudio = () => {
   const [audioLevel, setAudioLevel] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [saveProgress, setSaveProgress] = useState(0);
-  
-  // Guest invite state
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteName, setInviteName] = useState('');
   const [invitedGuests, setInvitedGuests] = useState<InvitedGuest[]>([]);
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
-  
-  // Streaming destinations state
   const [streamingDestinations, setStreamingDestinations] = useState<StreamingDestination[]>([
     { id: 'youtube', name: 'YouTube', icon: Youtube, enabled: false, rtmpUrl: '' },
     { id: 'facebook', name: 'Facebook', icon: Facebook, enabled: false, rtmpUrl: '' },
     { id: 'linkedin', name: 'LinkedIn', icon: Linkedin, enabled: false, rtmpUrl: '' },
     { id: 'rtmp', name: 'Custom RTMP', icon: Radio, enabled: false, rtmpUrl: '' },
   ]);
-  
-  // Device selection state
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedAudioDevice, setSelectedAudioDevice] = useState<string>('');
@@ -153,7 +147,6 @@ const RecordingStudio = () => {
   const audioAnalyserRef = useRef<AnalyserNode | null>(null);
   const audioAnimationRef = useRef<number | null>(null);
 
-  // Enumerate available devices
   const enumerateDevices = async () => {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
@@ -212,7 +205,6 @@ const RecordingStudio = () => {
       if (webcamRef.current) {
         webcamRef.current.srcObject = stream;
       }
-      // Re-enumerate after permission grant to get labels
       enumerateDevices();
       toast({ title: 'Camera ready', description: 'Webcam connected successfully' });
     } catch (error) {
@@ -250,7 +242,6 @@ const RecordingStudio = () => {
       setAudioOnlyStream(stream);
       enumerateDevices();
       
-      // Set up audio level meter
       const audioContext = new AudioContext();
       const source = audioContext.createMediaStreamSource(stream);
       const analyser = audioContext.createAnalyser();
@@ -306,7 +297,6 @@ const RecordingStudio = () => {
     try {
       const isAudio = recordingType === 'audio';
       
-      // Find a supported MIME type with fallbacks
       let mimeType: string;
       if (isAudio) {
         const audioTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
@@ -332,14 +322,12 @@ const RecordingStudio = () => {
         const blob = new Blob(recordedChunksRef.current, { type: blobType });
 
         if (isAudio && user) {
-          // Upload audio to storage, create project, navigate to Refiner
           setIsSaving(true);
           setSaveProgress(10);
           try {
             const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.webm`;
             const filePath = `${user.id}/${fileName}`;
 
-            // Upload audio file
             const { data: session } = await supabase.auth.getSession();
             if (!session?.session) throw new Error('Not authenticated');
 
@@ -356,7 +344,6 @@ const RecordingStudio = () => {
             if (!uploadRes.ok) throw new Error('Upload failed');
             setSaveProgress(40);
 
-            // Upload cover image if provided
             let coverUrl: string | undefined;
             if (coverImageFile) {
               const coverExt = coverImageFile.name.split('.').pop();
@@ -377,7 +364,6 @@ const RecordingStudio = () => {
             }
             setSaveProgress(55);
 
-            // Create project
             const { data: project, error: projectError } = await supabase
               .from('projects')
               .insert({
@@ -395,7 +381,6 @@ const RecordingStudio = () => {
             if (projectError) throw projectError;
             setSaveProgress(70);
 
-            // Auto-transcribe
             try {
               const { data, error } = await supabase.functions.invoke('transcribe-audio', {
                 body: { projectId: project.id },
@@ -415,7 +400,6 @@ const RecordingStudio = () => {
             console.error('Save error:', err);
             setIsSaving(false);
             toast({ title: 'Save failed', description: err instanceof Error ? err.message : 'Something went wrong', variant: 'destructive' });
-            // Fallback: download the file
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -423,7 +407,6 @@ const RecordingStudio = () => {
             a.click();
           }
         } else {
-          // Video: download as before
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
@@ -507,7 +490,6 @@ const RecordingStudio = () => {
   };
 
   const generateInviteLink = () => {
-    // Generate a unique session invite link
     const sessionId = crypto.randomUUID().slice(0, 8);
     return `${window.location.origin}/studio/join/${sessionId}`;
   };
@@ -536,7 +518,6 @@ const RecordingStudio = () => {
     setInviteName('');
     toast({ title: 'Invite sent!', description: `Invitation email sent to ${inviteName} at ${inviteEmail}` });
     
-    // Simulate guest joining after a delay for demo purposes
     setTimeout(() => {
       setInvitedGuests(prev => prev.map(g => 
         g.id === newGuest.id ? { ...g, status: 'joined' as const } : g
@@ -573,286 +554,266 @@ const RecordingStudio = () => {
       </Helmet>
 
       <AppLayout defaultSidebarOpen={false}>
+        {/* Save overlay */}
         {isSaving && (
-          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
-            <Card className="w-80 p-6 space-y-4 text-center">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-              <CardTitle className="text-lg">Saving Recording...</CardTitle>
-              <Progress value={saveProgress} className="h-2" />
-              <p className="text-sm text-muted-foreground">Uploading and preparing your content</p>
+          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-md flex items-center justify-center">
+            <Card className="w-96 border-primary/20 shadow-xl">
+              <CardContent className="p-8 space-y-5 text-center">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg mb-1">Saving Recording...</CardTitle>
+                  <p className="text-sm text-muted-foreground">Uploading and preparing your content</p>
+                </div>
+                <Progress value={saveProgress} className="h-2" />
+                <p className="text-xs text-muted-foreground">{saveProgress}% complete</p>
+              </CardContent>
             </Card>
           </div>
         )}
-        <div className="p-4 space-y-4 bg-background min-h-screen">
-          {/* Recording Type Toggle */}
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">Type:</span>
-            <div className="flex gap-2">
-              <Button
-                variant={recordingType === 'video' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setRecordingType('video')}
-                disabled={isRecording}
-              >
-                <Video className="h-4 w-4 mr-1" />
-                Video Podcast
-              </Button>
-              <Button
-                variant={recordingType === 'audio' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setRecordingType('audio')}
-                disabled={isRecording}
-              >
-                <Headphones className="h-4 w-4 mr-1" />
-                Audio Podcast
-              </Button>
+
+        <div className="p-4 lg:p-6 space-y-5 bg-background min-h-screen">
+          {/* Studio Header */}
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                <h1 className="text-xl font-bold tracking-tight">Recording Studio</h1>
+              </div>
+              {isRecording && (
+                <Badge variant="destructive" className="animate-pulse flex items-center gap-2 px-3 py-1 text-xs font-mono">
+                  <Circle className="h-2.5 w-2.5 fill-current" />
+                  {sessionMode === 'stream-record' && 'LIVE • '}
+                  REC {formatTime(recordingTime)}
+                </Badge>
+              )}
+              {invitedGuests.length > 0 && (
+                <Badge variant="secondary" className="flex items-center gap-1.5 px-3">
+                  <Users className="h-3.5 w-3.5" />
+                  {invitedGuests.length} guest{invitedGuests.length > 1 ? 's' : ''}
+                </Badge>
+              )}
             </div>
-          </div>
 
-          {/* Session Mode & Invite - Single Row Header */}
-          <div className="flex items-center gap-4 flex-wrap">
-            <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Invite Guest
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Invite Guest to Session</DialogTitle>
-                  <DialogDescription>
-                    Share a link or send an email invitation
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 pt-4">
-                  {/* Share Link */}
-                  <div className="space-y-2">
-                    <Label>Shareable Link</Label>
-                    <div className="flex gap-2">
-                      <Input 
-                        value={generateInviteLink()} 
-                        readOnly 
-                        className="text-sm"
-                      />
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        onClick={copyInviteLink}
-                      >
-                        {inviteLinkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-background px-2 text-muted-foreground">or send email</span>
-                    </div>
-                  </div>
-                  
-                  {/* Email Invite */}
-                  <div className="space-y-3">
-                    <div>
-                      <Label htmlFor="guest-name">Guest Name</Label>
-                      <Input 
-                        id="guest-name"
-                        placeholder="Enter name"
-                        value={inviteName}
-                        onChange={e => setInviteName(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="guest-email">Guest Email</Label>
-                      <Input 
-                        id="guest-email"
-                        type="email"
-                        placeholder="Enter email"
-                        value={inviteEmail}
-                        onChange={e => setInviteEmail(e.target.value)}
-                      />
-                    </div>
-                    <Button className="w-full" onClick={sendEmailInvite}>
-                      <Mail className="h-4 w-4 mr-2" />
-                      Send Invitation
-                    </Button>
-                  </div>
-                  
-                  {/* Invited Guests List */}
-                  {invitedGuests.length > 0 && (
-                    <div className="space-y-2 pt-2">
-                      <Label>Invited Guests</Label>
-                      <div className="space-y-2">
-                        {invitedGuests.map(guest => (
-                          <div key={guest.id} className="flex items-center justify-between p-2 rounded-lg bg-muted">
-                            <div>
-                              <div className="font-medium text-sm">{guest.name}</div>
-                              <div className="text-xs text-muted-foreground">{guest.email}</div>
-                            </div>
-                            <Badge variant={guest.status === 'joined' ? 'default' : 'secondary'}>
-                              {guest.status}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">Session Mode:</span>
-              <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              {/* Recording Type Toggle */}
+              <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/50 border border-border/50">
                 <Button
-                  variant={sessionMode === 'record' ? 'default' : 'outline'}
+                  variant={recordingType === 'video' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setRecordingType('video')}
+                  disabled={isRecording}
+                  className="h-8 px-3 text-xs"
+                >
+                  <Video className="h-3.5 w-3.5 mr-1.5" />
+                  Video
+                </Button>
+                <Button
+                  variant={recordingType === 'audio' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setRecordingType('audio')}
+                  disabled={isRecording}
+                  className="h-8 px-3 text-xs"
+                >
+                  <Headphones className="h-3.5 w-3.5 mr-1.5" />
+                  Audio
+                </Button>
+              </div>
+
+              <div className="h-6 w-px bg-border/50" />
+
+              {/* Session Mode Toggle */}
+              <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/50 border border-border/50">
+                <Button
+                  variant={sessionMode === 'record' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setSessionMode('record')}
+                  className="h-8 px-3 text-xs"
                 >
-                  <Save className="h-4 w-4 mr-1" />
-                  Record Only
+                  <Save className="h-3.5 w-3.5 mr-1.5" />
+                  Record
                 </Button>
                 <Button
-                  variant={sessionMode === 'stream-record' ? 'default' : 'outline'}
+                  variant={sessionMode === 'stream-record' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setSessionMode('stream-record')}
+                  className="h-8 px-3 text-xs"
                 >
-                  <Radio className="h-4 w-4 mr-1" />
+                  <Radio className="h-3.5 w-3.5 mr-1.5" />
                   Stream + Record
                 </Button>
               </div>
-            </div>
 
-            {invitedGuests.length > 0 && (
-              <Badge variant="secondary" className="flex items-center gap-1">
-                <Users className="h-3 w-3" />
-                {invitedGuests.length} guest{invitedGuests.length > 1 ? 's' : ''}
-              </Badge>
-            )}
-            {isRecording && (
-              <Badge variant="destructive" className="animate-pulse flex items-center gap-2">
-                <Circle className="h-3 w-3 fill-current" />
-                {sessionMode === 'stream-record' && 'LIVE • '}
-                REC {formatTime(recordingTime)}
-              </Badge>
-            )}
+              <div className="h-6 w-px bg-border/50" />
+
+              <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 px-3 text-xs">
+                    <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+                    Invite Guest
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Invite Guest to Session</DialogTitle>
+                    <DialogDescription>Share a link or send an email invitation</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                      <Label>Shareable Link</Label>
+                      <div className="flex gap-2">
+                        <Input value={generateInviteLink()} readOnly className="text-sm" />
+                        <Button variant="outline" size="icon" onClick={copyInviteLink}>
+                          {inviteLinkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">or send email</span>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="guest-name">Guest Name</Label>
+                        <Input id="guest-name" placeholder="Enter name" value={inviteName} onChange={e => setInviteName(e.target.value)} />
+                      </div>
+                      <div>
+                        <Label htmlFor="guest-email">Guest Email</Label>
+                        <Input id="guest-email" type="email" placeholder="Enter email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} />
+                      </div>
+                      <Button className="w-full" onClick={sendEmailInvite}>
+                        <Mail className="h-4 w-4 mr-2" />Send Invitation
+                      </Button>
+                    </div>
+                    {invitedGuests.length > 0 && (
+                      <div className="space-y-2 pt-2">
+                        <Label>Invited Guests</Label>
+                        <div className="space-y-2">
+                          {invitedGuests.map(guest => (
+                            <div key={guest.id} className="flex items-center justify-between p-2 rounded-lg bg-muted">
+                              <div>
+                                <div className="font-medium text-sm">{guest.name}</div>
+                                <div className="text-xs text-muted-foreground">{guest.email}</div>
+                              </div>
+                              <Badge variant={guest.status === 'joined' ? 'default' : 'secondary'}>{guest.status}</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
 
-          {/* Streaming Destinations (show only when stream mode selected) */}
+          {/* Streaming Destinations Bar */}
           {sessionMode === 'stream-record' && (
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-sm text-muted-foreground">Stream to:</span>
-              {streamingDestinations.map(dest => {
-                const Icon = dest.icon;
-                return (
-                  <Button
-                    key={dest.id}
-                    variant={dest.enabled ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => toggleStreamingDestination(dest.id)}
-                  >
-                    <Icon className="h-4 w-4 mr-1" />
-                    {dest.name}
-                  </Button>
-                );
-              })}
-            </div>
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="p-3 flex items-center gap-3 flex-wrap">
+                <span className="text-xs font-medium text-primary uppercase tracking-wider">Stream to</span>
+                <div className="h-4 w-px bg-border" />
+                {streamingDestinations.map(dest => {
+                  const Icon = dest.icon;
+                  return (
+                    <Button key={dest.id} variant={dest.enabled ? 'default' : 'outline'} size="sm" onClick={() => toggleStreamingDestination(dest.id)} className="h-8 text-xs">
+                      <Icon className="h-3.5 w-3.5 mr-1.5" />{dest.name}
+                    </Button>
+                  );
+                })}
+                {streamingDestinations.some(d => d.enabled) && (
+                  <>
+                    <div className="h-4 w-px bg-border" />
+                    {streamingDestinations.filter(d => d.enabled).map(dest => (
+                      <div key={dest.id} className="flex items-center gap-2">
+                        <Label className="text-xs text-muted-foreground">{dest.name}:</Label>
+                        <Input placeholder={`Enter ${dest.id === 'rtmp' ? 'RTMP URL' : 'Stream Key'}`} value={dest.rtmpUrl} onChange={e => updateRtmpUrl(dest.id, e.target.value)} className="w-56 h-8 text-xs" />
+                      </div>
+                    ))}
+                  </>
+                )}
+              </CardContent>
+            </Card>
           )}
 
-          {/* RTMP URLs for enabled streaming destinations */}
-          {sessionMode === 'stream-record' && streamingDestinations.some(d => d.enabled) && (
-            <div className="flex items-center gap-3 flex-wrap">
-              {streamingDestinations.filter(d => d.enabled).map(dest => (
-                <div key={dest.id} className="flex items-center gap-2">
-                  <Label className="text-sm">{dest.name}:</Label>
-                  <Input
-                    placeholder={`Enter ${dest.id === 'rtmp' ? 'RTMP URL' : 'Stream Key'}`}
-                    value={dest.rtmpUrl}
-                    onChange={e => updateRtmpUrl(dest.id, e.target.value)}
-                    className="w-64"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-4 gap-5">
             {/* Main Preview Area */}
-            <div className="xl:col-span-3 space-y-4">
-              <Card className="overflow-hidden">
+            <div className="xl:col-span-3 space-y-3">
+              {/* Preview Monitor */}
+              <Card className="overflow-hidden border-2 border-border/50 shadow-lg">
                 <CardContent className="p-0">
                   {recordingType === 'audio' ? (
-                    /* Audio Podcast Preview */
-                    <div className="aspect-video bg-muted flex flex-col items-center justify-center p-8 gap-6">
-                      {/* Cover Image */}
+                    <div className="aspect-video bg-gradient-to-b from-muted to-muted/80 flex flex-col items-center justify-center p-8 gap-6 relative">
+                      <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, hsl(var(--foreground)) 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+                      
                       <div
-                        className="w-48 h-48 rounded-2xl border-2 border-dashed border-border flex items-center justify-center cursor-pointer overflow-hidden hover:border-primary transition-colors shrink-0"
+                        className="w-44 h-44 rounded-2xl border-2 border-dashed border-border/60 flex items-center justify-center cursor-pointer overflow-hidden hover:border-primary/60 transition-all duration-300 shrink-0 shadow-md hover:shadow-lg relative z-10 group"
                         onClick={() => coverImageInputRef.current?.click()}
                       >
                         {coverImagePreview ? (
-                          <img src={coverImagePreview} alt="Episode cover" className="w-full h-full object-cover" />
+                          <img src={coverImagePreview} alt="Episode cover" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                         ) : (
-                          <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                            <ImagePlus className="w-10 h-10" />
-                            <span className="text-sm">Episode Cover</span>
-                            <span className="text-xs">1400×1400px</span>
+                          <div className="flex flex-col items-center gap-2 text-muted-foreground group-hover:text-foreground transition-colors">
+                            <ImagePlus className="w-8 h-8" />
+                            <span className="text-xs font-medium">Episode Cover</span>
+                            <span className="text-[10px] opacity-60">1400×1400px</span>
                           </div>
                         )}
                       </div>
                       {coverImagePreview && (
-                        <Button variant="ghost" size="sm" onClick={removeCoverImage}>
-                          <X className="w-4 h-4 mr-1" /> Remove Cover
+                        <Button variant="ghost" size="sm" onClick={removeCoverImage} className="relative z-10 text-xs">
+                          <X className="w-3.5 h-3.5 mr-1" /> Remove Cover
                         </Button>
                       )}
                       <input ref={coverImageInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverImageSelect} />
 
-                      {/* Audio Level Visualizer */}
                       {audioOnlyStream ? (
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="flex items-center gap-1 h-16">
-                            {Array.from({ length: 20 }).map((_, i) => (
+                        <div className="flex flex-col items-center gap-4 relative z-10">
+                          <div className="flex items-end gap-[3px] h-20 px-4 py-3 rounded-xl bg-background/50 backdrop-blur-sm border border-border/30">
+                            {Array.from({ length: 32 }).map((_, i) => (
                               <div
                                 key={i}
-                                className="w-2 rounded-full bg-primary transition-all duration-75"
+                                className="w-1.5 rounded-full bg-primary transition-all duration-75"
                                 style={{
-                                  height: `${Math.max(4, audioLevel * 64 * (0.5 + Math.random() * 0.5))}px`,
-                                  opacity: audioLevel > 0.02 ? 1 : 0.3,
+                                  height: `${Math.max(4, audioLevel * 72 * (0.4 + Math.random() * 0.6))}px`,
+                                  opacity: audioLevel > 0.02 ? 0.6 + Math.random() * 0.4 : 0.2,
                                 }}
                               />
                             ))}
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            {isRecording ? (isPaused ? 'Paused' : 'Recording...') : 'Microphone connected — ready to record'}
+                          <p className="text-sm text-muted-foreground font-medium">
+                            {isRecording ? (isPaused ? '⏸ Paused' : '🔴 Recording...') : '✓ Microphone connected — ready to record'}
                           </p>
                         </div>
                       ) : (
-                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                          <Mic className="h-12 w-12 opacity-50" />
-                          <p className="text-lg">Start your microphone to begin</p>
-                          <p className="text-sm">Click "Start Mic" below</p>
+                        <div className="flex flex-col items-center gap-3 text-muted-foreground relative z-10">
+                          <div className="w-20 h-20 rounded-full bg-muted-foreground/5 border border-border/50 flex items-center justify-center">
+                            <Mic className="h-8 w-8 opacity-40" />
+                          </div>
+                          <div className="text-center">
+                            <p className="text-base font-medium">Start your microphone to begin</p>
+                            <p className="text-xs opacity-60 mt-1">Click "Start Mic" in the controls below</p>
+                          </div>
                         </div>
                       )}
                     </div>
                   ) : (
-                    /* Video Podcast Preview */
                     <div className="relative aspect-video bg-muted">
                       {recordingMode === 'webcam' || recordingMode === 'screen-webcam' ? (
                         layout === 'split' ? (
                           <div className="flex h-full">
                             <video ref={screenRef} autoPlay muted playsInline className="w-1/2 h-full object-cover" />
+                            <div className="w-px bg-background" />
                             <video ref={webcamRef} autoPlay muted playsInline className="w-1/2 h-full object-cover" />
                           </div>
                         ) : (
                           <>
-                            <video
-                              ref={recordingMode === 'screen-webcam' ? screenRef : webcamRef}
-                              autoPlay muted playsInline className="w-full h-full object-cover"
-                            />
+                            <video ref={recordingMode === 'screen-webcam' ? screenRef : webcamRef} autoPlay muted playsInline className="w-full h-full object-cover" />
                             {recordingMode === 'screen-webcam' && layout !== 'fullscreen' && (
-                              <div className={`absolute ${getPipPositionClass(layout)} w-48 aspect-video rounded-lg overflow-hidden shadow-lg border-2 border-background`}>
+                              <div className={`absolute ${getPipPositionClass(layout)} w-48 aspect-video rounded-xl overflow-hidden shadow-2xl border-2 border-background/80 ring-1 ring-border/20`}>
                                 <video ref={webcamRef} autoPlay muted playsInline className="w-full h-full object-cover" />
                               </div>
                             )}
@@ -862,21 +823,28 @@ const RecordingStudio = () => {
                         <video ref={screenRef} autoPlay muted playsInline className="w-full h-full object-cover" />
                       )}
 
-                      {/* Teleprompter Overlay */}
                       {showTeleprompter && teleprompterText && (
-                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-6">
-                          <div className="text-white text-xl font-medium text-center max-w-3xl mx-auto leading-relaxed">
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background/90 via-background/60 to-transparent p-8">
+                          <div className="text-foreground text-xl font-medium text-center max-w-3xl mx-auto leading-relaxed drop-shadow-sm">
                             {teleprompterText}
                           </div>
                         </div>
                       )}
 
-                      {/* No Source Placeholder */}
                       {!webcamStream && !screenStream && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
-                          <Camera className="h-16 w-16 mb-4 opacity-50" />
-                          <p className="text-lg">Select a source to begin</p>
-                          <p className="text-sm">Click the buttons below to start your camera or screen share</p>
+                          <div className="w-24 h-24 rounded-full bg-muted-foreground/5 border border-border/50 flex items-center justify-center mb-5">
+                            <Camera className="h-10 w-10 opacity-40" />
+                          </div>
+                          <p className="text-lg font-medium">Select a source to begin</p>
+                          <p className="text-sm opacity-60 mt-1">Click the buttons below to start your camera or screen share</p>
+                        </div>
+                      )}
+
+                      {isRecording && (
+                        <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-sm border border-border/30">
+                          <div className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                          <span className="text-xs font-mono font-medium">{formatTime(recordingTime)}</span>
                         </div>
                       )}
                     </div>
@@ -885,31 +853,24 @@ const RecordingStudio = () => {
               </Card>
 
               {/* Controls Bar */}
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
+              <Card className="border-border/50">
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between gap-3">
                     {/* Source Buttons */}
-                     <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                       {recordingType === 'audio' ? (
                         <>
-                          <Button
-                            variant={audioOnlyStream ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={audioOnlyStream ? stopAudioOnly : startAudioOnly}
-                          >
-                            <Mic className="h-4 w-4 mr-2" />
-                            {audioOnlyStream ? 'Stop Mic' : 'Start Mic'}
+                          <Button variant={audioOnlyStream ? 'default' : 'outline'} size="sm" onClick={audioOnlyStream ? stopAudioOnly : startAudioOnly} className="h-9">
+                            <Mic className="h-4 w-4 mr-2" />{audioOnlyStream ? 'Stop Mic' : 'Start Mic'}
                           </Button>
                           {audioDevices.length > 0 && (
                             <Select value={selectedAudioDevice} onValueChange={(val) => { setSelectedAudioDevice(val); if (audioOnlyStream) { stopAudioOnly(); setTimeout(() => startAudioOnly(), 100); } }}>
-                              <SelectTrigger className="w-48 h-8 text-xs">
-                                <SelectValue placeholder="Select Microphone" />
+                              <SelectTrigger className="w-44 h-9 text-xs border-border/50">
+                                <Mic className="h-3 w-3 mr-1 text-muted-foreground" /><SelectValue placeholder="Select Microphone" />
                               </SelectTrigger>
                               <SelectContent>
                                 {audioDevices.filter(d => d.deviceId).map((d, i) => (
-                                  <SelectItem key={d.deviceId} value={d.deviceId}>
-                                    {d.label || `Microphone ${i + 1}`}
-                                  </SelectItem>
+                                  <SelectItem key={d.deviceId} value={d.deviceId}>{d.label || `Microphone ${i + 1}`}</SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
@@ -917,46 +878,32 @@ const RecordingStudio = () => {
                         </>
                       ) : (
                         <>
-                          <Button
-                            variant={webcamStream ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={webcamStream ? () => { webcamStream.getTracks().forEach(t => t.stop()); setWebcamStream(null); } : startWebcam}
-                          >
-                            <User className="h-4 w-4 mr-2" />
-                            {webcamStream ? 'Stop Camera' : 'Start Camera'}
+                          <Button variant={webcamStream ? 'default' : 'outline'} size="sm" onClick={webcamStream ? () => { webcamStream.getTracks().forEach(t => t.stop()); setWebcamStream(null); } : startWebcam} className="h-9">
+                            <User className="h-4 w-4 mr-2" />{webcamStream ? 'Stop Camera' : 'Start Camera'}
                           </Button>
-                          <Button
-                            variant={screenStream ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={screenStream ? () => { screenStream.getTracks().forEach(t => t.stop()); setScreenStream(null); } : startScreenShare}
-                          >
-                            <ScreenShare className="h-4 w-4 mr-2" />
-                            {screenStream ? 'Stop Share' : 'Share Screen'}
+                          <Button variant={screenStream ? 'default' : 'outline'} size="sm" onClick={screenStream ? () => { screenStream.getTracks().forEach(t => t.stop()); setScreenStream(null); } : startScreenShare} className="h-9">
+                            <ScreenShare className="h-4 w-4 mr-2" />{screenStream ? 'Stop Share' : 'Share Screen'}
                           </Button>
                           {videoDevices.length > 0 && (
                             <Select value={selectedVideoDevice} onValueChange={setSelectedVideoDevice}>
-                              <SelectTrigger className="w-44 h-8 text-xs">
-                                <SelectValue placeholder="Camera" />
+                              <SelectTrigger className="w-40 h-9 text-xs border-border/50">
+                                <Camera className="h-3 w-3 mr-1 text-muted-foreground" /><SelectValue placeholder="Camera" />
                               </SelectTrigger>
                               <SelectContent>
                                 {videoDevices.filter(d => d.deviceId).map((d, i) => (
-                                  <SelectItem key={d.deviceId} value={d.deviceId}>
-                                    {d.label || `Camera ${i + 1}`}
-                                  </SelectItem>
+                                  <SelectItem key={d.deviceId} value={d.deviceId}>{d.label || `Camera ${i + 1}`}</SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           )}
                           {audioDevices.length > 0 && (
                             <Select value={selectedAudioDevice} onValueChange={setSelectedAudioDevice}>
-                              <SelectTrigger className="w-44 h-8 text-xs">
-                                <SelectValue placeholder="Microphone" />
+                              <SelectTrigger className="w-40 h-9 text-xs border-border/50">
+                                <Mic className="h-3 w-3 mr-1 text-muted-foreground" /><SelectValue placeholder="Microphone" />
                               </SelectTrigger>
                               <SelectContent>
                                 {audioDevices.filter(d => d.deviceId).map((d, i) => (
-                                  <SelectItem key={d.deviceId} value={d.deviceId}>
-                                    {d.label || `Microphone ${i + 1}`}
-                                  </SelectItem>
+                                  <SelectItem key={d.deviceId} value={d.deviceId}>{d.label || `Microphone ${i + 1}`}</SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
@@ -965,49 +912,45 @@ const RecordingStudio = () => {
                       )}
                     </div>
 
-                    {/* Recording Controls */}
-                    <div className="flex items-center gap-4">
+                    {/* Recording Controls - Center */}
+                    <div className="flex items-center gap-2">
                       {recordingType === 'video' && (
                         <>
-                          <Button variant="ghost" size="icon" onClick={toggleMic} disabled={!webcamStream}>
-                            {isMicOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5 text-destructive" />}
+                          <Button variant="ghost" size="icon" onClick={toggleMic} disabled={!webcamStream} className={`h-9 w-9 rounded-full ${!isMicOn ? 'bg-destructive/10' : ''}`}>
+                            {isMicOn ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4 text-destructive" />}
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={toggleCamera} disabled={!webcamStream}>
-                            {isCameraOn ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5 text-destructive" />}
+                          <Button variant="ghost" size="icon" onClick={toggleCamera} disabled={!webcamStream} className={`h-9 w-9 rounded-full ${!isCameraOn ? 'bg-destructive/10' : ''}`}>
+                            {isCameraOn ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4 text-destructive" />}
                           </Button>
-                          <div className="h-6 w-px bg-border" />
+                          <div className="h-6 w-px bg-border/50" />
                         </>
                       )}
 
                       {!isRecording ? (
-                        <Button
-                          variant="destructive"
-                          onClick={startRecording}
-                          disabled={recordingType === 'audio' ? !audioOnlyStream : (!webcamStream && !screenStream)}
-                        >
+                        <Button variant="destructive" onClick={startRecording} disabled={recordingType === 'audio' ? !audioOnlyStream : (!webcamStream && !screenStream)} className="h-10 px-6 rounded-full shadow-lg">
                           {sessionMode === 'stream-record' ? (
                             <><Radio className="h-4 w-4 mr-2" /> Go Live</>
                           ) : (
-                            <><Circle className="h-4 w-4 mr-2 fill-current" /> Start Recording</>
+                            <><Circle className="h-4 w-4 mr-2 fill-current" /> Record</>
                           )}
                         </Button>
                       ) : (
                         <>
-                          <Button variant="outline" onClick={pauseRecording}>
+                          <Button variant="outline" onClick={pauseRecording} className="h-9 w-9 rounded-full" size="icon">
                             {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
                           </Button>
-                          <Button variant="destructive" onClick={stopRecording}>
-                            <Square className="h-4 w-4 mr-2 fill-current" /> Stop
+                          <Button variant="destructive" onClick={stopRecording} className="h-10 px-5 rounded-full">
+                            <Square className="h-3.5 w-3.5 mr-2 fill-current" /> Stop
                           </Button>
                         </>
                       )}
                     </div>
 
-                    {/* Mode Selection - only for video */}
+                    {/* Mode Selection */}
                     {recordingType === 'video' ? (
                       <Select value={recordingMode} onValueChange={(v: RecordingMode) => setRecordingMode(v)}>
-                        <SelectTrigger className="w-48">
-                          <SelectValue />
+                        <SelectTrigger className="w-44 h-9 text-xs border-border/50">
+                          <Layout className="h-3 w-3 mr-1 text-muted-foreground" /><SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="webcam">Webcam Only</SelectItem>
@@ -1016,7 +959,7 @@ const RecordingStudio = () => {
                         </SelectContent>
                       </Select>
                     ) : (
-                      <div className="w-48" /> /* spacer */
+                      <div className="w-44" />
                     )}
                   </div>
                 </CardContent>
@@ -1026,93 +969,98 @@ const RecordingStudio = () => {
             {/* Settings Sidebar */}
             <div className="space-y-4">
               <Tabs defaultValue="layout" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="layout"><Layout className="h-4 w-4" /></TabsTrigger>
-                  <TabsTrigger value="background"><Image className="h-4 w-4" /></TabsTrigger>
-                  <TabsTrigger value="teleprompter"><Type className="h-4 w-4" /></TabsTrigger>
+                <TabsList className="grid w-full grid-cols-3 h-10">
+                  <TabsTrigger value="layout" className="text-xs gap-1.5">
+                    <Layout className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Layout</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="background" className="text-xs gap-1.5">
+                    <Image className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">BG</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="teleprompter" className="text-xs gap-1.5">
+                    <Type className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Script</span>
+                  </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="layout" className="mt-4">
+                <TabsContent value="layout" className="mt-3">
                   <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm">Layout</CardTitle>
+                    <CardHeader className="pb-2 px-4 pt-4">
+                      <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Layout</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-2">
+                    <CardContent className="space-y-1.5 px-4 pb-4">
                       {LAYOUTS.map((l) => (
                         <button
                           key={l.id}
                           onClick={() => setLayout(l.id)}
-                          className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                          className={`w-full text-left p-3 rounded-lg border transition-all duration-200 ${
                             layout === l.id 
-                              ? 'border-primary bg-primary/10' 
-                              : 'border-border hover:border-primary/50'
+                              ? 'border-primary bg-primary/10 shadow-sm' 
+                              : 'border-transparent hover:border-border hover:bg-muted/50'
                           }`}
                         >
-                          <div className="font-medium text-sm">{l.label}</div>
-                          <div className="text-xs text-muted-foreground">{l.description}</div>
+                          <div className="font-medium text-xs">{l.label}</div>
+                          <div className="text-[11px] text-muted-foreground mt-0.5">{l.description}</div>
                         </button>
                       ))}
                     </CardContent>
                   </Card>
                 </TabsContent>
 
-                <TabsContent value="background" className="mt-4">
+                <TabsContent value="background" className="mt-3">
                   <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm">Virtual Background</CardTitle>
+                    <CardHeader className="pb-2 px-4 pt-4">
+                      <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Virtual Background</CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="px-4 pb-4">
                       <div className="grid grid-cols-2 gap-2">
                         {VIRTUAL_BACKGROUNDS.map((bg) => (
                           <button
                             key={bg.id}
                             onClick={() => setVirtualBackground(bg.id)}
-                            className={`aspect-video rounded-lg border-2 transition-all ${
+                            className={`aspect-video rounded-lg border-2 transition-all duration-200 relative overflow-hidden ${
                               virtualBackground === bg.id 
-                                ? 'border-primary ring-2 ring-primary/20' 
-                                : 'border-border hover:border-primary/50'
+                                ? 'border-primary ring-2 ring-primary/20 shadow-sm' 
+                                : 'border-border/50 hover:border-border'
                             } ${bg.color || 'bg-muted'}`}
                           >
+                            {virtualBackground === bg.id && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-background/30">
+                                <Check className="h-4 w-4 text-primary" />
+                              </div>
+                            )}
                             <span className="sr-only">{bg.label}</span>
                           </button>
                         ))}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-3">
-                        Note: Virtual backgrounds require browser support
+                      <p className="text-[10px] text-muted-foreground mt-3 text-center">
+                        Virtual backgrounds require browser support
                       </p>
                     </CardContent>
                   </Card>
                 </TabsContent>
 
-                <TabsContent value="teleprompter" className="mt-4">
+                <TabsContent value="teleprompter" className="mt-3">
                   <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm">Teleprompter</CardTitle>
+                    <CardHeader className="pb-2 px-4 pt-4">
+                      <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Teleprompter</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 px-4 pb-4">
                       <div className="flex items-center justify-between">
-                        <Label htmlFor="teleprompter-toggle">Enable</Label>
-                        <Switch
-                          id="teleprompter-toggle"
-                          checked={showTeleprompter}
-                          onCheckedChange={setShowTeleprompter}
-                        />
+                        <Label htmlFor="teleprompter-toggle" className="text-xs">Enable</Label>
+                        <Switch id="teleprompter-toggle" checked={showTeleprompter} onCheckedChange={setShowTeleprompter} />
                       </div>
                       <Textarea
-                        placeholder="Enter your script here..."
+                        placeholder="Paste your script here..."
                         value={teleprompterText}
                         onChange={(e) => setTeleprompterText(e.target.value)}
-                        className="min-h-[150px] text-sm"
+                        className="min-h-[140px] text-xs resize-none"
                       />
-                      <div className="space-y-2">
-                        <Label className="text-xs">Scroll Speed</Label>
-                        <Select 
-                          value={teleprompterSpeed.toString()} 
-                          onValueChange={(v) => setTeleprompterSpeed(parseInt(v))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] text-muted-foreground">Scroll Speed</Label>
+                        <Select value={teleprompterSpeed.toString()} onValueChange={(v) => setTeleprompterSpeed(parseInt(v))}>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="1">Slow</SelectItem>
                             <SelectItem value="2">Normal</SelectItem>
