@@ -126,7 +126,7 @@ const EpisodeForm = () => {
         const ext = imageFile.name.split(".").pop();
         const path = `episode-covers/${user.id}/${Date.now()}.${ext}`;
         const { error } = await supabase.storage.from("creator-assets").upload(path, imageFile, { upsert: true });
-        if (error) { toast.error("Failed to upload image"); return imageUrl; }
+        if (error) { console.error("Image upload error:", error); toast.error(`Failed to upload image: ${error.message}`); return imageUrl; }
         const { data: urlData } = supabase.storage.from("creator-assets").getPublicUrl(path);
         return urlData.publicUrl;
     };
