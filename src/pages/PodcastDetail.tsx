@@ -401,7 +401,7 @@ const PodcastDetail = () => {
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => navigate("/studio")}>
+                                        <DropdownMenuItem onClick={() => navigate(`/studio?podcastId=${id}`)}>
                                             <Radio className="w-4 h-4 mr-2" /> Record Your Podcast
                                         </DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => navigate(`/podcasts/${id}/episodes/new`)}>
@@ -423,7 +423,7 @@ const PodcastDetail = () => {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="center">
-                                            <DropdownMenuItem onClick={() => navigate("/studio")}>
+                                            <DropdownMenuItem onClick={() => navigate(`/studio?podcastId=${id}`)}>
                                                 <Radio className="w-4 h-4 mr-2" /> Record Your Podcast
                                             </DropdownMenuItem>
                                             <DropdownMenuItem onClick={() => navigate(`/podcasts/${id}/episodes/new`)}>

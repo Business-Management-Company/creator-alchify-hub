@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Video,
   Monitor,
@@ -99,6 +99,8 @@ const VIRTUAL_BACKGROUNDS = [
 const RecordingStudio = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const podcastId = searchParams.get('podcastId');
   const { toast } = useToast();
 
   const [recordingType, setRecordingType] = useState<RecordingType>('video');
@@ -364,38 +366,105 @@ const RecordingStudio = () => {
             }
             setSaveProgress(55);
 
-            const { data: project, error: projectError } = await supabase
-              .from('projects')
-              .insert({
-                user_id: user.id,
-                title: `Audio Recording ${new Date().toLocaleDateString()}`,
-                source_file_url: filePath,
-                source_file_name: `recording-${Date.now()}.webm`,
-                source_file_type: 'audio',
-                source_file_size: blob.size,
-                status: 'alchifying',
-              })
-              .select()
-              .single();
+            const { data: pubUrlData } = supabase.storage
+              .from('media-uploads')
+              .getPublicUrl(filePath);
+            const publicAudioUrl = pubUrlData.publicUrl;
 
-            if (projectError) throw projectError;
-            setSaveProgress(70);
+            if (podcastId) {
+              // Create episode linked to the podcast
+              const nextEpRes = await (supabase as any)
+                .from('episodes')
+                .select('episode_number')
+                .eq('podcast_id', podcastId)
+                .order('episode_number', { ascending: false })
+                .limit(1);
+              const nextNumber = ((nextEpRes.data?.[0]?.episode_number) || 0) + 1;
 
-            try {
-              const { data, error } = await supabase.functions.invoke('transcribe-audio', {
-                body: { projectId: project.id },
-              });
-              if (error) console.error('Auto-transcription error:', error);
-            } catch (e) {
-              console.error('Auto-transcription error:', e);
+              const { data: episode, error: epError } = await (supabase as any)
+                .from('episodes')
+                .insert({
+                  podcast_id: podcastId,
+                  user_id: user.id,
+                  title: `Episode ${nextNumber} – ${new Date().toLocaleDateString()}`,
+                  audio_url: publicAudioUrl,
+                  file_size_bytes: blob.size,
+                  duration_seconds: Math.round(recordingTime),
+                  episode_number: nextNumber,
+                  status: 'published',
+                  pub_date: new Date().toISOString(),
+                  image_url: coverUrl || null,
+                })
+                .select()
+                .single();
+              if (epError) throw epError;
+              setSaveProgress(85);
+
+              // Also create a project for Refiner access
+              const { data: project, error: projectError } = await supabase
+                .from('projects')
+                .insert({
+                  user_id: user.id,
+                  title: `Episode ${nextNumber} – ${new Date().toLocaleDateString()}`,
+                  source_file_url: filePath,
+                  source_file_name: `recording-${Date.now()}.webm`,
+                  source_file_type: 'audio',
+                  source_file_size: blob.size,
+                  source_duration_seconds: Math.round(recordingTime),
+                  status: 'alchifying',
+                })
+                .select()
+                .single();
+              if (projectError) throw projectError;
+              setSaveProgress(95);
+
+              try {
+                await supabase.functions.invoke('transcribe-audio', {
+                  body: { projectId: project.id },
+                });
+              } catch (e) {
+                console.error('Auto-transcription error:', e);
+              }
+              setSaveProgress(100);
+
+              toast({ title: 'Episode saved! 🎙️', description: 'Linked to your podcast and heading to Refiner...' });
+              setTimeout(() => {
+                setIsSaving(false);
+                navigate(`/refiner/${project.id}`);
+              }, 600);
+            } else {
+              // No podcast context — original flow
+              const { data: project, error: projectError } = await supabase
+                .from('projects')
+                .insert({
+                  user_id: user.id,
+                  title: `Audio Recording ${new Date().toLocaleDateString()}`,
+                  source_file_url: filePath,
+                  source_file_name: `recording-${Date.now()}.webm`,
+                  source_file_type: 'audio',
+                  source_file_size: blob.size,
+                  status: 'alchifying',
+                })
+                .select()
+                .single();
+              if (projectError) throw projectError;
+              setSaveProgress(70);
+
+              try {
+                await supabase.functions.invoke('transcribe-audio', {
+                  body: { projectId: project.id },
+                });
+              } catch (e) {
+                console.error('Auto-transcription error:', e);
+              }
+              setSaveProgress(100);
+
+              toast({ title: 'Recording saved! ✨', description: 'Heading to Refiner Studio...' });
+              setTimeout(() => {
+                setIsSaving(false);
+                navigate(`/refiner/${project.id}`);
+              }, 600);
             }
-            setSaveProgress(100);
-
-            toast({ title: 'Recording saved! ✨', description: 'Heading to Refiner Studio...' });
-            setTimeout(() => {
-              setIsSaving(false);
-              navigate(`/refiner/${project.id}`);
-            }, 600);
           } catch (err) {
             console.error('Save error:', err);
             setIsSaving(false);
