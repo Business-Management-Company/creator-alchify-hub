@@ -54,6 +54,7 @@ import {
     ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
+import { validatePodcastCoverImage } from "@/lib/image-validation";
 import { AudioPlayer } from "@/components/ui/audio-player";
 import AppLayout from "@/components/layout/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -170,10 +171,13 @@ const PodcastDetail = () => {
         const file = e.target.files?.[0];
         if (!file || !id) return;
 
-        if (!file.type.startsWith("image/")) {
-            toast.error("Please select an image file");
+        const validation = await validatePodcastCoverImage(file);
+        if (!validation.valid) {
+            toast.error(validation.error);
+            if (coverInputRef.current) coverInputRef.current.value = "";
             return;
         }
+
         if (file.size > 10 * 1024 * 1024) {
             toast.error("Image must be under 10MB");
             return;
@@ -598,10 +602,10 @@ const PodcastDetail = () => {
                                         </div>
                                         <div className="flex-1 space-y-2 text-sm text-muted-foreground">
                                             <p>Your podcast cover art is displayed on streaming platforms and RSS readers.</p>
-                                            <ul className="list-disc list-inside space-y-1">
-                                                <li>Recommended: 3000×3000 px (square)</li>
-                                                <li>Minimum: 1400×1400 px</li>
-                                                <li>Formats: JPG or PNG</li>
+                                             <ul className="list-disc list-inside space-y-1">
+                                                <li><strong>Required:</strong> Square, min 1400×1400 px</li>
+                                                <li><strong>Recommended:</strong> 3000×3000 px</li>
+                                                <li>Formats: JPG or PNG only</li>
                                                 <li>Max size: 10MB</li>
                                             </ul>
                                             {coverUploading && (
