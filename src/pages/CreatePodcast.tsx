@@ -19,6 +19,7 @@ import { PODCAST_CATEGORIES, PODCAST_LANGUAGES } from "@/types/podcast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { validatePodcastCoverImage } from "@/lib/image-validation";
 
 const CreatePodcast = () => {
   const navigate = useNavigate();
@@ -37,13 +38,17 @@ const CreatePodcast = () => {
 
   const createPodcast = useCreatePodcast();
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file");
+
+    const result = await validatePodcastCoverImage(file);
+    if (!result.valid) {
+      toast.error(result.error);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
+
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
   };
@@ -137,7 +142,7 @@ const CreatePodcast = () => {
                   className="hidden"
                   onChange={handleImageSelect}
                 />
-                <p className="text-xs text-muted-foreground">Recommended: 1400×1400px, square, JPG or PNG</p>
+                <p className="text-xs text-muted-foreground">Required: Square, min 1400×1400px (recommended 3000×3000), JPG or PNG</p>
               </div>
 
               <div>

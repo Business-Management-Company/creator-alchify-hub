@@ -48,6 +48,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
+import { validatePodcastCoverImage } from '@/lib/image-validation';
 
 import {
   Dialog,
@@ -274,10 +275,17 @@ const RecordingStudio = () => {
     setAudioLevel(0);
   };
 
-  const handleCoverImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoverImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) { toast({ title: 'Invalid file', description: 'Please select an image', variant: 'destructive' }); return; }
+
+    const validation = await validatePodcastCoverImage(file);
+    if (!validation.valid) {
+      toast({ title: 'Invalid cover art', description: validation.error, variant: 'destructive' });
+      if (coverImageInputRef.current) coverImageInputRef.current.value = "";
+      return;
+    }
+
     setCoverImageFile(file);
     setCoverImagePreview(URL.createObjectURL(file));
   };
