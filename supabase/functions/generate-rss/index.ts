@@ -38,6 +38,24 @@ function stripHtml(html: string): string {
     return html.replace(/<[^>]*>/g, "").trim();
 }
 
+/** Extract storage path from a full Supabase storage URL */
+function extractStoragePath(fullUrl: string, bucket: string): string | null {
+    // Matches both /object/public/bucket/ and /object/sign/bucket/ patterns
+    const patterns = [
+        `/storage/v1/object/public/${bucket}/`,
+        `/storage/v1/object/sign/${bucket}/`,
+        `/storage/v1/object/${bucket}/`,
+    ];
+    for (const pattern of patterns) {
+        const idx = fullUrl.indexOf(pattern);
+        if (idx !== -1) {
+            const path = fullUrl.substring(idx + pattern.length).split('?')[0];
+            return decodeURIComponent(path);
+        }
+    }
+    return null;
+}
+
 serve(async (req) => {
     if (req.method === "OPTIONS") {
         return new Response("ok", { headers: corsHeaders });
@@ -126,13 +144,69 @@ serve(async (req) => {
         }
 
         // Build episode items (rss.com style)
+        // Generate signed URLs for all episode audio files (7 days expiry)
+        const signedAudioUrls: Record<string, string> = {};
+        const signedImageUrls: Record<string, string> = {};
+        
+        const SIGNED_URL_EXPIRY = 60 * 60 * 24 * 7; // 7 days
+        
+        await Promise.all(
+            (episodes || []).map(async (ep: any) => {
+                // Sign audio URL if it's a storage URL
+                if (ep.audio_url && ep.audio_url.includes('/storage/v1/')) {
+                    const storagePath = extractStoragePath(ep.audio_url, 'media-uploads');
+                    if (storagePath) {
+                        const { data } = await supabase.storage
+                            .from('media-uploads')
+                            .createSignedUrl(storagePath, SIGNED_URL_EXPIRY);
+                        if (data?.signedUrl) {
+                            signedAudioUrls[ep.id] = data.signedUrl;
+                        }
+                    }
+                }
+                // Sign episode image URL if it's a storage URL
+                if (ep.image_url && ep.image_url.includes('/storage/v1/')) {
+                    const storagePath = extractStoragePath(ep.image_url, 'media-uploads') || 
+                                       extractStoragePath(ep.image_url, 'creator-assets');
+                    const bucket = ep.image_url.includes('media-uploads') ? 'media-uploads' : 'creator-assets';
+                    if (storagePath) {
+                        const { data } = await supabase.storage
+                            .from(bucket)
+                            .createSignedUrl(storagePath, SIGNED_URL_EXPIRY);
+                        if (data?.signedUrl) {
+                            signedImageUrls[ep.id] = data.signedUrl;
+                        }
+                    }
+                }
+            })
+        );
+
+        // Also sign the podcast image if needed
+        let signedPodcastImageUrl = imageUrl;
+        if (imageUrl && imageUrl.includes('/storage/v1/')) {
+            const bucket = imageUrl.includes('media-uploads') ? 'media-uploads' : 'creator-assets';
+            const storagePath = extractStoragePath(imageUrl, bucket);
+            if (storagePath) {
+                const { data } = await supabase.storage
+                    .from(bucket)
+                    .createSignedUrl(storagePath, SIGNED_URL_EXPIRY);
+                if (data?.signedUrl) {
+                    signedPodcastImageUrl = data.signedUrl;
+                }
+            }
+        }
+
         const items = (episodes || [])
             .map((ep: any) => {
                 const guid = ep.guid || ep.id;
                 const episodePageUrl = `${siteUrl}/podcast/${podcast.id}/episode/${ep.id}`;
                 const epDescription = ep.description || "";
                 const epExplicit = podcast.is_explicit ? "yes" : "no";
-                const epImageUrl = ep.image_url || imageUrl;
+                const epImageUrl = signedImageUrls[ep.id] || ep.image_url || signedPodcastImageUrl;
+                const audioUrl = signedAudioUrls[ep.id] || ep.audio_url;
+                const audioType = ep.audio_url?.endsWith('.flac') ? 'audio/flac' : 
+                                  ep.audio_url?.endsWith('.wav') ? 'audio/wav' : 
+                                  ep.audio_url?.endsWith('.m4a') ? 'audio/mp4' : 'audio/mpeg';
 
                 return `    <item>
       <title>${cdata(ep.title)}</title>
@@ -142,7 +216,7 @@ serve(async (req) => {
       <dc:creator>${cdata(author)}</dc:creator>
       <pubDate>${toRfc2822(ep.pub_date)}</pubDate>
       <content:encoded>${cdata(epDescription)}</content:encoded>
-      ${ep.audio_url ? `<enclosure url="${escapeXml(ep.audio_url)}" length="${ep.file_size_bytes || 0}" type="audio/mpeg" />` : ""}
+      ${audioUrl ? `<enclosure url="${escapeXml(audioUrl)}" length="${ep.file_size_bytes || 0}" type="${audioType}" />` : ""}
       <itunes:title>${cdata(ep.title)}</itunes:title>
       <itunes:summary>${cdata(stripHtml(epDescription))}</itunes:summary>
       <itunes:author>${escapeXml(author)}</itunes:author>
@@ -178,7 +252,7 @@ serve(async (req) => {
     <atom:link href="${escapeXml(feedSelfUrl)}" rel="self" type="application/rss+xml" />
     ${podcast.rss_feed_url ? `<itunes:new-feed-url>${escapeXml(feedSelfUrl)}</itunes:new-feed-url>` : ""}
     <image>
-      <url>${escapeXml(imageUrl)}</url>
+      <url>${escapeXml(signedPodcastImageUrl)}</url>
       <title>${cdata(podcast.title)}</title>
       <link>${podcastPageUrl}</link>
     </image>
@@ -187,7 +261,7 @@ serve(async (req) => {
     <itunes:summary>${cdata(stripHtml(podcastDescription))}</itunes:summary>
     <itunes:author>${escapeXml(author)}</itunes:author>
     <itunes:explicit>${isExplicit}</itunes:explicit>
-    <itunes:image href="${escapeXml(imageUrl)}" />
+    <itunes:image href="${escapeXml(signedPodcastImageUrl)}" />
     <itunes:owner>
       <itunes:name>${cdata(author)}</itunes:name>
       <itunes:email>${escapeXml(authorEmail)}</itunes:email>
@@ -198,7 +272,7 @@ serve(async (req) => {
     <!-- Google Play tags -->
     <googleplay:author>${escapeXml(author)}</googleplay:author>
     <googleplay:description>${cdata(stripHtml(podcastDescription))}</googleplay:description>
-    <googleplay:image href="${escapeXml(imageUrl)}" />
+    <googleplay:image href="${escapeXml(signedPodcastImageUrl)}" />
     <googleplay:explicit>${isExplicit}</googleplay:explicit>
     ${podcast.category ? `<googleplay:category text="${escapeXml(podcast.category.split(">")[0].trim())}" />` : ""}
 
