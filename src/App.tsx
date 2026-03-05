@@ -46,6 +46,7 @@ import PodcastDetail from "./pages/PodcastDetail";
 import EpisodeForm from "./pages/EpisodeForm";
 import PublicPodcasts from "./pages/PublicPodcasts";
 import PublicPodcastDetail from "./pages/PublicPodcastDetail";
+import RssFeedProxy from "./pages/RssFeedProxy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -104,6 +105,7 @@ const App = () => (
                 <Route path="/podcasts/:id/episodes/:eid" element={<EpisodeForm />} />
                 <Route path="/discover" element={<PublicPodcasts />} />
                 <Route path="/podcast/:slug" element={<PublicPodcastDetail />} />
+                <Route path="/feed/:podcastId" element={<RssFeedProxy />} />
                 {/* Board Portal - Public access for board members */}
                 <Route path="/board" element={<BoardPortal />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

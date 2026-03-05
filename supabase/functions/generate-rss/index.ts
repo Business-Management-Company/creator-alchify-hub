@@ -115,7 +115,7 @@ serve(async (req) => {
             "https://alchify.com";
 
         const podcastPageUrl = `${siteUrl}/podcast/${podcast.id}`;
-        const feedSelfUrl = `${supabaseUrl}/functions/v1/generate-rss?id=${podcast.id}`;
+        const feedSelfUrl = `${siteUrl}/feed/${podcast.id}`;
         const author = podcast.author || podcast.title;
         const authorEmail = podcast.author_email || "";
         const podcastDescription = podcast.description || "";
