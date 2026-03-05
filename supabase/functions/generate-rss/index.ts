@@ -21,19 +21,21 @@ function cdata(str: string): string {
 }
 
 function formatDuration(totalSeconds: number | null): string {
-    if (!totalSeconds || totalSeconds <= 0) return "00:00";
+    if (!totalSeconds || totalSeconds <= 0) return "00:00:00";
     const h = Math.floor(totalSeconds / 3600);
     const m = Math.floor((totalSeconds % 3600) / 60);
     const s = totalSeconds % 60;
-    if (h > 0) {
-        return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-    }
-    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
 function toRfc2822(date: string | null): string {
     if (!date) return new Date().toUTCString();
     return new Date(date).toUTCString();
+}
+
+/** Strip HTML tags for plain-text summary */
+function stripHtml(html: string): string {
+    return html.replace(/<[^>]*>/g, "").trim();
 }
 
 serve(async (req) => {
@@ -43,10 +45,8 @@ serve(async (req) => {
 
     try {
         const url = new URL(req.url);
-        // Support both ?id=<uuid> and legacy ?slug=<uuid>
         let podcastId = url.searchParams.get("id") || url.searchParams.get("slug");
 
-        // Support path-based invocation: /generate-rss/<id>
         if (!podcastId) {
             const pathParts = url.pathname.split("/").filter(Boolean);
             const last = pathParts[pathParts.length - 1];
@@ -58,10 +58,7 @@ serve(async (req) => {
         if (!podcastId) {
             return new Response(
                 JSON.stringify({ error: "Missing podcast id parameter. Use ?id=<podcast-uuid>" }),
-                {
-                    status: 400,
-                    headers: { ...corsHeaders, "Content-Type": "application/json" },
-                }
+                { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
         }
 
@@ -69,7 +66,6 @@ serve(async (req) => {
         const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-        // Fetch podcast by ID (status can be 'active' or 'draft')
         const { data: podcast, error: podcastError } = await supabase
             .from("podcasts")
             .select("*")
@@ -80,14 +76,10 @@ serve(async (req) => {
             console.error("Podcast fetch error:", podcastError);
             return new Response(
                 JSON.stringify({ error: "Podcast not found", details: podcastError?.message }),
-                {
-                    status: 404,
-                    headers: { ...corsHeaders, "Content-Type": "application/json" },
-                }
+                { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
         }
 
-        // Fetch published episodes ordered by pub_date descending
         const { data: episodes, error: episodesError } = await supabase
             .from("episodes")
             .select("*")
@@ -106,64 +98,111 @@ serve(async (req) => {
 
         const podcastPageUrl = `${siteUrl}/podcast/${podcast.id}`;
         const feedSelfUrl = `${supabaseUrl}/functions/v1/generate-rss?id=${podcast.id}`;
+        const author = podcast.author || podcast.title;
+        const authorEmail = podcast.author_email || "";
+        const podcastDescription = podcast.description || "";
+        const isExplicit = podcast.is_explicit ? "yes" : "no";
+        const language = podcast.language || "en";
+        const imageUrl = podcast.image_url || "";
 
-        // Build episode items
+        // Determine the latest episode pub_date for lastBuildDate / pubDate
+        const latestPubDate = episodes && episodes.length > 0
+            ? toRfc2822(episodes[0].pub_date)
+            : new Date().toUTCString();
+
+        // Build category tag – support subcategories with "Category > Subcategory" format
+        let categoryXml = "";
+        if (podcast.category) {
+            const parts = podcast.category.split(">");
+            if (parts.length === 2) {
+                categoryXml = `    <itunes:category text="${escapeXml(parts[0].trim())}">
+      <itunes:category text="${escapeXml(parts[1].trim())}" />
+    </itunes:category>`;
+            } else {
+                categoryXml = `    <itunes:category text="${escapeXml(podcast.category.trim())}" />`;
+            }
+        } else {
+            categoryXml = `    <itunes:category text="Society &amp; Culture" />`;
+        }
+
+        // Build episode items (rss.com style)
         const items = (episodes || [])
             .map((ep: any) => {
                 const guid = ep.guid || ep.id;
                 const episodePageUrl = `${siteUrl}/podcast/${podcast.id}/episode/${ep.id}`;
+                const epDescription = ep.description || "";
+                const epExplicit = podcast.is_explicit ? "yes" : "no";
+                const epImageUrl = ep.image_url || imageUrl;
 
-                return `
-    <item>
-      <title>${escapeXml(ep.title)}</title>
-      <description>${cdata(ep.description || "")}</description>
+                return `    <item>
+      <title>${cdata(ep.title)}</title>
+      <description>${cdata(epDescription)}</description>
       <link>${episodePageUrl}</link>
       <guid isPermaLink="false">${escapeXml(guid)}</guid>
+      <dc:creator>${cdata(author)}</dc:creator>
       <pubDate>${toRfc2822(ep.pub_date)}</pubDate>
+      <content:encoded>${cdata(epDescription)}</content:encoded>
       ${ep.audio_url ? `<enclosure url="${escapeXml(ep.audio_url)}" length="${ep.file_size_bytes || 0}" type="audio/mpeg" />` : ""}
-      <itunes:title>${escapeXml(ep.title)}</itunes:title>
-      <itunes:summary>${cdata(ep.description || "")}</itunes:summary>
+      <itunes:title>${cdata(ep.title)}</itunes:title>
+      <itunes:summary>${cdata(stripHtml(epDescription))}</itunes:summary>
+      <itunes:author>${escapeXml(author)}</itunes:author>
+      <itunes:image href="${escapeXml(epImageUrl)}" />
       <itunes:duration>${formatDuration(ep.duration_seconds)}</itunes:duration>
-      <itunes:explicit>false</itunes:explicit>
+      <itunes:explicit>${epExplicit}</itunes:explicit>
+      <itunes:episodeType>full</itunes:episodeType>
       ${ep.episode_number ? `<itunes:episode>${ep.episode_number}</itunes:episode>` : ""}
       ${ep.season_number ? `<itunes:season>${ep.season_number}</itunes:season>` : ""}
     </item>`;
             })
             .join("\n");
 
-        const categoryTag = podcast.category
-            ? `<itunes:category text="${escapeXml(podcast.category)}" />`
-            : `<itunes:category text="Society &amp; Culture" />`;
-
         const rss = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"
-  xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
+  xmlns:dc="http://purl.org/dc/elements/1.1/"
   xmlns:content="http://purl.org/rss/1.0/modules/content/"
   xmlns:atom="http://www.w3.org/2005/Atom"
+  xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
+  xmlns:googleplay="http://www.google.com/schemas/play-podcasts/1.0"
   xmlns:podcast="https://podcastindex.org/namespace/1.0">
   <channel>
-    <title>${escapeXml(podcast.title)}</title>
-    <description>${cdata(podcast.description || "")}</description>
+    <title>${cdata(podcast.title)}</title>
+    <description>${cdata(podcastDescription)}</description>
     <link>${podcastPageUrl}</link>
-    <language>${escapeXml(podcast.language || "en")}</language>
-    <copyright>© ${new Date().getFullYear()} ${escapeXml(podcast.author || podcast.title)}</copyright>
-    <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
-    <atom:link href="${escapeXml(feedSelfUrl)}" rel="self" type="application/rss+xml" />
+    <language>${escapeXml(language)}</language>
+    <copyright>${cdata(`© ${new Date().getFullYear()} ${author}`)}</copyright>
     <generator>Alchify Podcast Platform</generator>
+    <lastBuildDate>${latestPubDate}</lastBuildDate>
+    <pubDate>${latestPubDate}</pubDate>
+    <docs>https://www.rssboard.org/rss-specification</docs>
+    <managingEditor>${authorEmail ? `${escapeXml(authorEmail)} (${escapeXml(author)})` : escapeXml(author)}</managingEditor>
+    <atom:link href="${escapeXml(feedSelfUrl)}" rel="self" type="application/rss+xml" />
+    ${podcast.rss_feed_url ? `<itunes:new-feed-url>${escapeXml(feedSelfUrl)}</itunes:new-feed-url>` : ""}
+    <image>
+      <url>${escapeXml(imageUrl)}</url>
+      <title>${cdata(podcast.title)}</title>
+      <link>${podcastPageUrl}</link>
+    </image>
 
-    <!-- iTunes / Apple Podcasts tags -->
-    <itunes:author>${escapeXml(podcast.author || podcast.title)}</itunes:author>
-    <itunes:summary>${cdata(podcast.description || "")}</itunes:summary>
-    <itunes:type>episodic</itunes:type>
-    <itunes:explicit>${podcast.is_explicit ? "true" : "false"}</itunes:explicit>
+    <!-- iTunes tags -->
+    <itunes:summary>${cdata(stripHtml(podcastDescription))}</itunes:summary>
+    <itunes:author>${escapeXml(author)}</itunes:author>
+    <itunes:explicit>${isExplicit}</itunes:explicit>
+    <itunes:image href="${escapeXml(imageUrl)}" />
     <itunes:owner>
-      <itunes:name>${escapeXml(podcast.author || "")}</itunes:name>
-      ${podcast.author_email ? `<itunes:email>${escapeXml(podcast.author_email)}</itunes:email>` : ""}
+      <itunes:name>${cdata(author)}</itunes:name>
+      <itunes:email>${escapeXml(authorEmail)}</itunes:email>
     </itunes:owner>
-    ${podcast.image_url ? `<itunes:image href="${escapeXml(podcast.image_url)}" />` : ""}
-    ${podcast.image_url ? `<image><url>${escapeXml(podcast.image_url)}</url><title>${escapeXml(podcast.title)}</title><link>${podcastPageUrl}</link></image>` : ""}
-    ${categoryTag}
+    <itunes:type>episodic</itunes:type>
+    ${categoryXml}
 
+    <!-- Google Play tags -->
+    <googleplay:author>${escapeXml(author)}</googleplay:author>
+    <googleplay:description>${cdata(stripHtml(podcastDescription))}</googleplay:description>
+    <googleplay:image href="${escapeXml(imageUrl)}" />
+    <googleplay:explicit>${isExplicit}</googleplay:explicit>
+    ${podcast.category ? `<googleplay:category text="${escapeXml(podcast.category.split(">")[0].trim())}" />` : ""}
+
+    <!-- Podcast 2.0 tags -->
     <podcast:locked>no</podcast:locked>
 
     <!-- Episodes -->
@@ -185,10 +224,7 @@ ${items}
             JSON.stringify({
                 error: error instanceof Error ? error.message : "Unknown error occurred",
             }),
-            {
-                status: 500,
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-            }
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
     }
 });
