@@ -603,8 +603,7 @@ const PodcastDetail = () => {
                                         <div className="flex-1 space-y-2 text-sm text-muted-foreground">
                                             <p>Your podcast cover art is displayed on streaming platforms and RSS readers.</p>
                                              <ul className="list-disc list-inside space-y-1">
-                                                <li><strong>Required:</strong> Square, min 1400×1400 px</li>
-                                                <li><strong>Recommended:</strong> 3000×3000 px</li>
+                                                <li><strong>Required:</strong> Exactly 3000×3000 pixels</li>
                                                 <li>Formats: JPG or PNG only</li>
                                                 <li>Max size: 10MB</li>
                                             </ul>

@@ -836,7 +836,7 @@ const RecordingStudio = () => {
                           <div className="flex flex-col items-center gap-2 text-muted-foreground group-hover:text-foreground transition-colors">
                             <ImagePlus className="w-8 h-8" />
                             <span className="text-xs font-medium">Episode Cover</span>
-                            <span className="text-[10px] opacity-60">1400×1400px</span>
+                            <span className="text-[10px] opacity-60">3000×3000px</span>
                           </div>
                         )}
                       </div>

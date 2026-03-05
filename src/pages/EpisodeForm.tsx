@@ -245,7 +245,7 @@ const EpisodeForm = () => {
                         <Card>
                             <CardContent className="p-6">
                                 <Label className="text-base font-semibold mb-3 block">Episode Cover Image (optional)</Label>
-                                <p className="text-sm text-muted-foreground mb-3">Override the podcast cover for this episode. Recommended: 1400×1400px, square.</p>
+                                <p className="text-sm text-muted-foreground mb-3">Override the podcast cover for this episode. Required: Exactly 3000×3000 pixels, JPG or PNG.</p>
                                 <div className="flex items-center gap-4">
                                     <div
                                         className="w-28 h-28 rounded-xl border-2 border-dashed border-border flex items-center justify-center cursor-pointer overflow-hidden hover:border-primary transition-colors shrink-0"

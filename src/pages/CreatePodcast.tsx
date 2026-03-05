@@ -142,7 +142,7 @@ const CreatePodcast = () => {
                   className="hidden"
                   onChange={handleImageSelect}
                 />
-                <p className="text-xs text-muted-foreground">Required: Square, min 1400×1400px (recommended 3000×3000), JPG or PNG</p>
+                <p className="text-xs text-muted-foreground">Required: Exactly 3000×3000 pixels, JPG or PNG, RGB color space</p>
               </div>
 
               <div>
