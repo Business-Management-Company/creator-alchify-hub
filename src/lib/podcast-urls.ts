@@ -8,8 +8,13 @@ export function getPublicPodcastUrl(podcastId: string): string {
   return `${window.location.origin}/podcast/${podcastId}`;
 }
 
-/** RSS feed URL – proxied through the site for a cleaner look */
+/** RSS feed URL – uses a clean /feed/ path */
 export function getRssFeedUrl(podcastId: string): string {
+  return `${window.location.origin}/feed/${podcastId}`;
+}
+
+/** Internal Supabase function URL for the RSS feed (used by proxy) */
+export function getRssFeedFunctionUrl(podcastId: string): string {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   return `${supabaseUrl}/functions/v1/generate-rss?id=${podcastId}`;
 }
