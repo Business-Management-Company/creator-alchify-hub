@@ -1,6 +1,6 @@
 /**
  * Validates an image file meets podcast cover art requirements.
- * Apple Podcasts requires: min 1400×1400, recommended 3000×3000, square, JPG/PNG, RGB.
+ * Apple Podcasts requires: exactly 3000×3000 pixels, JPG/PNG, RGB color space.
  */
 export interface ImageValidationResult {
   valid: boolean;
@@ -9,8 +9,7 @@ export interface ImageValidationResult {
   error?: string;
 }
 
-const MIN_DIMENSION = 1400;
-const RECOMMENDED_DIMENSION = 3000;
+const REQUIRED_DIMENSION = 3000;
 
 export function validatePodcastCoverImage(file: File): Promise<ImageValidationResult> {
   return new Promise((resolve) => {
@@ -27,17 +26,12 @@ export function validatePodcastCoverImage(file: File): Promise<ImageValidationRe
       URL.revokeObjectURL(url);
       const { naturalWidth: w, naturalHeight: h } = img;
 
-      if (w !== h) {
-        resolve({ valid: false, width: w, height: h, error: `Image must be square. Yours is ${w}×${h}px.` });
-        return;
-      }
-
-      if (w < MIN_DIMENSION) {
+      if (w !== REQUIRED_DIMENSION || h !== REQUIRED_DIMENSION) {
         resolve({
           valid: false,
           width: w,
           height: h,
-          error: `Image must be at least ${MIN_DIMENSION}×${MIN_DIMENSION}px. Yours is ${w}×${h}px. Recommended: ${RECOMMENDED_DIMENSION}×${RECOMMENDED_DIMENSION}px.`,
+          error: `Artwork must be exactly ${REQUIRED_DIMENSION}×${REQUIRED_DIMENSION} pixels. Yours is ${w}×${h}px.`,
         });
         return;
       }
