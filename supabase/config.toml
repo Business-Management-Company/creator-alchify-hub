@@ -8,3 +8,12 @@ verify_jwt = false
 
 [functions.import-rss]
 verify_jwt = false
+
+[functions.import-rss-feed]
+verify_jwt = false
+
+[functions.transcribe-audio]
+verify_jwt = false
+
+[functions.admin-users]
+verify_jwt = false

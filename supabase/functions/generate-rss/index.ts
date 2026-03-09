@@ -162,12 +162,13 @@ serve(async (req) => {
         
         await Promise.all(
             publishedEpisodes.map(async (ep: any) => {
-                // Sign audio URL if it's a storage URL
+                // Sign audio URL if it's a storage URL (support both buckets)
                 if (ep.audio_url && ep.audio_url.includes('/storage/v1/')) {
-                    const storagePath = extractStoragePath(ep.audio_url, 'media-uploads');
+                    const audioBucket = ep.audio_url.includes('creator-assets') ? 'creator-assets' : 'media-uploads';
+                    const storagePath = extractStoragePath(ep.audio_url, audioBucket);
                     if (storagePath) {
                         const { data } = await supabase.storage
-                            .from('media-uploads')
+                            .from(audioBucket)
                             .createSignedUrl(storagePath, SIGNED_URL_EXPIRY);
                         if (data?.signedUrl) {
                             signedAudioUrls[ep.id] = data.signedUrl;
