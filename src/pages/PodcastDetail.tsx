@@ -533,10 +533,10 @@ const PodcastDetail = () => {
                                                         </AlertDialog>
                                                     </div>
                                                 </div>
-                                                {expandedEpisode === episode.id && episode.audio_url && signedUrls[episode.audio_url] && (
+                                                {expandedEpisode === episode.id && episode.audio_url && (signedUrls[episode.audio_url] || !isPrivateStorageUrl(episode.audio_url)) && (
                                                     <div className="mt-4">
                                                         <AudioPlayer
-                                                            src={signedUrls[episode.audio_url]}
+                                                            src={signedUrls[episode.audio_url] || episode.audio_url}
                                                             title={episode.title}
                                                             className="border-0 bg-muted/50"
                                                         />

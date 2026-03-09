@@ -109,14 +109,18 @@ export function useUploadAudio() {
     const { user } = useAuth();
     return useMutation({
         mutationFn: async ({ file, podcastId }: { file: File; podcastId: string }) => {
-            const fileExt = file.name.split(".").pop();
-            const fileName = `${user!.id}/${podcastId}/${crypto.randomUUID()}.${fileExt}`;
+            const { isAllowedAudioFile } = await import("@/lib/audio-validation");
+            const check = isAllowedAudioFile(file);
+            if (!check.valid) throw new Error(check.error);
+
+            const fileExt = file.name.split(".").pop()?.toLowerCase() || "mp3";
+            const fileName = `podcast-audio/${user!.id}/${podcastId}/${crypto.randomUUID()}.${fileExt}`;
             const { error: uploadError } = await supabase.storage
-                .from("media-uploads")
+                .from("creator-assets")
                 .upload(fileName, file, { cacheControl: "3600", upsert: false });
             if (uploadError) throw uploadError;
             const { data: { publicUrl } } = supabase.storage
-                .from("media-uploads")
+                .from("creator-assets")
                 .getPublicUrl(fileName);
             return { url: publicUrl, fileSize: file.size };
         },

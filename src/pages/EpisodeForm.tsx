@@ -12,6 +12,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEpisode, useCreateEpisode, useUpdateEpisode, useUploadAudio, useNextEpisodeNumber } from "@/hooks/useEpisodes";
 import { supabase } from "@/integrations/supabase/client";
+import { isAllowedAudioFile, AUDIO_ACCEPT } from "@/lib/audio-validation";
 
 const EpisodeForm = () => {
     const { id: podcastId, eid: episodeId } = useParams<{ id: string; eid: string }>();
@@ -82,24 +83,31 @@ const EpisodeForm = () => {
     const handleFileDrop = useCallback(async (e: React.DragEvent) => {
         e.preventDefault();
         const file = e.dataTransfer.files[0];
-        if (file && file.type.startsWith("audio/")) {
-            setAudioFile(file);
-            if (!title) setTitle(file.name.replace(/\.[^/.]+$/, ""));
-            const dur = await getAudioDuration(file);
-            if (dur > 0) setDurationSeconds(dur);
-        } else {
-            toast.error("Please drop an audio file (MP3, M4A, WAV)");
+        if (!file) return;
+        const check = isAllowedAudioFile(file);
+        if (!check.valid) {
+            toast.error(check.error);
+            return;
         }
+        setAudioFile(file);
+        if (!title) setTitle(file.name.replace(/\.[^/.]+$/, ""));
+        const dur = await getAudioDuration(file);
+        if (dur > 0) setDurationSeconds(dur);
     }, [title]);
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
-            setAudioFile(file);
-            if (!title) setTitle(file.name.replace(/\.[^/.]+$/, ""));
-            const dur = await getAudioDuration(file);
-            if (dur > 0) setDurationSeconds(dur);
+        if (!file) return;
+        const check = isAllowedAudioFile(file);
+        if (!check.valid) {
+            toast.error(check.error);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+            return;
         }
+        setAudioFile(file);
+        if (!title) setTitle(file.name.replace(/\.[^/.]+$/, ""));
+        const dur = await getAudioDuration(file);
+        if (dur > 0) setDurationSeconds(dur);
     };
 
     const removeFile = () => {
@@ -229,7 +237,7 @@ const EpisodeForm = () => {
                                     >
                                         <Upload className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
                                         <p className="font-medium mb-1">Drop your audio file here</p>
-                                        <p className="text-sm text-muted-foreground">or click to browse · MP3, M4A, WAV · Max 200MB</p>
+                                        <p className="text-sm text-muted-foreground">or click to browse · MP3, M4A, AAC, WAV, WebM, OGG, FLAC · Max 200MB</p>
                                     </div>
                                 )}
                                 {isUploading && (
@@ -237,7 +245,7 @@ const EpisodeForm = () => {
                                         <Loader2 className="w-4 h-4 animate-spin" /><span className="text-sm">Uploading...</span>
                                     </div>
                                 )}
-                                <input ref={fileInputRef} type="file" accept="audio/*" className="hidden" onChange={handleFileSelect} />
+                                <input ref={fileInputRef} type="file" accept={AUDIO_ACCEPT} className="hidden" onChange={handleFileSelect} />
                             </CardContent>
                         </Card>
 
