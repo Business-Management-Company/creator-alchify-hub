@@ -114,7 +114,7 @@ export function useUploadAudio() {
             if (!check.valid) throw new Error(check.error);
 
             const fileExt = file.name.split(".").pop()?.toLowerCase() || "mp3";
-            const fileName = `podcast-audio/${user!.id}/${podcastId}/${crypto.randomUUID()}.${fileExt}`;
+            const fileName = `${user!.id}/podcast-audio/${podcastId}/${crypto.randomUUID()}.${fileExt}`;
             const { error: uploadError } = await supabase.storage
                 .from("creator-assets")
                 .upload(fileName, file, { cacheControl: "3600", upsert: false });
