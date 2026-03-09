@@ -536,7 +536,75 @@ const RecordingStudio = () => {
             a.download = `audio-${Date.now()}.webm`;
             a.click();
           }
+        } else if (!isAudio && user) {
+          // Video recording — upload to storage and create project
+          setIsSaving(true);
+          setSaveProgress(10);
+          try {
+            const ext = blobType.includes('mp4') ? 'mp4' : 'webm';
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+            const filePath = `${user.id}/${fileName}`;
+
+            const { data: session } = await supabase.auth.getSession();
+            if (!session?.session) throw new Error('Not authenticated');
+
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const uploadUrl = `${supabaseUrl}/storage/v1/object/media-uploads/${filePath}`;
+            const uploadRes = await fetch(uploadUrl, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${session.session.access_token}`,
+                'Content-Type': blobType,
+              },
+              body: blob,
+            });
+            if (!uploadRes.ok) throw new Error('Upload failed');
+            setSaveProgress(50);
+
+            const { data: project, error: projectError } = await supabase
+              .from('projects')
+              .insert({
+                user_id: user.id,
+                title: `Video Recording ${new Date().toLocaleDateString()}`,
+                source_file_url: filePath,
+                source_file_name: `recording-${Date.now()}.${ext}`,
+                source_file_type: 'video',
+                source_file_size: blob.size,
+                source_duration_seconds: Math.round(recordingTime),
+                status: 'alchifying',
+              })
+              .select()
+              .single();
+            if (projectError) throw projectError;
+            setSaveProgress(80);
+
+            try {
+              await supabase.functions.invoke('transcribe-audio', {
+                body: { projectId: project.id },
+              });
+            } catch (e) {
+              console.error('Auto-transcription error:', e);
+            }
+            setSaveProgress(100);
+
+            toast({ title: 'Video saved! 🎬', description: 'Heading to Refiner Studio...' });
+            setTimeout(() => {
+              setIsSaving(false);
+              navigate(`/refiner/${project.id}`);
+            }, 600);
+          } catch (err) {
+            console.error('Save error:', err);
+            setIsSaving(false);
+            toast({ title: 'Save failed', description: err instanceof Error ? err.message : 'Something went wrong', variant: 'destructive' });
+            // Fallback: download locally
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `video-${Date.now()}.webm`;
+            a.click();
+          }
         } else {
+          // Not logged in fallback
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
