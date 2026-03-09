@@ -113,8 +113,10 @@ const EpisodeForm = () => {
     const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        console.log('Audio file selected:', file.name, file.type, file.size);
         const check = isAllowedAudioFile(file);
         if (!check.valid) {
+            console.warn('Audio validation failed:', check.error);
             toast.error(check.error);
             if (fileInputRef.current) fileInputRef.current.value = "";
             return;
