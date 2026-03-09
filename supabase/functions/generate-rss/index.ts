@@ -161,7 +161,7 @@ serve(async (req) => {
         const SIGNED_URL_EXPIRY = 60 * 60 * 24 * 30; // 30 days
         
         await Promise.all(
-            (episodes || []).map(async (ep: any) => {
+            publishedEpisodes.map(async (ep: any) => {
                 // Sign audio URL if it's a storage URL
                 if (ep.audio_url && ep.audio_url.includes('/storage/v1/')) {
                     const storagePath = extractStoragePath(ep.audio_url, 'media-uploads');
