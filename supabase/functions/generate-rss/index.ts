@@ -254,7 +254,7 @@ serve(async (req) => {
     <description>${cdata(podcastDescription)}</description>
     <link>${podcastPageUrl}</link>
     <language>${escapeXml(language)}</language>
-    <copyright>${cdata(`© ${new Date().getFullYear()} ${author}`)}</copyright>
+    <copyright>${escapeXml(`© ${new Date().getFullYear()} ${author}`)}</copyright>
     <generator>Alchify Podcast Platform</generator>
     <lastBuildDate>${latestPubDate}</lastBuildDate>
     <pubDate>${latestPubDate}</pubDate>
