@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import AppLayout from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import {
   Video,
   Monitor,
@@ -100,6 +100,7 @@ const VIRTUAL_BACKGROUNDS = [
 const RecordingStudio = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const podcastId = searchParams.get('podcastId');
   const { toast } = useToast();
@@ -176,13 +177,6 @@ const RecordingStudio = () => {
     }
   }, [user, loading, navigate]);
 
-  useEffect(() => {
-    return () => {
-      stopAllStreams();
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, []);
-
   // Sync streams to video elements when mode/layout change so preview updates without restarting
   useEffect(() => {
     if (recordingType !== 'video') return;
@@ -202,6 +196,20 @@ const RecordingStudio = () => {
     setAudioOnlyStream(null);
     setAudioLevel(0);
   };
+
+  // Stop all streams and recording when navigating away from the page
+  const stopAllStreamsRef = useRef(stopAllStreams);
+  stopAllStreamsRef.current = stopAllStreams;
+
+  useEffect(() => {
+    return () => {
+      stopAllStreamsRef.current();
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        try { mediaRecorderRef.current.stop(); } catch {}
+      }
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [location.pathname]);
 
   const startWebcam = async () => {
     try {
@@ -334,10 +342,35 @@ const RecordingStudio = () => {
   };
 
   const startRecording = () => {
-    // Video: use screen when mode is screen-only; otherwise webcam (screen-webcam records webcam only for now)
-    const streamToRecord = recordingType === 'audio'
-      ? audioOnlyStream
-      : (recordingMode === 'screen' ? screenStream : webcamStream);
+    let streamToRecord: MediaStream | null = null;
+
+    if (recordingType === 'audio') {
+      streamToRecord = audioOnlyStream;
+    } else if (recordingMode === 'screen') {
+      streamToRecord = screenStream;
+    } else if (recordingMode === 'webcam') {
+      streamToRecord = webcamStream;
+    } else if (recordingMode === 'screen-webcam') {
+      // Combine screen video + webcam audio (and webcam video tracks) into one stream
+      if (screenStream && webcamStream) {
+        const combined = new MediaStream();
+        // Use screen video as the primary video
+        screenStream.getVideoTracks().forEach(t => combined.addTrack(t));
+        // Add webcam video tracks too (for PiP overlay — recorder captures primary)
+        webcamStream.getVideoTracks().forEach(t => combined.addTrack(t));
+        // Use webcam audio (mic) since screen audio may not be available
+        webcamStream.getAudioTracks().forEach(t => combined.addTrack(t));
+        // Also add screen audio if available
+        screenStream.getAudioTracks().forEach(t => {
+          if (!combined.getAudioTracks().find(at => at.id === t.id)) {
+            combined.addTrack(t);
+          }
+        });
+        streamToRecord = combined;
+      } else {
+        streamToRecord = screenStream || webcamStream;
+      }
+    }
     
     console.log('startRecording called:', { recordingType, recordingMode, hasWebcam: !!webcamStream, hasScreen: !!screenStream, hasAudio: !!audioOnlyStream, streamToRecord: !!streamToRecord });
     
