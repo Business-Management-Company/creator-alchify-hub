@@ -158,7 +158,7 @@ serve(async (req) => {
         const signedAudioUrls: Record<string, string> = {};
         const signedImageUrls: Record<string, string> = {};
         
-        const SIGNED_URL_EXPIRY = 60 * 60 * 24 * 7; // 7 days
+        const SIGNED_URL_EXPIRY = 60 * 60 * 24 * 30; // 30 days
         
         await Promise.all(
             (episodes || []).map(async (ep: any) => {
