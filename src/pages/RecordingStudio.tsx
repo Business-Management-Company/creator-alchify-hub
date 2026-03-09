@@ -342,10 +342,35 @@ const RecordingStudio = () => {
   };
 
   const startRecording = () => {
-    // Video: use screen when mode is screen-only; otherwise webcam (screen-webcam records webcam only for now)
-    const streamToRecord = recordingType === 'audio'
-      ? audioOnlyStream
-      : (recordingMode === 'screen' ? screenStream : webcamStream);
+    let streamToRecord: MediaStream | null = null;
+
+    if (recordingType === 'audio') {
+      streamToRecord = audioOnlyStream;
+    } else if (recordingMode === 'screen') {
+      streamToRecord = screenStream;
+    } else if (recordingMode === 'webcam') {
+      streamToRecord = webcamStream;
+    } else if (recordingMode === 'screen-webcam') {
+      // Combine screen video + webcam audio (and webcam video tracks) into one stream
+      if (screenStream && webcamStream) {
+        const combined = new MediaStream();
+        // Use screen video as the primary video
+        screenStream.getVideoTracks().forEach(t => combined.addTrack(t));
+        // Add webcam video tracks too (for PiP overlay — recorder captures primary)
+        webcamStream.getVideoTracks().forEach(t => combined.addTrack(t));
+        // Use webcam audio (mic) since screen audio may not be available
+        webcamStream.getAudioTracks().forEach(t => combined.addTrack(t));
+        // Also add screen audio if available
+        screenStream.getAudioTracks().forEach(t => {
+          if (!combined.getAudioTracks().find(at => at.id === t.id)) {
+            combined.addTrack(t);
+          }
+        });
+        streamToRecord = combined;
+      } else {
+        streamToRecord = screenStream || webcamStream;
+      }
+    }
     
     console.log('startRecording called:', { recordingType, recordingMode, hasWebcam: !!webcamStream, hasScreen: !!screenStream, hasAudio: !!audioOnlyStream, streamToRecord: !!streamToRecord });
     
