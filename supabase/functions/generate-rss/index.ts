@@ -116,6 +116,9 @@ serve(async (req) => {
             throw new Error(`Failed to fetch episodes: ${episodesError.message}`);
         }
 
+        // Filter to only episodes with a valid audio_url
+        const publishedEpisodes = (episodes || []).filter((ep: any) => ep.audio_url && ep.audio_url.trim() !== '');
+
         const siteUrl =
             Deno.env.get("SITE_URL") ||
             Deno.env.get("PUBLIC_SITE_URL") ||
