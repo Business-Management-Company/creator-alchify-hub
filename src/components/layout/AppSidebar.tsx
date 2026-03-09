@@ -196,8 +196,8 @@ interface SidebarState {
 }
 
 // Find which creator section contains a given path
-const findCreatorSectionForPath = (path: string): string | null => {
-  for (const section of creatorSectionsFiltered) {
+const findCreatorSectionForPath = (path: string, sections: typeof creatorSections): string | null => {
+  for (const section of sections) {
     for (const item of section.items) {
       if (path === item.path || (item.path !== "/" && path.startsWith(item.path))) {
         return section.id;
