@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -52,6 +52,8 @@ import {
     Upload,
     X,
     ChevronDown,
+    Check,
+    AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { validatePodcastCoverImage } from "@/lib/image-validation";
@@ -541,6 +543,62 @@ const PodcastDetail = () => {
                         </TabsContent>
 
                         <TabsContent value="distribution" className="space-y-4">
+                            {!podcast.rss_import && (
+                                <Card className="border-muted">
+                                    <CardHeader>
+                                        <CardTitle className="text-base flex items-center gap-2">
+                                            {([
+                                                podcast.image_url,
+                                                podcast.category,
+                                                podcast.author,
+                                                podcast.author_email,
+                                                (podcast.episodes || []).some((ep: Episode) => ep.status === "published" && ep.audio_url),
+                                            ] as boolean[]).every(Boolean) ? (
+                                                <Check className="w-4 h-4 text-green-600" />
+                                            ) : (
+                                                <AlertCircle className="w-4 h-4 text-amber-600" />
+                                            )}
+                                            Distribution readiness (RSS.com / Apple / Spotify)
+                                        </CardTitle>
+                                        <CardDescription>
+                                            Complete these so your feed is accepted by major directories.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                                            <li className="flex items-center gap-2">
+                                                {podcast.image_url ? <Check className="w-4 h-4 text-green-600 shrink-0" /> : <span className="w-4 h-4 rounded-full border-2 border-amber-500 shrink-0" />}
+                                                Cover image (1400–3000px square)
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                {podcast.category ? <Check className="w-4 h-4 text-green-600 shrink-0" /> : <span className="w-4 h-4 rounded-full border-2 border-amber-500 shrink-0" />}
+                                                Category
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                {podcast.author ? <Check className="w-4 h-4 text-green-600 shrink-0" /> : <span className="w-4 h-4 rounded-full border-2 border-amber-500 shrink-0" />}
+                                                Author name
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                {podcast.author_email ? <Check className="w-4 h-4 text-green-600 shrink-0" /> : <span className="w-4 h-4 rounded-full border-2 border-amber-500 shrink-0" />}
+                                                Author email
+                                            </li>
+                                            <li className="flex items-center gap-2 sm:col-span-2">
+                                                {(podcast.episodes || []).some((ep: Episode) => ep.status === "published" && ep.audio_url) ? (
+                                                    <Check className="w-4 h-4 text-green-600 shrink-0" />
+                                                ) : (
+                                                    <span className="w-4 h-4 rounded-full border-2 border-amber-500 shrink-0" />
+                                                )}
+                                                At least one published episode with audio
+                                            </li>
+                                        </ul>
+                                        {(!podcast.image_url || !podcast.category || !podcast.author || !podcast.author_email || !(podcast.episodes || []).some((ep: Episode) => ep.status === "published" && ep.audio_url)) ? (
+                                            <p className="text-xs text-muted-foreground mt-3">
+                                                Update missing items in Settings or add episodes, then use the RSS feed URL below to submit to Apple Podcasts, Spotify, and others.
+                                            </p>
+                                        ) : null}
+                                    </CardContent>
+                                </Card>
+                            )}
                             <DistributionHub
                                 podcastId={id!}
                                 rssFeedUrl={getRssFeedUrl(id!)}

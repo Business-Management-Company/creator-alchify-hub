@@ -1,6 +1,6 @@
 /**
  * Validates an image file meets podcast cover art requirements.
- * Apple Podcasts requires: exactly 3000×3000 pixels, JPG/PNG, RGB color space.
+ * Apple Podcasts / RSS.com: 1400×1400 to 3000×3000 pixels, square, JPG or PNG.
  */
 export interface ImageValidationResult {
   valid: boolean;
@@ -9,13 +9,13 @@ export interface ImageValidationResult {
   error?: string;
 }
 
-const REQUIRED_DIMENSION = 3000;
+const MIN_DIMENSION = 1400;
+const MAX_DIMENSION = 3000;
 
 export function validatePodcastCoverImage(file: File): Promise<ImageValidationResult> {
   return new Promise((resolve) => {
-    // Check file type
     if (!["image/jpeg", "image/png"].includes(file.type)) {
-      resolve({ valid: false, width: 0, height: 0, error: "Cover art must be JPG or PNG format." });
+      resolve({ valid: false, width: 0, height: 0, error: "Cover art must be JPG or PNG (required by Apple Podcasts)." });
       return;
     }
 
@@ -26,12 +26,21 @@ export function validatePodcastCoverImage(file: File): Promise<ImageValidationRe
       URL.revokeObjectURL(url);
       const { naturalWidth: w, naturalHeight: h } = img;
 
-      if (w !== REQUIRED_DIMENSION || h !== REQUIRED_DIMENSION) {
+      if (w !== h) {
         resolve({
           valid: false,
           width: w,
           height: h,
-          error: `Artwork must be exactly ${REQUIRED_DIMENSION}×${REQUIRED_DIMENSION} pixels. Yours is ${w}×${h}px.`,
+          error: `Artwork must be square. Yours is ${w}×${h}px.`,
+        });
+        return;
+      }
+      if (w < MIN_DIMENSION || w > MAX_DIMENSION) {
+        resolve({
+          valid: false,
+          width: w,
+          height: h,
+          error: `Artwork must be between ${MIN_DIMENSION}×${MIN_DIMENSION} and ${MAX_DIMENSION}×${MAX_DIMENSION} pixels (Apple Podcasts). Yours is ${w}×${h}px.`,
         });
         return;
       }

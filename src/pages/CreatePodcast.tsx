@@ -30,6 +30,7 @@ const CreatePodcast = () => {
   const [language, setLanguage] = useState("en");
   const [isExplicit, setIsExplicit] = useState(false);
   const [authorName, setAuthorName] = useState("");
+  const [authorEmail, setAuthorEmail] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -89,6 +90,7 @@ const CreatePodcast = () => {
         language,
         is_explicit: isExplicit,
         author: authorName.trim() || null,
+        author_email: authorEmail.trim() || null,
         website_url: websiteUrl.trim() || null,
         image_url: imageUrl,
         status: "draft",
@@ -142,7 +144,7 @@ const CreatePodcast = () => {
                   className="hidden"
                   onChange={handleImageSelect}
                 />
-                <p className="text-xs text-muted-foreground">Required: Exactly 3000×3000 pixels, JPG or PNG, RGB color space</p>
+                <p className="text-xs text-muted-foreground">Required for distribution: 1400×1400 to 3000×3000, square, JPG or PNG</p>
               </div>
 
               <div>
@@ -178,9 +180,16 @@ const CreatePodcast = () => {
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="authorName" className="text-base font-semibold">Author / Host Name</Label>
-                <Input id="authorName" value={authorName} onChange={(e) => setAuthorName(e.target.value)} placeholder="Your name" className="mt-2" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="authorName" className="text-base font-semibold">Author / Host Name</Label>
+                  <Input id="authorName" value={authorName} onChange={(e) => setAuthorName(e.target.value)} placeholder="Your name" className="mt-2" />
+                </div>
+                <div>
+                  <Label htmlFor="authorEmail" className="text-base font-semibold">Author Email</Label>
+                  <Input id="authorEmail" value={authorEmail} onChange={(e) => setAuthorEmail(e.target.value)} placeholder="contact@example.com" className="mt-2" type="email" />
+                  <p className="text-xs text-muted-foreground mt-1">Required for Apple Podcasts &amp; Spotify distribution</p>
+                </div>
               </div>
 
               <div>
