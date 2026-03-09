@@ -206,7 +206,7 @@ serve(async (req) => {
             }
         }
 
-        const items = (episodes || [])
+        const items = publishedEpisodes
             .map((ep: any) => {
                 const guid = ep.guid || ep.id;
                 const episodePageUrl = `${siteUrl}/podcast/${podcast.id}/episode/${ep.id}`;
@@ -217,6 +217,7 @@ serve(async (req) => {
                 const audioType = ep.audio_url?.endsWith('.flac') ? 'audio/flac' : 
                                   ep.audio_url?.endsWith('.wav') ? 'audio/wav' : 
                                   ep.audio_url?.endsWith('.m4a') ? 'audio/mp4' : 'audio/mpeg';
+                const fileSize = (ep.file_size_bytes && ep.file_size_bytes > 0) ? ep.file_size_bytes : 0;
 
                 return `    <item>
       <title>${cdata(ep.title)}</title>
@@ -226,7 +227,7 @@ serve(async (req) => {
       <dc:creator>${cdata(author)}</dc:creator>
       <pubDate>${toRfc2822(ep.pub_date)}</pubDate>
       <content:encoded>${cdata(epDescription)}</content:encoded>
-      ${audioUrl ? `<enclosure url="${escapeXml(audioUrl)}" length="${ep.file_size_bytes || 0}" type="${audioType}" />` : ""}
+      <enclosure url="${escapeXml(audioUrl)}" length="${fileSize}" type="${audioType}" />
       <itunes:title>${cdata(ep.title)}</itunes:title>
       <itunes:summary>${cdata(stripHtml(epDescription))}</itunes:summary>
       <itunes:author>${escapeXml(author)}</itunes:author>
