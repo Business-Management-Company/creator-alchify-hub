@@ -362,7 +362,14 @@ const RecordingStudio = () => {
         const audioTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
         mimeType = audioTypes.find(t => MediaRecorder.isTypeSupported(t)) || '';
       } else {
-        const videoTypes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+        const videoTypes = [
+          'video/webm;codecs=vp9,opus',
+          'video/webm;codecs=vp8,opus', 
+          'video/webm;codecs=vp9',
+          'video/webm;codecs=vp8',
+          'video/webm',
+          'video/mp4',
+        ];
         mimeType = videoTypes.find(t => MediaRecorder.isTypeSupported(t)) || '';
       }
 
