@@ -48,8 +48,11 @@ const Upload = () => {
   }, [user, loading, navigate]);
 
   const validateFile = (file: File): string | null => {
-    if (!ACCEPTED_TYPES.includes(file.type)) {
-      return 'Invalid file type. Please upload MP4, MOV, WebM, MP3, WAV, or M4A files.';
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    const mimeOk = ACCEPTED_TYPES.includes(file.type);
+    const extOk = ACCEPTED_EXTENSIONS.includes(ext);
+    if (!mimeOk && !extOk) {
+      return 'Invalid file type. Please upload MP4, MOV, WebM, MP3, WAV, M4A, AAC, OGG, or FLAC files.';
     }
     if (file.size > MAX_FILE_SIZE) {
       return 'File too large. Maximum size is 500MB.';
