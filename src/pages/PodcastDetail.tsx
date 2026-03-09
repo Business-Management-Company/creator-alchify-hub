@@ -54,6 +54,7 @@ import {
     ChevronDown,
     Check,
     AlertCircle,
+    Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { validatePodcastCoverImage } from "@/lib/image-validation";
@@ -346,8 +347,9 @@ const PodcastDetail = () => {
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" onClick={handlePublish}>
-                                {podcast.status === "active" ? "Unpublish" : "Publish"}
+                            <Button variant="outline" size="sm" onClick={handlePublish} disabled={updatePodcast.isPending}>
+                                {updatePodcast.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                {updatePodcast.isPending ? (podcast.status === "active" ? "Unpublishing..." : "Publishing...") : (podcast.status === "active" ? "Unpublish" : "Publish")}
                             </Button>
                         </div>
                     </div>
@@ -500,11 +502,13 @@ const PodcastDetail = () => {
                                                                     </AlertDialogDescription>
                                                                 </AlertDialogHeader>
                                                                 <AlertDialogFooter>
-                                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                    <AlertDialogCancel disabled={deleteEpisode.isPending}>Cancel</AlertDialogCancel>
                                                                     <AlertDialogAction
                                                                         onClick={() => deleteEpisode.mutate({ episodeId: episode.id, podcastId: id! })}
+                                                                        disabled={deleteEpisode.isPending}
                                                                     >
-                                                                        Delete
+                                                                        {deleteEpisode.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                                                        {deleteEpisode.isPending ? "Deleting..." : "Delete"}
                                                                     </AlertDialogAction>
                                                                 </AlertDialogFooter>
                                                             </AlertDialogContent>
@@ -690,6 +694,7 @@ const PodcastDetail = () => {
                                                 Cancel
                                             </Button>
                                             <Button size="sm" onClick={handleSave} disabled={updatePodcast.isPending}>
+                                                {updatePodcast.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                                                 {updatePodcast.isPending ? "Saving..." : "Save"}
                                             </Button>
                                         </div>
@@ -848,9 +853,10 @@ const PodcastDetail = () => {
                                                 </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction className="bg-destructive" onClick={handleDelete}>
-                                                    Delete Forever
+                                                <AlertDialogCancel disabled={deletePodcast.isPending}>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction className="bg-destructive" onClick={handleDelete} disabled={deletePodcast.isPending}>
+                                                    {deletePodcast.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                                    {deletePodcast.isPending ? "Deleting..." : "Delete Forever"}
                                                 </AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>

@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Mic, Globe, Tag, ImagePlus } from "lucide-react";
+import { ArrowLeft, Mic, Globe, Tag, ImagePlus, Loader2 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { useCreatePodcast } from "@/hooks/usePodcasts";
 import { PODCAST_CATEGORIES, PODCAST_LANGUAGES } from "@/types/podcast";
@@ -207,6 +207,7 @@ const CreatePodcast = () => {
 
               <div className="flex items-center justify-between pt-6">
                 <Button type="submit" size="lg" disabled={createPodcast.isPending || uploading || !title.trim()}>
+                  {(uploading || createPodcast.isPending) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   {uploading ? "Uploading image..." : createPodcast.isPending ? "Creating..." : "Create Podcast"}
                 </Button>
                 <Button type="button" variant="link" onClick={() => navigate("/podcasts")} className="text-muted-foreground">Cancel</Button>
