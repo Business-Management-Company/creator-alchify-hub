@@ -177,22 +177,6 @@ const RecordingStudio = () => {
     }
   }, [user, loading, navigate]);
 
-  // Stop all streams and recording when navigating away
-  const stopAllStreamsRef = useRef(stopAllStreams);
-  stopAllStreamsRef.current = stopAllStreams;
-  const mediaRecorderRefForCleanup = mediaRecorderRef;
-  const timerRefForCleanup = timerRef;
-
-  useEffect(() => {
-    return () => {
-      stopAllStreamsRef.current();
-      if (mediaRecorderRefForCleanup.current && mediaRecorderRefForCleanup.current.state !== 'inactive') {
-        try { mediaRecorderRefForCleanup.current.stop(); } catch {}
-      }
-      if (timerRefForCleanup.current) clearInterval(timerRefForCleanup.current);
-    };
-  }, [location.pathname]);
-
   // Sync streams to video elements when mode/layout change so preview updates without restarting
   useEffect(() => {
     if (recordingType !== 'video') return;
