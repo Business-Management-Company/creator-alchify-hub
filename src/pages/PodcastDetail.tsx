@@ -66,6 +66,7 @@ import { useDeleteEpisode } from "@/hooks/useEpisodes";
 import { PODCAST_CATEGORIES, PODCAST_LANGUAGES } from "@/types/podcast";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import DistributionHub from "@/components/podcast/DistributionHub";
+import { ImageWithLoader } from "@/components/ui/image-with-loader";
 import type { Episode } from "@/types/podcast";
 import { getRssFeedUrl } from "@/lib/podcast-urls";
 
@@ -638,9 +639,10 @@ const PodcastDetail = () => {
                                         <div className="relative group">
                                             {podcast.image_url ? (
                                                 <div className="relative w-40 h-40 rounded-lg overflow-hidden border">
-                                                    <img
+                                                    <ImageWithLoader
                                                         src={podcast.image_url}
                                                         alt={podcast.title}
+                                                        wrapperClassName="absolute inset-0 w-full h-full"
                                                         className="w-full h-full object-cover"
                                                     />
                                                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">

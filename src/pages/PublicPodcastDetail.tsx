@@ -9,6 +9,7 @@ import { Play, Pause, Clock, Calendar, Music } from "lucide-react";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import AudioPlayer from "@/components/AudioPlayer";
 import Navbar from "@/components/Navbar";
+import { ImageWithLoader } from "@/components/ui/image-with-loader";
 import type { Episode } from "@/types/podcast";
 
 function needsSignedUrl(url: string | null): boolean {
@@ -210,10 +211,11 @@ const PublicPodcastDetail = () => {
         {/* Podcast Header */}
         <div className="mb-8 flex items-center gap-6">
           {podcast.image_url ? (
-            <img
+            <ImageWithLoader
               src={podcast.image_url}
               alt={podcast.title}
-              className="w-32 h-32 object-cover rounded-lg shrink-0"
+              wrapperClassName="w-32 h-32 rounded-lg shrink-0"
+              className="w-full h-full object-cover rounded-lg"
             />
           ) : (
             <div className="w-32 h-32 bg-gradient-to-br from-primary/20 to-accent/20 rounded-lg shrink-0 flex items-center justify-center">

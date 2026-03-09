@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import podcastStudio from "@/assets/podcast-studio.jpg";
 import { ImportRSSButton } from "@/components/podcast/ImportRSSButton";
 import AppLayout from "@/components/layout/AppLayout";
+import { ImageWithLoader } from "@/components/ui/image-with-loader";
 import { usePodcasts } from "@/hooks/usePodcasts";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -72,7 +73,12 @@ const Podcasts = () => {
                   onClick={() => navigate(`/podcasts/${podcast.id}`)}
                 >
                   {podcast.image_url ? (
-                    <img src={podcast.image_url} alt={podcast.title} className="w-full h-48 object-cover" />
+                    <ImageWithLoader
+                      src={podcast.image_url}
+                      alt={podcast.title}
+                      wrapperClassName="w-full h-48"
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <div className="w-full h-48 bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
                       <Music className="w-16 h-16 text-muted-foreground" />
@@ -102,7 +108,12 @@ const Podcasts = () => {
             </div>
           ) : (
             <Card className="overflow-hidden">
-              <img src={podcastStudio} alt="Professional podcast studio" className="w-full h-64 object-cover" />
+              <ImageWithLoader
+                src={podcastStudio}
+                alt="Professional podcast studio"
+                wrapperClassName="w-full h-64"
+                className="w-full h-full object-cover"
+              />
               <div className="p-12 text-center">
                 <h3 className="text-2xl font-bold mb-2">No podcasts yet</h3>
                 <p className="text-muted-foreground mb-6 max-w-md mx-auto">Create your first podcast on Alchify</p>

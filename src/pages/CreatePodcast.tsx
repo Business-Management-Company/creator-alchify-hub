@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { validatePodcastCoverImage } from "@/lib/image-validation";
+import { ImageWithLoader } from "@/components/ui/image-with-loader";
 
 const CreatePodcast = () => {
   const navigate = useNavigate();
@@ -129,7 +130,12 @@ const CreatePodcast = () => {
                   onClick={() => fileInputRef.current?.click()}
                 >
                   {imagePreview ? (
-                    <img src={imagePreview} alt="Cover" className="w-full h-full object-cover" />
+                    <ImageWithLoader
+                      src={imagePreview}
+                      alt="Cover"
+                      wrapperClassName="w-full h-full"
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
                       <ImagePlus className="w-8 h-8" />
