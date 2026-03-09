@@ -154,7 +154,6 @@ const AudioPlayer: React.FC = () => {
   };
 
   const canGoPrevious = episodeList.length > 0 && currentIndex > 0;
-  const canGoNext = episodeList.length > 0 && currentIndex >= 0 && currentIndex < episodeList.length - 1;
 
   if (!currentEpisode) return null;
 
