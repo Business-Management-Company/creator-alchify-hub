@@ -132,14 +132,35 @@ const PublicPodcastDetail = () => {
       }
     }
 
-    playEpisode({
-      id: episode.id,
-      title: episode.title,
-      audioUrl,
-      podcastTitle: podcast?.title || "Unknown Podcast",
-      podcastId: podcast?.id,
-      duration: episode.duration_seconds || 0,
-    });
+    const getUrlForEpisode = (ep: Episode) => {
+      if (!ep.audio_url) return "";
+      if (needsSignedUrl(ep.audio_url)) return signedUrls[extractStoragePath(ep.audio_url)] || ep.audio_url;
+      return ep.audio_url;
+    };
+    const episodeList = (podcast?.episodes || [])
+      .filter((ep: Episode) => ep.audio_url)
+      .map((ep: Episode) => ({
+        id: ep.id,
+        title: ep.title,
+        audioUrl: ep.id === episode.id ? audioUrl : getUrlForEpisode(ep),
+        podcastTitle: podcast?.title || "Unknown Podcast",
+        podcastId: podcast?.id,
+        duration: ep.duration_seconds || 0,
+      }))
+      .filter((item) => item.audioUrl);
+    const currentIndex = episodeList.findIndex((item) => item.id === episode.id);
+
+    playEpisode(
+      {
+        id: episode.id,
+        title: episode.title,
+        audioUrl,
+        podcastTitle: podcast?.title || "Unknown Podcast",
+        podcastId: podcast?.id,
+        duration: episode.duration_seconds || 0,
+      },
+      { episodeList, currentIndex: currentIndex >= 0 ? currentIndex : 0 }
+    );
   };
 
   const formatDuration = (seconds: number | null) => {

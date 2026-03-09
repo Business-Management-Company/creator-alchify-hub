@@ -5,8 +5,6 @@ import { Card } from '@/components/ui/card';
 import {
   Play,
   Pause,
-  ChevronLeft,
-  ChevronRight,
   RotateCcw,
   RotateCw,
   SkipBack,
@@ -17,12 +15,27 @@ import {
 } from 'lucide-react';
 import { useAudioPlayer } from '@/contexts/AudioPlayerContext';
 
+const SPEED_OPTIONS = [1, 1.25, 1.5, 1.75, 2];
+
 const AudioPlayer: React.FC = () => {
-  const { currentEpisode, pauseEpisode, resumeEpisode, updateProgress, setCurrentEpisode } = useAudioPlayer();
+  const {
+    currentEpisode,
+    episodeList,
+    currentIndex,
+    pauseEpisode,
+    resumeEpisode,
+    updateProgress,
+    setCurrentEpisode,
+    playPreviousEpisode,
+    playNextEpisode,
+  } = useAudioPlayer();
+
+  const canGoNext = Boolean(episodeList?.length && currentIndex >= 0 && currentIndex < episodeList.length - 1);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [duration, setDuration] = useState(0);
+  const [playbackRate, setPlaybackRate] = useState(1);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -37,8 +50,10 @@ const AudioPlayer: React.FC = () => {
     };
 
     const handleEnded = () => {
-      // Don't auto-hide player on end — keep it visible and mark as paused
-      if (currentEpisode) {
+      if (!currentEpisode) return;
+      if (canGoNext) {
+        playNextEpisode();
+      } else {
         setCurrentEpisode({
           ...currentEpisode,
           isPlaying: false,
@@ -56,7 +71,7 @@ const AudioPlayer: React.FC = () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('ended', handleEnded);
     };
-  }, [currentEpisode, updateProgress, setCurrentEpisode]);
+  }, [currentEpisode, updateProgress, setCurrentEpisode, canGoNext, playNextEpisode]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -75,6 +90,12 @@ const AudioPlayer: React.FC = () => {
 
     audio.volume = isMuted ? 0 : volume;
   }, [volume, isMuted]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.playbackRate = playbackRate;
+  }, [playbackRate]);
 
   const handleSeek = (value: number[]) => {
     const audio = audioRef.current;
@@ -127,15 +148,13 @@ const AudioPlayer: React.FC = () => {
     }
   };
 
-  const nextEpisode = () => {
-    // TODO: Implement next episode functionality
-    console.log('Next episode');
+  const cycleSpeed = () => {
+    const idx = SPEED_OPTIONS.indexOf(playbackRate);
+    setPlaybackRate(SPEED_OPTIONS[(idx + 1) % SPEED_OPTIONS.length]);
   };
 
-  const previousEpisode = () => {
-    // TODO: Implement previous episode functionality
-    console.log('Previous episode');
-  };
+  const canGoPrevious = episodeList.length > 0 && currentIndex > 0;
+  const canGoNext = episodeList.length > 0 && currentIndex >= 0 && currentIndex < episodeList.length - 1;
 
   if (!currentEpisode) return null;
 
@@ -165,11 +184,13 @@ const AudioPlayer: React.FC = () => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={previousEpisode}
+              onClick={playPreviousEpisode}
               className="h-8 w-8"
+              disabled={!canGoPrevious}
+              title={canGoPrevious ? "Previous episode" : "No previous episode"}
             >
               <SkipBack className="h-4 w-4" />
-            </Button>    
+            </Button>
 
             <Button
               variant="ghost"
@@ -183,11 +204,13 @@ const AudioPlayer: React.FC = () => {
                 <Play className="h-5 w-5" />
               )}
             </Button>     
-         <Button
+            <Button
               variant="ghost"
               size="icon"
-              onClick={nextEpisode}
+              onClick={playNextEpisode}
               className="h-8 w-8"
+              disabled={!canGoNext}
+              title={canGoNext ? "Next episode" : "No next episode"}
             >
               <SkipForward className="h-4 w-4" />
             </Button>
@@ -203,20 +226,31 @@ const AudioPlayer: React.FC = () => {
             </Button>
           </div>
           <div className="flex-1 max-w-md flex items-center gap-2">
-            <span className="text-xs text-muted-foreground w-10 text-right">
+            <span className="text-xs text-muted-foreground w-10 text-right tabular-nums">
               {formatTime(currentEpisode.currentTime)}
             </span>
             <Slider
-              value={[currentEpisode.currentTime]}
-              max={duration || currentEpisode.duration}
-              step={1}
+              value={[Math.min(currentEpisode.currentTime, Math.max(1, duration || currentEpisode.duration || 1))]}
+              max={Math.max(1, duration || currentEpisode.duration || 1)}
+              step={0.1}
               onValueChange={handleSeek}
-              className="flex-1"
+              className="flex-1 cursor-pointer"
             />
-            <span className="text-xs text-muted-foreground w-10">
-              {formatTime(duration || currentEpisode.duration)}
+            <span className="text-xs text-muted-foreground w-10 tabular-nums">
+              {formatTime(duration || currentEpisode.duration || 0)}
             </span>
           </div>
+
+          {/* Playback speed (RSS.com-style) */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 text-xs font-medium min-w-[3rem]"
+            onClick={cycleSpeed}
+            title="Playback speed"
+          >
+            {playbackRate}x
+          </Button>
 
           {/* Volume */}
           <div className="flex items-center gap-2">

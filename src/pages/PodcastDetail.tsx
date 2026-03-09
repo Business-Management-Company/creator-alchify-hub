@@ -273,14 +273,31 @@ const PodcastDetail = () => {
         setPlayingLoading(true);
         const playableUrl = await getPlayableUrl(episode.audio_url);
         setPlayingLoading(false);
-        playEpisode({
-            id: episode.id,
-            title: episode.title,
-            audioUrl: playableUrl,
-            podcastTitle: podcast?.title || "Unknown Podcast",
-            podcastId: id,
-            duration: episode.duration_seconds || 0,
-        });
+
+        const episodeList = (podcast?.episodes || [])
+            .filter((ep) => ep.audio_url)
+            .map((ep) => ({
+                id: ep.id,
+                title: ep.title,
+                audioUrl: ep.id === episode.id ? playableUrl : (signedUrls[ep.audio_url] || (isPrivateStorageUrl(ep.audio_url) ? "" : ep.audio_url)),
+                podcastTitle: podcast?.title || "Unknown Podcast",
+                podcastId: id,
+                duration: ep.duration_seconds || 0,
+            }))
+            .filter((item) => item.audioUrl);
+        const currentIndex = episodeList.findIndex((item) => item.id === episode.id);
+
+        playEpisode(
+            {
+                id: episode.id,
+                title: episode.title,
+                audioUrl: playableUrl,
+                podcastTitle: podcast?.title || "Unknown Podcast",
+                podcastId: id,
+                duration: episode.duration_seconds || 0,
+            },
+            { episodeList, currentIndex: currentIndex >= 0 ? currentIndex : 0 }
+        );
     };
 
     const formatDuration = (seconds: number | null) => {
