@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Mic, Globe, Tag, ImagePlus } from "lucide-react";
+import { ArrowLeft, Mic, Globe, Tag, ImagePlus, Loader2 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { useCreatePodcast } from "@/hooks/usePodcasts";
 import { PODCAST_CATEGORIES, PODCAST_LANGUAGES } from "@/types/podcast";
@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { validatePodcastCoverImage } from "@/lib/image-validation";
+import { ImageWithLoader } from "@/components/ui/image-with-loader";
 
 const CreatePodcast = () => {
   const navigate = useNavigate();
@@ -30,6 +31,7 @@ const CreatePodcast = () => {
   const [language, setLanguage] = useState("en");
   const [isExplicit, setIsExplicit] = useState(false);
   const [authorName, setAuthorName] = useState("");
+  const [authorEmail, setAuthorEmail] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -58,14 +60,14 @@ const CreatePodcast = () => {
     const ext = imageFile.name.split(".").pop();
     const path = `podcast-covers/${user.id}/${Date.now()}.${ext}`;
     const { error } = await supabase.storage
-      .from("media-uploads")
+      .from("creator-assets")
       .upload(path, imageFile, { upsert: true });
     if (error) {
-      toast.error("Failed to upload image");
+      toast.error(error.message || "Failed to upload image");
       return null;
     }
     const { data: urlData } = supabase.storage
-      .from("media-uploads")
+      .from("creator-assets")
       .getPublicUrl(path);
     return urlData.publicUrl;
   };
@@ -89,6 +91,7 @@ const CreatePodcast = () => {
         language,
         is_explicit: isExplicit,
         author: authorName.trim() || null,
+        author_email: authorEmail.trim() || null,
         website_url: websiteUrl.trim() || null,
         image_url: imageUrl,
         status: "draft",
@@ -127,7 +130,12 @@ const CreatePodcast = () => {
                   onClick={() => fileInputRef.current?.click()}
                 >
                   {imagePreview ? (
-                    <img src={imagePreview} alt="Cover" className="w-full h-full object-cover" />
+                    <ImageWithLoader
+                      src={imagePreview}
+                      alt="Cover"
+                      wrapperClassName="w-full h-full"
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
                       <ImagePlus className="w-8 h-8" />
@@ -142,7 +150,7 @@ const CreatePodcast = () => {
                   className="hidden"
                   onChange={handleImageSelect}
                 />
-                <p className="text-xs text-muted-foreground">Required: Exactly 3000×3000 pixels, JPG or PNG, RGB color space</p>
+                <p className="text-xs text-muted-foreground">Required for distribution: 1400×1400 to 3000×3000, square, JPG or PNG</p>
               </div>
 
               <div>
@@ -178,9 +186,16 @@ const CreatePodcast = () => {
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="authorName" className="text-base font-semibold">Author / Host Name</Label>
-                <Input id="authorName" value={authorName} onChange={(e) => setAuthorName(e.target.value)} placeholder="Your name" className="mt-2" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="authorName" className="text-base font-semibold">Author / Host Name</Label>
+                  <Input id="authorName" value={authorName} onChange={(e) => setAuthorName(e.target.value)} placeholder="Your name" className="mt-2" />
+                </div>
+                <div>
+                  <Label htmlFor="authorEmail" className="text-base font-semibold">Author Email</Label>
+                  <Input id="authorEmail" value={authorEmail} onChange={(e) => setAuthorEmail(e.target.value)} placeholder="contact@example.com" className="mt-2" type="email" />
+                  <p className="text-xs text-muted-foreground mt-1">Required for Apple Podcasts &amp; Spotify distribution</p>
+                </div>
               </div>
 
               <div>
@@ -198,6 +213,7 @@ const CreatePodcast = () => {
 
               <div className="flex items-center justify-between pt-6">
                 <Button type="submit" size="lg" disabled={createPodcast.isPending || uploading || !title.trim()}>
+                  {(uploading || createPodcast.isPending) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   {uploading ? "Uploading image..." : createPodcast.isPending ? "Creating..." : "Create Podcast"}
                 </Button>
                 <Button type="button" variant="link" onClick={() => navigate("/podcasts")} className="text-muted-foreground">Cancel</Button>

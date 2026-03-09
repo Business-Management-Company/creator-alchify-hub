@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -52,6 +52,9 @@ import {
     Upload,
     X,
     ChevronDown,
+    Check,
+    AlertCircle,
+    Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { validatePodcastCoverImage } from "@/lib/image-validation";
@@ -63,6 +66,7 @@ import { useDeleteEpisode } from "@/hooks/useEpisodes";
 import { PODCAST_CATEGORIES, PODCAST_LANGUAGES } from "@/types/podcast";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import DistributionHub from "@/components/podcast/DistributionHub";
+import { ImageWithLoader } from "@/components/ui/image-with-loader";
 import type { Episode } from "@/types/podcast";
 import { getRssFeedUrl } from "@/lib/podcast-urls";
 
@@ -270,14 +274,31 @@ const PodcastDetail = () => {
         setPlayingLoading(true);
         const playableUrl = await getPlayableUrl(episode.audio_url);
         setPlayingLoading(false);
-        playEpisode({
-            id: episode.id,
-            title: episode.title,
-            audioUrl: playableUrl,
-            podcastTitle: podcast?.title || "Unknown Podcast",
-            podcastId: id,
-            duration: episode.duration_seconds || 0,
-        });
+
+        const episodeList = (podcast?.episodes || [])
+            .filter((ep) => ep.audio_url)
+            .map((ep) => ({
+                id: ep.id,
+                title: ep.title,
+                audioUrl: ep.id === episode.id ? playableUrl : (signedUrls[ep.audio_url] || (isPrivateStorageUrl(ep.audio_url) ? "" : ep.audio_url)),
+                podcastTitle: podcast?.title || "Unknown Podcast",
+                podcastId: id,
+                duration: ep.duration_seconds || 0,
+            }))
+            .filter((item) => item.audioUrl);
+        const currentIndex = episodeList.findIndex((item) => item.id === episode.id);
+
+        playEpisode(
+            {
+                id: episode.id,
+                title: episode.title,
+                audioUrl: playableUrl,
+                podcastTitle: podcast?.title || "Unknown Podcast",
+                podcastId: id,
+                duration: episode.duration_seconds || 0,
+            },
+            { episodeList, currentIndex: currentIndex >= 0 ? currentIndex : 0 }
+        );
     };
 
     const formatDuration = (seconds: number | null) => {
@@ -344,8 +365,9 @@ const PodcastDetail = () => {
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" onClick={handlePublish}>
-                                {podcast.status === "active" ? "Unpublish" : "Publish"}
+                            <Button variant="outline" size="sm" onClick={handlePublish} disabled={updatePodcast.isPending}>
+                                {updatePodcast.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                {updatePodcast.isPending ? (podcast.status === "active" ? "Unpublishing..." : "Publishing...") : (podcast.status === "active" ? "Unpublish" : "Publish")}
                             </Button>
                         </div>
                     </div>
@@ -498,21 +520,23 @@ const PodcastDetail = () => {
                                                                     </AlertDialogDescription>
                                                                 </AlertDialogHeader>
                                                                 <AlertDialogFooter>
-                                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                    <AlertDialogCancel disabled={deleteEpisode.isPending}>Cancel</AlertDialogCancel>
                                                                     <AlertDialogAction
                                                                         onClick={() => deleteEpisode.mutate({ episodeId: episode.id, podcastId: id! })}
+                                                                        disabled={deleteEpisode.isPending}
                                                                     >
-                                                                        Delete
+                                                                        {deleteEpisode.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                                                        {deleteEpisode.isPending ? "Deleting..." : "Delete"}
                                                                     </AlertDialogAction>
                                                                 </AlertDialogFooter>
                                                             </AlertDialogContent>
                                                         </AlertDialog>
                                                     </div>
                                                 </div>
-                                                {expandedEpisode === episode.id && episode.audio_url && signedUrls[episode.audio_url] && (
+                                                {expandedEpisode === episode.id && episode.audio_url && (signedUrls[episode.audio_url] || !isPrivateStorageUrl(episode.audio_url)) && (
                                                     <div className="mt-4">
                                                         <AudioPlayer
-                                                            src={signedUrls[episode.audio_url]}
+                                                            src={signedUrls[episode.audio_url] || episode.audio_url}
                                                             title={episode.title}
                                                             className="border-0 bg-muted/50"
                                                         />
@@ -541,6 +565,62 @@ const PodcastDetail = () => {
                         </TabsContent>
 
                         <TabsContent value="distribution" className="space-y-4">
+                            {!podcast.rss_import && (
+                                <Card className="border-muted">
+                                    <CardHeader>
+                                        <CardTitle className="text-base flex items-center gap-2">
+                                            {([
+                                                podcast.image_url,
+                                                podcast.category,
+                                                podcast.author,
+                                                podcast.author_email,
+                                                (podcast.episodes || []).some((ep: Episode) => ep.status === "published" && ep.audio_url),
+                                            ] as boolean[]).every(Boolean) ? (
+                                                <Check className="w-4 h-4 text-green-600" />
+                                            ) : (
+                                                <AlertCircle className="w-4 h-4 text-amber-600" />
+                                            )}
+                                            Distribution readiness (RSS.com / Apple / Spotify)
+                                        </CardTitle>
+                                        <CardDescription>
+                                            Complete these so your feed is accepted by major directories.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                                            <li className="flex items-center gap-2">
+                                                {podcast.image_url ? <Check className="w-4 h-4 text-green-600 shrink-0" /> : <span className="w-4 h-4 rounded-full border-2 border-amber-500 shrink-0" />}
+                                                Cover image (1400–3000px square)
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                {podcast.category ? <Check className="w-4 h-4 text-green-600 shrink-0" /> : <span className="w-4 h-4 rounded-full border-2 border-amber-500 shrink-0" />}
+                                                Category
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                {podcast.author ? <Check className="w-4 h-4 text-green-600 shrink-0" /> : <span className="w-4 h-4 rounded-full border-2 border-amber-500 shrink-0" />}
+                                                Author name
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                {podcast.author_email ? <Check className="w-4 h-4 text-green-600 shrink-0" /> : <span className="w-4 h-4 rounded-full border-2 border-amber-500 shrink-0" />}
+                                                Author email
+                                            </li>
+                                            <li className="flex items-center gap-2 sm:col-span-2">
+                                                {(podcast.episodes || []).some((ep: Episode) => ep.status === "published" && ep.audio_url) ? (
+                                                    <Check className="w-4 h-4 text-green-600 shrink-0" />
+                                                ) : (
+                                                    <span className="w-4 h-4 rounded-full border-2 border-amber-500 shrink-0" />
+                                                )}
+                                                At least one published episode with audio
+                                            </li>
+                                        </ul>
+                                        {(!podcast.image_url || !podcast.category || !podcast.author || !podcast.author_email || !(podcast.episodes || []).some((ep: Episode) => ep.status === "published" && ep.audio_url)) ? (
+                                            <p className="text-xs text-muted-foreground mt-3">
+                                                Update missing items in Settings or add episodes, then use the RSS feed URL below to submit to Apple Podcasts, Spotify, and others.
+                                            </p>
+                                        ) : null}
+                                    </CardContent>
+                                </Card>
+                            )}
                             <DistributionHub
                                 podcastId={id!}
                                 rssFeedUrl={getRssFeedUrl(id!)}
@@ -559,9 +639,10 @@ const PodcastDetail = () => {
                                         <div className="relative group">
                                             {podcast.image_url ? (
                                                 <div className="relative w-40 h-40 rounded-lg overflow-hidden border">
-                                                    <img
+                                                    <ImageWithLoader
                                                         src={podcast.image_url}
                                                         alt={podcast.title}
+                                                        wrapperClassName="absolute inset-0 w-full h-full"
                                                         className="w-full h-full object-cover"
                                                     />
                                                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
@@ -632,6 +713,7 @@ const PodcastDetail = () => {
                                                 Cancel
                                             </Button>
                                             <Button size="sm" onClick={handleSave} disabled={updatePodcast.isPending}>
+                                                {updatePodcast.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                                                 {updatePodcast.isPending ? "Saving..." : "Save"}
                                             </Button>
                                         </div>
@@ -790,9 +872,10 @@ const PodcastDetail = () => {
                                                 </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction className="bg-destructive" onClick={handleDelete}>
-                                                    Delete Forever
+                                                <AlertDialogCancel disabled={deletePodcast.isPending}>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction className="bg-destructive" onClick={handleDelete} disabled={deletePodcast.isPending}>
+                                                    {deletePodcast.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                                    {deletePodcast.isPending ? "Deleting..." : "Delete Forever"}
                                                 </AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
