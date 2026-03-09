@@ -225,7 +225,7 @@ serve(async (req) => {
 
       await supabase.from("rss_imports").insert({
         user_id: user.user.id,
-        podcast_id: podcast.id,
+        podcast_id: podcast!.id,
         rss_url: rssUrl,
         status: "completed",
         episodes_imported: episodes.length,
