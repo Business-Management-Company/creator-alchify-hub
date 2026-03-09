@@ -59,14 +59,14 @@ const CreatePodcast = () => {
     const ext = imageFile.name.split(".").pop();
     const path = `podcast-covers/${user.id}/${Date.now()}.${ext}`;
     const { error } = await supabase.storage
-      .from("media-uploads")
+      .from("creator-assets")
       .upload(path, imageFile, { upsert: true });
     if (error) {
-      toast.error("Failed to upload image");
+      toast.error(error.message || "Failed to upload image");
       return null;
     }
     const { data: urlData } = supabase.storage
-      .from("media-uploads")
+      .from("creator-assets")
       .getPublicUrl(path);
     return urlData.publicUrl;
   };
