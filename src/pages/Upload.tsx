@@ -118,6 +118,7 @@ const Upload = () => {
 
       xhr.open('POST', url);
       xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
       xhr.setRequestHeader('x-upsert', 'false');
       xhr.send(file);
     });
