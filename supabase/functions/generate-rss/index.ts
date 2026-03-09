@@ -134,8 +134,8 @@ serve(async (req) => {
         const imageUrl = podcast.image_url || "";
 
         // Determine the latest episode pub_date for lastBuildDate / pubDate
-        const latestPubDate = episodes && episodes.length > 0
-            ? toRfc2822(episodes[0].pub_date)
+        const latestPubDate = publishedEpisodes.length > 0
+            ? toRfc2822(publishedEpisodes[0].pub_date)
             : new Date().toUTCString();
 
         // Build category tag – support subcategories with "Category > Subcategory" format
