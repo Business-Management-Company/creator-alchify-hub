@@ -98,6 +98,13 @@ serve(async (req) => {
             );
         }
 
+        if (podcast.status !== 'active' && podcast.status !== 'published') {
+            return new Response(
+                JSON.stringify({ error: "Podcast not available" }),
+                { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+        }
+
         const { data: episodes, error: episodesError } = await supabase
             .from("episodes")
             .select("*")
