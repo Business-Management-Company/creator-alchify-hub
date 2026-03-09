@@ -146,6 +146,7 @@ const EpisodeForm = () => {
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        console.log('Image file selected:', file.name, file.type, file.size);
         if (!file.type.startsWith("image/")) { toast.error("Please select an image file"); return; }
         setImageFile(file);
         setImagePreview(URL.createObjectURL(file));
