@@ -92,6 +92,8 @@ const Upload = () => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUploadError(null);
     const selectedFile = e.target.files?.[0];
+    // Always clear the input so the same file can be re-selected
+    if (e.target) e.target.value = '';
     if (selectedFile) {
       const error = validateFile(selectedFile);
       if (error) {
