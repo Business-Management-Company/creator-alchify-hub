@@ -114,22 +114,28 @@ export function useUploadAudio() {
             const check = isAllowedAudioFile(file);
             if (!check.valid) throw new Error(check.error);
 
+            const { data: session } = await supabase.auth.getSession();
+            if (!session?.session) throw new Error("Not authenticated");
+
             const fileExt = file.name.split(".").pop()?.toLowerCase() || "mp3";
-            // creator-assets bucket layout: podcast-covers/, episode-covers/, podcast-audio/
-            const fileName = `podcast-audio/${user.id}/${podcastId}/${crypto.randomUUID()}.${fileExt}`;
-            const { error: uploadError } = await supabase.storage
-                .from("creator-assets")
-                .upload(fileName, file, { cacheControl: "3600", upsert: false });
-            if (uploadError) {
-                const msg =
-                    (uploadError as { message?: string }).message ||
-                    (uploadError as { error?: string }).error ||
-                    String(uploadError);
-                throw new Error(msg || "Storage upload failed. Check that the creator-assets bucket exists and you have permission.");
+            const filePath = `${user.id}/${crypto.randomUUID()}.${fileExt}`;
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const uploadUrl = `${supabaseUrl}/storage/v1/object/media-uploads/${filePath}`;
+            const uploadRes = await fetch(uploadUrl, {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${session.session.access_token}`,
+                    "Content-Type": file.type || "audio/mpeg",
+                },
+                body: file,
+            });
+            if (!uploadRes.ok) {
+                const errText = await uploadRes.text();
+                throw new Error(errText || "Storage upload failed.");
             }
             const { data: { publicUrl } } = supabase.storage
-                .from("creator-assets")
-                .getPublicUrl(fileName);
+                .from("media-uploads")
+                .getPublicUrl(filePath);
             return { url: publicUrl, fileSize: file.size };
         },
         onError: (error: unknown) => {

@@ -96,14 +96,13 @@ const EpisodeForm = () => {
         };
     }, [imagePreview]);
 
-    // Shared handler for audio files (drag-drop + file picker)
-    const processAudioFile = useCallback(async (file: File) => {
+    // Shared handler for audio files (drag-drop + file picker). Set file immediately; duration in background so UI doesn't freeze.
+    const processAudioFile = useCallback((file: File) => {
         const check = isAllowedAudioFile(file);
         if (!check.valid) { toast.error(check.error); return; }
         setAudioFile(file);
         setTitle((prev) => prev || file.name.replace(/\.[^/.]+$/, ""));
-        const dur = await getAudioDuration(file).catch(() => 0);
-        if (dur > 0) setDurationSeconds(dur);
+        getAudioDuration(file).then((dur) => { if (dur > 0) setDurationSeconds(dur); }).catch(() => {});
     }, []);
 
     const handleFileDrop = useCallback((e: React.DragEvent) => {
