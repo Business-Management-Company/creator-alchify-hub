@@ -197,6 +197,20 @@ const RecordingStudio = () => {
     setAudioLevel(0);
   };
 
+  // Stop all streams and recording when navigating away from the page
+  const stopAllStreamsRef = useRef(stopAllStreams);
+  stopAllStreamsRef.current = stopAllStreams;
+
+  useEffect(() => {
+    return () => {
+      stopAllStreamsRef.current();
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        try { mediaRecorderRef.current.stop(); } catch {}
+      }
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [location.pathname]);
+
   const startWebcam = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
