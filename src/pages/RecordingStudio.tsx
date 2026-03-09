@@ -338,8 +338,19 @@ const RecordingStudio = () => {
     const streamToRecord = recordingType === 'audio'
       ? audioOnlyStream
       : (recordingMode === 'screen' ? screenStream : webcamStream);
+    
+    console.log('startRecording called:', { recordingType, recordingMode, hasWebcam: !!webcamStream, hasScreen: !!screenStream, hasAudio: !!audioOnlyStream, streamToRecord: !!streamToRecord });
+    
     if (!streamToRecord) {
       toast({ title: 'No source', description: recordingType === 'audio' ? 'Please start microphone first' : 'Please start camera or screen share first', variant: 'destructive' });
+      return;
+    }
+    
+    // Verify stream is still active
+    const activeTracks = streamToRecord.getTracks().filter(t => t.readyState === 'live');
+    console.log('Active tracks:', activeTracks.length, activeTracks.map(t => `${t.kind}:${t.readyState}`));
+    if (activeTracks.length === 0) {
+      toast({ title: 'Source disconnected', description: 'Your camera or microphone was disconnected. Please restart it.', variant: 'destructive' });
       return;
     }
 
