@@ -348,8 +348,9 @@ const Upload = () => {
             {!file ? (
               <>
                 <input
+                  ref={fileInputRef}
                   type="file"
-                  accept={ACCEPTED_TYPES.join(',')}
+                  accept=".mp4,.mov,.webm,.mp3,.wav,.m4a,.aac,.ogg,.flac,video/mp4,video/quicktime,video/webm,audio/mpeg,audio/wav,audio/mp4,audio/x-m4a,audio/ogg,audio/webm,audio/flac"
                   onChange={handleFileSelect}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
