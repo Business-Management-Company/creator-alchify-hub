@@ -109,32 +109,19 @@ export function useUploadAudio() {
     const { user } = useAuth();
     return useMutation({
         mutationFn: async ({ file, podcastId }: { file: File; podcastId: string }) => {
-            if (!user?.id) throw new Error("You must be signed in to upload audio.");
-            const { isAllowedAudioFile } = await import("@/lib/audio-validation");
-            const check = isAllowedAudioFile(file);
-            if (!check.valid) throw new Error(check.error);
-
-            const fileExt = file.name.split(".").pop()?.toLowerCase() || "mp3";
-            // creator-assets bucket layout: podcast-covers/, episode-covers/, podcast-audio/
-            const fileName = `podcast-audio/${user.id}/${podcastId}/${crypto.randomUUID()}.${fileExt}`;
+            const fileExt = file.name.split(".").pop();
+            const fileName = `${user!.id}/${podcastId}/${crypto.randomUUID()}.${fileExt}`;
             const { error: uploadError } = await supabase.storage
-                .from("creator-assets")
+                .from("media-uploads")
                 .upload(fileName, file, { cacheControl: "3600", upsert: false });
-            if (uploadError) {
-                const msg =
-                    (uploadError as { message?: string }).message ||
-                    (uploadError as { error?: string }).error ||
-                    String(uploadError);
-                throw new Error(msg || "Storage upload failed. Check that the creator-assets bucket exists and you have permission.");
-            }
+            if (uploadError) throw uploadError;
             const { data: { publicUrl } } = supabase.storage
-                .from("creator-assets")
+                .from("media-uploads")
                 .getPublicUrl(fileName);
             return { url: publicUrl, fileSize: file.size };
         },
-        onError: (error: unknown) => {
-            const message = error instanceof Error ? error.message : "Failed to upload audio file";
-            toast.error(message);
+        onError: (error: any) => {
+            toast.error(error.message || "Failed to upload audio file");
         },
     });
 }

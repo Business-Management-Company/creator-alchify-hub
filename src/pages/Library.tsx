@@ -5,7 +5,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -53,8 +52,7 @@ import {
   Filter,
   Scissors,
   Download,
-  Film,
-  Loader2
+  Film
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import VideoThumbnail from '@/components/VideoThumbnail';
@@ -247,91 +245,71 @@ const Library = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          {filesLoading ? (
-            <>
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Card key={i} className="border-border">
-                  <CardContent className="p-3">
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="h-10 w-10 rounded-lg" />
-                      <div className="space-y-1 flex-1">
-                        <Skeleton className="h-6 w-12" />
-                        <Skeleton className="h-3 w-16" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </>
-          ) : (
-            <>
-              <Card className="border-border">
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/20 text-primary">
-                      <FolderOpen className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold">{stats.total}</p>
-                      <p className="text-xs text-muted-foreground">Total Files</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="border-border">
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-blue-500/20 text-blue-400">
-                      <Video className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold">{stats.videos}</p>
-                      <p className="text-xs text-muted-foreground">Videos</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="border-border">
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-purple-500/20 text-purple-400">
-                      <Music className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold">{stats.audio}</p>
-                      <p className="text-xs text-muted-foreground">Audio</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="border-border">
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-accent/20 text-accent-foreground">
-                      <Scissors className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold">{stats.clipCount}</p>
-                      <p className="text-xs text-muted-foreground">Clips</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="border-border">
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-green-500/20 text-green-400">
-                      <HardDrive className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold">{formatFileSize(stats.totalSize)}</p>
-                      <p className="text-xs text-muted-foreground">Storage</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
+          <Card className="border-border">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/20 text-primary">
+                  <FolderOpen className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold">{stats.total}</p>
+                  <p className="text-xs text-muted-foreground">Total Files</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-border">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-blue-500/20 text-blue-400">
+                  <Video className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold">{stats.videos}</p>
+                  <p className="text-xs text-muted-foreground">Videos</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-border">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-purple-500/20 text-purple-400">
+                  <Music className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold">{stats.audio}</p>
+                  <p className="text-xs text-muted-foreground">Audio</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-border">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-accent/20 text-accent-foreground">
+                  <Scissors className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold">{stats.clipCount}</p>
+                  <p className="text-xs text-muted-foreground">Clips</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-border">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-green-500/20 text-green-400">
+                  <HardDrive className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold">{formatFileSize(stats.totalSize)}</p>
+                  <p className="text-xs text-muted-foreground">Storage</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Main Tabs: Files / Clips / Exports */}
@@ -675,10 +653,9 @@ const Library = () => {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDelete} disabled={deleteMutation.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                {deleteMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Delete
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

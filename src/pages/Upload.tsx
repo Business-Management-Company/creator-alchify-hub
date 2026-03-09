@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { 
@@ -22,15 +22,13 @@ import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/layout/AppLayout';
 
 const ACCEPTED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'];
-const ACCEPTED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/wave', 'audio/x-m4a', 'audio/mp4', 'audio/aac', 'audio/ogg', 'audio/webm', 'audio/flac', 'audio/x-wav'];
+const ACCEPTED_AUDIO_TYPES = ['audio/mpeg', 'audio/wav', 'audio/x-m4a', 'audio/mp4'];
 const ACCEPTED_TYPES = [...ACCEPTED_VIDEO_TYPES, ...ACCEPTED_AUDIO_TYPES];
-const ACCEPTED_EXTENSIONS = ['mp4', 'mov', 'webm', 'mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac'];
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 
 const Upload = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   
   const [file, setFile] = useState<File | null>(null);
@@ -48,11 +46,8 @@ const Upload = () => {
   }, [user, loading, navigate]);
 
   const validateFile = (file: File): string | null => {
-    const ext = file.name.split('.').pop()?.toLowerCase() || '';
-    const mimeOk = ACCEPTED_TYPES.includes(file.type);
-    const extOk = ACCEPTED_EXTENSIONS.includes(ext);
-    if (!mimeOk && !extOk) {
-      return 'Invalid file type. Please upload MP4, MOV, WebM, MP3, WAV, M4A, AAC, OGG, or FLAC files.';
+    if (!ACCEPTED_TYPES.includes(file.type)) {
+      return 'Invalid file type. Please upload MP4, MOV, WebM, MP3, WAV, or M4A files.';
     }
     if (file.size > MAX_FILE_SIZE) {
       return 'File too large. Maximum size is 500MB.';
@@ -92,8 +87,6 @@ const Upload = () => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUploadError(null);
     const selectedFile = e.target.files?.[0];
-    // Always clear the input so the same file can be re-selected
-    if (e.target) e.target.value = '';
     if (selectedFile) {
       const error = validateFile(selectedFile);
       if (error) {
@@ -348,9 +341,8 @@ const Upload = () => {
             {!file ? (
               <>
                 <input
-                  ref={fileInputRef}
                   type="file"
-                  accept=".mp4,.mov,.webm,.mp3,.wav,.m4a,.aac,.ogg,.flac,video/mp4,video/quicktime,video/webm,audio/mpeg,audio/wav,audio/mp4,audio/x-m4a,audio/ogg,audio/webm,audio/flac"
+                  accept={ACCEPTED_TYPES.join(',')}
                   onChange={handleFileSelect}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />

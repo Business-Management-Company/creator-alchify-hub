@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ImageWithLoader } from "@/components/ui/image-with-loader";
 import { Music, Mic, Clock, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -100,12 +99,7 @@ const PublicPodcasts = () => {
                 onClick={() => navigate(`/podcast/${podcast.id}`)}
               >
                 {podcast.image_url ? (
-                  <ImageWithLoader
-                    src={podcast.image_url}
-                    alt={podcast.title}
-                    wrapperClassName="w-full h-48"
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={podcast.image_url} alt={podcast.title} className="w-full h-48 object-cover" />
                 ) : (
                   <div className="w-full h-48 bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
                     <Music className="w-16 h-16 text-muted-foreground" />

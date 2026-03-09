@@ -20,7 +20,7 @@ export const alchifyConfig: TenantConfig = {
     dashboard: true,
     analytics: true,
     integrations: true,
-    podcasts: true,
+    podcasts: false,
     meetings: false,
     events: false,
     crm: false,

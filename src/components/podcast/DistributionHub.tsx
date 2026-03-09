@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -234,41 +233,6 @@ export default function DistributionHub({ podcastId, rssFeedUrl, isImported }: D
           </CardDescription>
         </CardHeader>
       </Card>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-5 w-48" />
-            <Skeleton className="h-4 w-full mt-2" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-10 flex-1" />
-              <Skeleton className="h-10 w-10" />
-            </div>
-          </CardContent>
-        </Card>
-        <div className="space-y-3">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i}>
-              <div className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-3">
-                  <Skeleton className="h-10 w-10 rounded-lg" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-3 w-64" />
-                  </div>
-                </div>
-                <Skeleton className="h-6 w-20" />
-              </div>
-            </Card>
-          ))}
-        </div>
-      </div>
     );
   }
 

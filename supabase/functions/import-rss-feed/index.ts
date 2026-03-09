@@ -172,7 +172,7 @@ serve(async (req) => {
       if (newEpisodes.length > 0) {
         const { error: epError } = await supabase.from("episodes").insert(
           newEpisodes.map((ep: any) => ({
-            podcast_id: podcast!.id,
+            podcast_id: podcast.id,
             user_id: user.user.id,
             title: ep.title,
             description: ep.description,
@@ -225,7 +225,7 @@ serve(async (req) => {
 
       await supabase.from("rss_imports").insert({
         user_id: user.user.id,
-        podcast_id: podcast!.id,
+        podcast_id: podcast.id,
         rss_url: rssUrl,
         status: "completed",
         episodes_imported: episodes.length,
@@ -234,7 +234,7 @@ serve(async (req) => {
       if (episodes.length > 0) {
         const { error: epError } = await supabase.from("episodes").insert(
           episodes.map((ep: any) => ({
-            podcast_id: podcast!.id,
+            podcast_id: podcast.id,
             user_id: user.user.id,
             title: ep.title,
             description: ep.description,

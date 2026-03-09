@@ -1,10 +1,12 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Card } from '@/components/ui/card';
 import {
   Play,
   Pause,
+  ChevronLeft,
+  ChevronRight,
   RotateCcw,
   RotateCw,
   SkipBack,
@@ -15,35 +17,12 @@ import {
 } from 'lucide-react';
 import { useAudioPlayer } from '@/contexts/AudioPlayerContext';
 
-const SPEED_OPTIONS = [1, 1.25, 1.5, 1.75, 2];
-
 const AudioPlayer: React.FC = () => {
-  const {
-    currentEpisode,
-    episodeList,
-    currentIndex,
-    pauseEpisode,
-    resumeEpisode,
-    updateProgress,
-    setCurrentEpisode,
-    playPreviousEpisode,
-    playNextEpisode,
-  } = useAudioPlayer();
-
-  const canGoPrevious = Boolean(episodeList?.length && currentIndex > 0);
-  const canGoNext = Boolean(episodeList?.length && currentIndex >= 0 && currentIndex < episodeList.length - 1);
-
+  const { currentEpisode, pauseEpisode, resumeEpisode, updateProgress, setCurrentEpisode } = useAudioPlayer();
   const audioRef = useRef<HTMLAudioElement>(null);
-  const isSeekingRef = useRef(false);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [duration, setDuration] = useState(0);
-  const [playbackRate, setPlaybackRate] = useState(1);
-
-  // Reset duration when episode changes (avoid showing previous episode's duration)
-  useEffect(() => {
-    setDuration(currentEpisode?.duration ?? 0);
-  }, [currentEpisode?.id, currentEpisode?.audioUrl]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -54,15 +33,12 @@ const AudioPlayer: React.FC = () => {
     };
 
     const handleTimeUpdate = () => {
-      if (isSeekingRef.current) return;
       updateProgress(audio.currentTime);
     };
 
     const handleEnded = () => {
-      if (!currentEpisode) return;
-      if (canGoNext) {
-        playNextEpisode();
-      } else {
+      // Don't auto-hide player on end — keep it visible and mark as paused
+      if (currentEpisode) {
         setCurrentEpisode({
           ...currentEpisode,
           isPlaying: false,
@@ -80,18 +56,18 @@ const AudioPlayer: React.FC = () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('ended', handleEnded);
     };
-  }, [currentEpisode, updateProgress, setCurrentEpisode, canGoNext, playNextEpisode]);
+  }, [currentEpisode, updateProgress, setCurrentEpisode]);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentEpisode) return;
 
     if (currentEpisode.isPlaying) {
-      audio.play().catch(() => {});
+      audio.play();
     } else {
       audio.pause();
     }
-  }, [currentEpisode?.isPlaying, currentEpisode?.id]);
+  }, [currentEpisode?.isPlaying]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -100,23 +76,13 @@ const AudioPlayer: React.FC = () => {
     audio.volume = isMuted ? 0 : volume;
   }, [volume, isMuted]);
 
-  useEffect(() => {
+  const handleSeek = (value: number[]) => {
     const audio = audioRef.current;
-    if (!audio) return;
-    audio.playbackRate = playbackRate;
-  }, [playbackRate]);
-
-  const handleSeek = useCallback((value: number[]) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    isSeekingRef.current = true;
-    const t = value[0];
-    audio.currentTime = t;
-    updateProgress(t);
-    requestAnimationFrame(() => {
-      isSeekingRef.current = false;
-    });
-  }, [updateProgress]);
+    if (audio) {
+      audio.currentTime = value[0];
+      updateProgress(value[0]);
+    }
+  };
 
   const handleVolumeChange = (value: number[]) => {
     setVolume(value[0]);
@@ -127,22 +93,17 @@ const AudioPlayer: React.FC = () => {
     setIsMuted(!isMuted);
   };
 
-  const maxDuration = duration || currentEpisode?.duration || 0;
-
   const skipBackward = () => {
     const audio = audioRef.current;
     if (audio) {
       audio.currentTime = Math.max(0, audio.currentTime - 5);
-      updateProgress(audio.currentTime);
     }
   };
 
   const skipForward = () => {
     const audio = audioRef.current;
     if (audio) {
-      const max = audio.duration || maxDuration || 0;
-      audio.currentTime = Math.min(max, audio.currentTime + 5);
-      updateProgress(audio.currentTime);
+      audio.currentTime = Math.min(duration, audio.currentTime + 5);
     }
   };
 
@@ -156,32 +117,32 @@ const AudioPlayer: React.FC = () => {
     const audio = audioRef.current;
     if (audio) {
       audio.currentTime = Math.max(0, audio.currentTime - 5);
-      updateProgress(audio.currentTime);
     }
   };
 
   const fastForward5 = () => {
     const audio = audioRef.current;
     if (audio) {
-      const max = audio.duration || maxDuration || 0;
-      audio.currentTime = Math.min(max, audio.currentTime + 5);
-      updateProgress(audio.currentTime);
+      audio.currentTime = Math.min(duration, audio.currentTime + 5);
     }
   };
 
-  const cycleSpeed = () => {
-    const idx = SPEED_OPTIONS.indexOf(playbackRate);
-    setPlaybackRate(SPEED_OPTIONS[(idx + 1) % SPEED_OPTIONS.length]);
+  const nextEpisode = () => {
+    // TODO: Implement next episode functionality
+    console.log('Next episode');
+  };
+
+  const previousEpisode = () => {
+    // TODO: Implement previous episode functionality
+    console.log('Previous episode');
   };
 
   if (!currentEpisode) return null;
 
-  const sliderMax = Math.max(1, maxDuration);
-
   return (
     <Card className="mt-4 border-t-0 rounded-t-lg shadow-lg bg-card/95 backdrop-blur-sm">
       <div className="p-4">
-        <audio key={currentEpisode.id} ref={audioRef} src={currentEpisode.audioUrl} preload="metadata" />
+        <audio ref={audioRef} src={currentEpisode.audioUrl} preload="metadata" />
 
         <div className="flex items-center gap-4">
           {/* Episode Info */}
@@ -204,13 +165,11 @@ const AudioPlayer: React.FC = () => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={playPreviousEpisode}
+              onClick={previousEpisode}
               className="h-8 w-8"
-              disabled={!canGoPrevious}
-              title={canGoPrevious ? "Previous episode" : "No previous episode"}
             >
               <SkipBack className="h-4 w-4" />
-            </Button>
+            </Button>    
 
             <Button
               variant="ghost"
@@ -224,13 +183,11 @@ const AudioPlayer: React.FC = () => {
                 <Play className="h-5 w-5" />
               )}
             </Button>     
-            <Button
+         <Button
               variant="ghost"
               size="icon"
-              onClick={playNextEpisode}
+              onClick={nextEpisode}
               className="h-8 w-8"
-              disabled={!canGoNext}
-              title={canGoNext ? "Next episode" : "No next episode"}
             >
               <SkipForward className="h-4 w-4" />
             </Button>
@@ -246,31 +203,20 @@ const AudioPlayer: React.FC = () => {
             </Button>
           </div>
           <div className="flex-1 max-w-md flex items-center gap-2">
-            <span className="text-xs text-muted-foreground w-10 text-right tabular-nums">
+            <span className="text-xs text-muted-foreground w-10 text-right">
               {formatTime(currentEpisode.currentTime)}
             </span>
             <Slider
-              value={[Math.min(currentEpisode.currentTime, sliderMax)]}
-              max={sliderMax}
-              step={0.1}
+              value={[currentEpisode.currentTime]}
+              max={duration || currentEpisode.duration}
+              step={1}
               onValueChange={handleSeek}
-              className="flex-1 cursor-pointer"
+              className="flex-1"
             />
-            <span className="text-xs text-muted-foreground w-10 tabular-nums">
-              {formatTime(maxDuration)}
+            <span className="text-xs text-muted-foreground w-10">
+              {formatTime(duration || currentEpisode.duration)}
             </span>
           </div>
-
-          {/* Playback speed (RSS.com-style) */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2 text-xs font-medium min-w-[3rem]"
-            onClick={cycleSpeed}
-            title="Playback speed"
-          >
-            {playbackRate}x
-          </Button>
 
           {/* Volume */}
           <div className="flex items-center gap-2">

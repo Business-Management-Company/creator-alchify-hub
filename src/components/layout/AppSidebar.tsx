@@ -44,7 +44,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
-import { getTenantConfig } from "@/config/alchify.config";
 import { cn } from "@/lib/utils";
 
 // Icon map for dynamic icon rendering
@@ -196,8 +195,8 @@ interface SidebarState {
 }
 
 // Find which creator section contains a given path
-const findCreatorSectionForPath = (path: string, sections: typeof creatorSections): string | null => {
-  for (const section of sections) {
+const findCreatorSectionForPath = (path: string): string | null => {
+  for (const section of creatorSections) {
     for (const item of section.items) {
       if (path === item.path || (item.path !== "/" && path.startsWith(item.path))) {
         return section.id;
@@ -213,15 +212,6 @@ const AppSidebar = () => {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { isAdmin } = useAdminCheck();
-  const config = getTenantConfig();
-  const creatorSectionsFiltered = useMemo(
-    () =>
-      creatorSections.filter(
-        (section) =>
-          section.id !== "podcast studio" || config.modules?.podcasts === true
-      ),
-    [config.modules?.podcasts]
-  );
 
   // Load persisted state from localStorage
   const loadStoredState = (): SidebarState => {
@@ -263,7 +253,7 @@ const AppSidebar = () => {
           };
         } else {
           // Switching to creator: find and expand the relevant section
-          const sectionId = findCreatorSectionForPath(location.pathname, creatorSectionsFiltered);
+          const sectionId = findCreatorSectionForPath(location.pathname);
           return {
             ...prev,
             mode: "creator",
@@ -273,7 +263,7 @@ const AppSidebar = () => {
         }
       } else if (currentMode === "creator") {
         // Already in creator mode, update open section if navigating
-        const sectionId = findCreatorSectionForPath(location.pathname, creatorSectionsFiltered);
+        const sectionId = findCreatorSectionForPath(location.pathname);
         if (sectionId && sectionId !== prev.openCreatorGroupId) {
           return {
             ...prev,
@@ -513,7 +503,7 @@ const AppSidebar = () => {
             </SidebarGroupLabel>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="mt-0.5 space-y-px">{creatorSectionsFiltered.map((section) => renderCreatorSection(section))}</div>
+            <div className="mt-0.5 space-y-px">{creatorSections.map((section) => renderCreatorSection(section))}</div>
           </CollapsibleContent>
         </Collapsible>
       </SidebarGroup>
@@ -547,7 +537,7 @@ const AppSidebar = () => {
         ) : (
           <>
             {/* Creator mode: Show creator sections */}
-            {creatorSectionsFiltered.map((section) => renderCreatorSection(section))}
+            {creatorSections.map((section) => renderCreatorSection(section))}
 
             {/* Admin toggle - only for admins */}
             {isAdmin && (
