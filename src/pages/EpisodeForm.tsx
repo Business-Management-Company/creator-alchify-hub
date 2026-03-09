@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -45,25 +45,29 @@ const EpisodeForm = () => {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const imageInputRef = useRef<HTMLInputElement>(null);
 
-    if (existingEpisode && !formInitialized) {
-        setTitle(existingEpisode.title);
-        setDescription(existingEpisode.description || "");
-        setEpisodeNumber(existingEpisode.episode_number || "");
-        setSeasonNumber(existingEpisode.season_number || "");
-        setAudioUrl(existingEpisode.audio_url);
-        setFileSize(existingEpisode.file_size_bytes);
-        setPublishNow(existingEpisode.status === "published");
-        if ((existingEpisode as any).image_url) {
-            setImageUrl((existingEpisode as any).image_url);
-            setImagePreview((existingEpisode as any).image_url);
+    useEffect(() => {
+        if (existingEpisode && !formInitialized) {
+            setTitle(existingEpisode.title);
+            setDescription(existingEpisode.description || "");
+            setEpisodeNumber(existingEpisode.episode_number || "");
+            setSeasonNumber(existingEpisode.season_number || "");
+            setAudioUrl(existingEpisode.audio_url);
+            setFileSize(existingEpisode.file_size_bytes);
+            setPublishNow(existingEpisode.status === "published");
+            if ((existingEpisode as any).image_url) {
+                setImageUrl((existingEpisode as any).image_url);
+                setImagePreview((existingEpisode as any).image_url);
+            }
+            setFormInitialized(true);
         }
-        setFormInitialized(true);
-    }
+    }, [existingEpisode, formInitialized]);
 
-    if (!isEditing && nextNumber && !episodeNumber && !formInitialized) {
-        setEpisodeNumber(nextNumber);
-        setFormInitialized(true);
-    }
+    useEffect(() => {
+        if (!isEditing && nextNumber && !episodeNumber && !formInitialized) {
+            setEpisodeNumber(nextNumber);
+            setFormInitialized(true);
+        }
+    }, [isEditing, nextNumber, episodeNumber, formInitialized]);
 
     const getAudioDuration = (file: File): Promise<number> => {
         return new Promise((resolve) => {
