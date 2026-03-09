@@ -100,6 +100,7 @@ const VIRTUAL_BACKGROUNDS = [
 const RecordingStudio = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const podcastId = searchParams.get('podcastId');
   const { toast } = useToast();
