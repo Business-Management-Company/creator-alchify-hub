@@ -76,6 +76,12 @@ const EpisodeForm = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [existingEpisode?.id]); // only re-run if the episode itself changes
 
+    useEffect(() => {
+        if (user === null) {
+            navigate("/auth", { replace: true });
+        }
+    }, [user, navigate]);
+
     // Auto-fill episode number for new episodes
     useEffect(() => {
         if (!isEditing && nextNumber && episodeNumber === "") {

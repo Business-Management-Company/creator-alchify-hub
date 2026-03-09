@@ -183,11 +183,20 @@ const RecordingStudio = () => {
     };
   }, []);
 
+  // Sync streams to video elements when mode/layout change so preview updates without restarting
+  useEffect(() => {
+    if (recordingType !== 'video') return;
+    if (webcamStream && webcamRef.current) webcamRef.current.srcObject = webcamStream;
+    if (screenStream && screenRef.current) screenRef.current.srcObject = screenStream;
+  }, [recordingType, recordingMode, layout, webcamStream, screenStream]);
+
   const stopAllStreams = () => {
     webcamStream?.getTracks().forEach(track => track.stop());
     screenStream?.getTracks().forEach(track => track.stop());
     audioOnlyStream?.getTracks().forEach(track => track.stop());
     if (audioAnimationRef.current) cancelAnimationFrame(audioAnimationRef.current);
+    if (webcamRef.current) webcamRef.current.srcObject = null;
+    if (screenRef.current) screenRef.current.srcObject = null;
     setWebcamStream(null);
     setScreenStream(null);
     setAudioOnlyStream(null);
@@ -197,10 +206,10 @@ const RecordingStudio = () => {
   const startWebcam = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: selectedVideoDevice 
-          ? { deviceId: { exact: selectedVideoDevice }, width: 1920, height: 1080 }
-          : { width: 1920, height: 1080, facingMode: 'user' },
-        audio: selectedAudioDevice 
+        video: selectedVideoDevice
+          ? { deviceId: { exact: selectedVideoDevice }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+          : { width: { ideal: 1920 }, height: { ideal: 1080 }, facingMode: 'user' },
+        audio: selectedAudioDevice
           ? { deviceId: { exact: selectedAudioDevice } }
           : true,
       });
@@ -218,21 +227,50 @@ const RecordingStudio = () => {
 
   const startScreenShare = async () => {
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { width: 1920, height: 1080 },
-        audio: true
-      });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: true,
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false,
+        });
+      }
       setScreenStream(stream);
       if (screenRef.current) {
         screenRef.current.srcObject = stream;
       }
       stream.getVideoTracks()[0].onended = () => {
         setScreenStream(null);
+        if (screenRef.current) screenRef.current.srcObject = null;
       };
       toast({ title: 'Screen share ready', description: 'Screen sharing started' });
     } catch (error) {
       console.error('Error sharing screen:', error);
       toast({ title: 'Screen share error', description: 'Could not start screen share', variant: 'destructive' });
+    }
+  };
+
+  const stopWebcam = () => {
+    if (webcamStream) {
+      webcamStream.getTracks().forEach(t => t.stop());
+      setWebcamStream(null);
+    }
+    if (webcamRef.current) {
+      webcamRef.current.srcObject = null;
+    }
+  };
+
+  const stopScreenShare = () => {
+    if (screenStream) {
+      screenStream.getTracks().forEach(t => t.stop());
+      setScreenStream(null);
+    }
+    if (screenRef.current) {
+      screenRef.current.srcObject = null;
     }
   };
 
@@ -296,8 +334,9 @@ const RecordingStudio = () => {
   };
 
   const startRecording = () => {
-    const streamToRecord = recordingType === 'audio' 
-      ? audioOnlyStream 
+    // Video: use screen when mode is screen-only; otherwise webcam (screen-webcam records webcam only for now)
+    const streamToRecord = recordingType === 'audio'
+      ? audioOnlyStream
       : (recordingMode === 'screen' ? screenStream : webcamStream);
     if (!streamToRecord) {
       toast({ title: 'No source', description: recordingType === 'audio' ? 'Please start microphone first' : 'Please start camera or screen share first', variant: 'destructive' });
@@ -306,18 +345,27 @@ const RecordingStudio = () => {
 
     try {
       const isAudio = recordingType === 'audio';
-      
+
       let mimeType: string;
       if (isAudio) {
         const audioTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
         mimeType = audioTypes.find(t => MediaRecorder.isTypeSupported(t)) || '';
       } else {
-        const videoTypes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
+        const videoTypes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
         mimeType = videoTypes.find(t => MediaRecorder.isTypeSupported(t)) || '';
       }
-      
-      const recorderOptions: MediaRecorderOptions = mimeType ? { mimeType } : {};
-      const mediaRecorder = new MediaRecorder(streamToRecord, recorderOptions);
+
+      let mediaRecorder: MediaRecorder;
+      try {
+        const withBitrate: MediaRecorderOptions = mimeType ? { mimeType, videoBitsPerSecond: 2500000 } : {};
+        mediaRecorder = new MediaRecorder(streamToRecord, withBitrate);
+      } catch {
+        try {
+          mediaRecorder = new MediaRecorder(streamToRecord, mimeType ? { mimeType } : {});
+        } catch {
+          mediaRecorder = new MediaRecorder(streamToRecord);
+        }
+      }
       mediaRecorderRef.current = mediaRecorder;
       recordedChunksRef.current = [];
 
@@ -330,6 +378,11 @@ const RecordingStudio = () => {
       mediaRecorder.onstop = async () => {
         const blobType = mimeType || (isAudio ? 'audio/webm' : 'video/webm');
         const blob = new Blob(recordedChunksRef.current, { type: blobType });
+
+        if (!isAudio && blob.size === 0) {
+          toast({ title: 'Recording failed', description: 'No video data was captured. Try starting the camera again.', variant: 'destructive' });
+          return;
+        }
 
         if (isAudio && user) {
           setIsSaving(true);
@@ -508,18 +561,21 @@ const RecordingStudio = () => {
   };
 
   const pauseRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      if (isPaused) {
-        mediaRecorderRef.current.resume();
-        timerRef.current = window.setInterval(() => {
-          setRecordingTime(prev => prev + 1);
-        }, 1000);
-      } else {
-        mediaRecorderRef.current.pause();
-        if (timerRef.current) clearInterval(timerRef.current);
-      }
-      setIsPaused(!isPaused);
+    const mr = mediaRecorderRef.current;
+    if (!mr || !isRecording) return;
+    const canPause = typeof mr.pause === 'function' && typeof mr.resume === 'function';
+    if (!canPause) {
+      toast({ title: 'Pause not supported', description: 'Your browser does not support pausing video recording', variant: 'destructive' });
+      return;
     }
+    if (isPaused) {
+      mr.resume();
+      timerRef.current = window.setInterval(() => setRecordingTime(prev => prev + 1), 1000);
+    } else {
+      mr.pause();
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+    setIsPaused(!isPaused);
   };
 
   const stopRecording = () => {
@@ -955,10 +1011,10 @@ const RecordingStudio = () => {
                         </>
                       ) : (
                         <>
-                          <Button variant={webcamStream ? 'default' : 'outline'} size="sm" onClick={webcamStream ? () => { webcamStream.getTracks().forEach(t => t.stop()); setWebcamStream(null); } : startWebcam} className="h-9">
+                          <Button variant={webcamStream ? 'default' : 'outline'} size="sm" onClick={webcamStream ? stopWebcam : startWebcam} className="h-9">
                             <User className="h-4 w-4 mr-2" />{webcamStream ? 'Stop Camera' : 'Start Camera'}
                           </Button>
-                          <Button variant={screenStream ? 'default' : 'outline'} size="sm" onClick={screenStream ? () => { screenStream.getTracks().forEach(t => t.stop()); setScreenStream(null); } : startScreenShare} className="h-9">
+                          <Button variant={screenStream ? 'default' : 'outline'} size="sm" onClick={screenStream ? stopScreenShare : startScreenShare} className="h-9">
                             <ScreenShare className="h-4 w-4 mr-2" />{screenStream ? 'Stop Share' : 'Share Screen'}
                           </Button>
                           {videoDevices.length > 0 && (
@@ -1004,7 +1060,7 @@ const RecordingStudio = () => {
                       )}
 
                       {!isRecording ? (
-                        <Button variant="destructive" onClick={startRecording} disabled={recordingType === 'audio' ? !audioOnlyStream : (!webcamStream && !screenStream)} className="h-10 px-6 rounded-full shadow-lg">
+                        <Button variant="destructive" onClick={startRecording} disabled={recordingType === 'audio' ? !audioOnlyStream : (recordingMode === 'screen' ? !screenStream : recordingMode === 'webcam' ? !webcamStream : (!webcamStream || !screenStream))} className="h-10 px-6 rounded-full shadow-lg">
                           {sessionMode === 'stream-record' ? (
                             <><Radio className="h-4 w-4 mr-2" /> Go Live</>
                           ) : (

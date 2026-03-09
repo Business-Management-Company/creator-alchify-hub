@@ -20,7 +20,7 @@ const UI_ELEMENT_MAP: Record<string, HighlightTarget> = {
   'projects': { id: 'projects', label: 'Projects', selector: '[data-ui-element="projects"], [href="/projects"]' },
   'library': { id: 'library', label: 'Library', selector: '[data-ui-element="library"], [href="/library"]' },
   'refiner': { id: 'refiner', label: 'Refiner Studio', selector: '[data-ui-element="refiner"]' },
-  'recording': { id: 'recording', label: 'Recording Studio', selector: '[data-ui-element="recording"], [href="/recording-studio"]' },
+  'recording': { id: 'recording', label: 'Recording Studio', selector: '[data-ui-element="recording"], [href="/studio"]' },
   'settings': { id: 'settings', label: 'Settings', selector: '[data-ui-element="settings"], [href="/settings"]' },
   'dashboard': { id: 'dashboard', label: 'Dashboard', selector: '[data-ui-element="dashboard"], [href="/dashboard"]' },
   'export': { id: 'export', label: 'Export', selector: '[data-ui-element="export"], [data-tab="distribute"]' },

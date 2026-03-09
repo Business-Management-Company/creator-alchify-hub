@@ -47,6 +47,7 @@ import EpisodeForm from "./pages/EpisodeForm";
 import PublicPodcasts from "./pages/PublicPodcasts";
 import PublicPodcastDetail from "./pages/PublicPodcastDetail";
 import RssFeedProxy from "./pages/RssFeedProxy";
+import Exports from "./pages/Exports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -71,6 +72,7 @@ const App = () => (
                 <Route path="/refiner/:projectId" element={<Refiner />} />
                 <Route path="/studio" element={<RecordingStudio />} />
                 <Route path="/library" element={<Library />} />
+                <Route path="/exports" element={<Exports />} />
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/integrations" element={<Integrations />} />
                 <Route path="/settings" element={<Settings />} />

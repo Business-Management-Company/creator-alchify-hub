@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +39,12 @@ const CreatePodcast = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const createPodcast = useCreatePodcast();
+
+  useEffect(() => {
+    if (user === null) {
+      navigate("/auth", { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

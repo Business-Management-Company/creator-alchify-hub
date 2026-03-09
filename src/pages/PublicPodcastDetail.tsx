@@ -80,6 +80,10 @@ const PublicPodcastDetail = () => {
         const res = await supabase.functions.invoke("public-signed-url", {
           body: { paths: privatePaths },
         });
+        if (res.error) {
+          console.error("public-signed-url error:", res.error);
+          return;
+        }
         if (res.data?.urls) {
           setSignedUrls(res.data.urls);
         }
@@ -119,15 +123,17 @@ const PublicPodcastDetail = () => {
           const res = await supabase.functions.invoke("public-signed-url", {
             body: { paths: [path] },
           });
+          if (res.error) {
+            console.error("public-signed-url error:", res.error);
+            return;
+          }
           if (res.data?.urls?.[path]) {
             audioUrl = res.data.urls[path];
             setSignedUrls((prev) => ({ ...prev, [path]: audioUrl }));
           } else {
-            console.error("Could not get signed URL for episode");
             return;
           }
         } catch {
-          console.error("Failed to get signed URL");
           return;
         }
       }
