@@ -263,7 +263,7 @@ const AppSidebar = () => {
           };
         } else {
           // Switching to creator: find and expand the relevant section
-          const sectionId = findCreatorSectionForPath(location.pathname);
+          const sectionId = findCreatorSectionForPath(location.pathname, creatorSectionsFiltered);
           return {
             ...prev,
             mode: "creator",
