@@ -71,12 +71,18 @@ const EpisodeForm = () => {
 
     const getAudioDuration = (file: File): Promise<number> => {
         return new Promise((resolve) => {
+            const timeout = setTimeout(() => {
+                console.warn('Audio duration detection timed out');
+                resolve(0);
+            }, 5000);
             const audio = new Audio();
             audio.addEventListener('loadedmetadata', () => {
+                clearTimeout(timeout);
                 resolve(Math.round(audio.duration));
                 URL.revokeObjectURL(audio.src);
             });
             audio.addEventListener('error', () => {
+                clearTimeout(timeout);
                 resolve(0);
                 URL.revokeObjectURL(audio.src);
             });
