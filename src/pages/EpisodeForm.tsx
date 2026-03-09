@@ -82,6 +82,7 @@ const EpisodeForm = () => {
 
     const handleFileDrop = useCallback(async (e: React.DragEvent) => {
         e.preventDefault();
+        e.stopPropagation();
         const file = e.dataTransfer.files[0];
         if (!file) return;
         const check = isAllowedAudioFile(file);
@@ -91,11 +92,15 @@ const EpisodeForm = () => {
         }
         setAudioFile(file);
         if (!title) setTitle(file.name.replace(/\.[^/.]+$/, ""));
-        const dur = await getAudioDuration(file);
-        if (dur > 0) setDurationSeconds(dur);
+        try {
+            const dur = await getAudioDuration(file);
+            if (dur > 0) setDurationSeconds(dur);
+        } catch {
+            setDurationSeconds(0);
+        }
     }, [title]);
 
-    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
         const check = isAllowedAudioFile(file);
@@ -106,9 +111,20 @@ const EpisodeForm = () => {
         }
         setAudioFile(file);
         if (!title) setTitle(file.name.replace(/\.[^/.]+$/, ""));
-        const dur = await getAudioDuration(file);
-        if (dur > 0) setDurationSeconds(dur);
-    };
+        try {
+            const dur = await getAudioDuration(file);
+            if (dur > 0) setDurationSeconds(dur);
+        } catch {
+            setDurationSeconds(0);
+        }
+    }, [title]);
+
+    const openFilePicker = useCallback(() => {
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+            fileInputRef.current.click();
+        }
+    }, []);
 
     const removeFile = () => {
         setAudioFile(null);
@@ -232,8 +248,13 @@ const EpisodeForm = () => {
                                     </div>
                                 ) : (
                                     <div
+                                        role="button"
+                                        tabIndex={0}
                                         className="border-2 border-dashed rounded-lg p-12 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-all"
-                                        onDragOver={(e) => e.preventDefault()} onDrop={handleFileDrop} onClick={() => fileInputRef.current?.click()}
+                                        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                        onDrop={handleFileDrop}
+                                        onClick={openFilePicker}
+                                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openFilePicker(); } }}
                                     >
                                         <Upload className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
                                         <p className="font-medium mb-1">Drop your audio file here</p>
@@ -245,7 +266,7 @@ const EpisodeForm = () => {
                                         <Loader2 className="w-4 h-4 animate-spin" /><span className="text-sm">Uploading...</span>
                                     </div>
                                 )}
-                                <input ref={fileInputRef} type="file" accept={AUDIO_ACCEPT} className="hidden" onChange={handleFileSelect} />
+                                <input ref={fileInputRef} type="file" accept={AUDIO_ACCEPT} className="hidden" onChange={handleFileSelect} aria-label="Select audio file" />
                             </CardContent>
                         </Card>
 
