@@ -273,7 +273,7 @@ const AppSidebar = () => {
         }
       } else if (currentMode === "creator") {
         // Already in creator mode, update open section if navigating
-        const sectionId = findCreatorSectionForPath(location.pathname);
+        const sectionId = findCreatorSectionForPath(location.pathname, creatorSectionsFiltered);
         if (sectionId && sectionId !== prev.openCreatorGroupId) {
           return {
             ...prev,
