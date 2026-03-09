@@ -196,8 +196,8 @@ interface SidebarState {
 }
 
 // Find which creator section contains a given path
-const findCreatorSectionForPath = (path: string): string | null => {
-  for (const section of creatorSectionsFiltered) {
+const findCreatorSectionForPath = (path: string, sections: typeof creatorSections): string | null => {
+  for (const section of sections) {
     for (const item of section.items) {
       if (path === item.path || (item.path !== "/" && path.startsWith(item.path))) {
         return section.id;
@@ -263,7 +263,7 @@ const AppSidebar = () => {
           };
         } else {
           // Switching to creator: find and expand the relevant section
-          const sectionId = findCreatorSectionForPath(location.pathname);
+          const sectionId = findCreatorSectionForPath(location.pathname, creatorSectionsFiltered);
           return {
             ...prev,
             mode: "creator",
@@ -273,7 +273,7 @@ const AppSidebar = () => {
         }
       } else if (currentMode === "creator") {
         // Already in creator mode, update open section if navigating
-        const sectionId = findCreatorSectionForPath(location.pathname);
+        const sectionId = findCreatorSectionForPath(location.pathname, creatorSectionsFiltered);
         if (sectionId && sectionId !== prev.openCreatorGroupId) {
           return {
             ...prev,

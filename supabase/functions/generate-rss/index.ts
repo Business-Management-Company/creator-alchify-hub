@@ -116,6 +116,9 @@ serve(async (req) => {
             throw new Error(`Failed to fetch episodes: ${episodesError.message}`);
         }
 
+        // Filter to only episodes with a valid audio_url
+        const publishedEpisodes = (episodes || []).filter((ep: any) => ep.audio_url && ep.audio_url.trim() !== '');
+
         const siteUrl =
             Deno.env.get("SITE_URL") ||
             Deno.env.get("PUBLIC_SITE_URL") ||
@@ -131,8 +134,8 @@ serve(async (req) => {
         const imageUrl = podcast.image_url || "";
 
         // Determine the latest episode pub_date for lastBuildDate / pubDate
-        const latestPubDate = episodes && episodes.length > 0
-            ? toRfc2822(episodes[0].pub_date)
+        const latestPubDate = publishedEpisodes.length > 0
+            ? toRfc2822(publishedEpisodes[0].pub_date)
             : new Date().toUTCString();
 
         // Build category tag – support subcategories with "Category > Subcategory" format
@@ -155,10 +158,10 @@ serve(async (req) => {
         const signedAudioUrls: Record<string, string> = {};
         const signedImageUrls: Record<string, string> = {};
         
-        const SIGNED_URL_EXPIRY = 60 * 60 * 24 * 7; // 7 days
+        const SIGNED_URL_EXPIRY = 60 * 60 * 24 * 30; // 30 days
         
         await Promise.all(
-            (episodes || []).map(async (ep: any) => {
+            publishedEpisodes.map(async (ep: any) => {
                 // Sign audio URL if it's a storage URL
                 if (ep.audio_url && ep.audio_url.includes('/storage/v1/')) {
                     const storagePath = extractStoragePath(ep.audio_url, 'media-uploads');
@@ -203,7 +206,7 @@ serve(async (req) => {
             }
         }
 
-        const items = (episodes || [])
+        const items = publishedEpisodes
             .map((ep: any) => {
                 const guid = ep.guid || ep.id;
                 const episodePageUrl = `${siteUrl}/podcast/${podcast.id}/episode/${ep.id}`;
@@ -214,6 +217,7 @@ serve(async (req) => {
                 const audioType = ep.audio_url?.endsWith('.flac') ? 'audio/flac' : 
                                   ep.audio_url?.endsWith('.wav') ? 'audio/wav' : 
                                   ep.audio_url?.endsWith('.m4a') ? 'audio/mp4' : 'audio/mpeg';
+                const fileSize = (ep.file_size_bytes && ep.file_size_bytes > 0) ? ep.file_size_bytes : 0;
 
                 return `    <item>
       <title>${cdata(ep.title)}</title>
@@ -223,7 +227,7 @@ serve(async (req) => {
       <dc:creator>${cdata(author)}</dc:creator>
       <pubDate>${toRfc2822(ep.pub_date)}</pubDate>
       <content:encoded>${cdata(epDescription)}</content:encoded>
-      ${audioUrl ? `<enclosure url="${escapeXml(audioUrl)}" length="${ep.file_size_bytes || 0}" type="${audioType}" />` : ""}
+      <enclosure url="${escapeXml(audioUrl)}" length="${fileSize}" type="${audioType}" />
       <itunes:title>${cdata(ep.title)}</itunes:title>
       <itunes:summary>${cdata(stripHtml(epDescription))}</itunes:summary>
       <itunes:author>${escapeXml(author)}</itunes:author>
@@ -250,7 +254,7 @@ serve(async (req) => {
     <description>${cdata(podcastDescription)}</description>
     <link>${podcastPageUrl}</link>
     <language>${escapeXml(language)}</language>
-    <copyright>${cdata(`© ${new Date().getFullYear()} ${author}`)}</copyright>
+    <copyright>${escapeXml(`© ${new Date().getFullYear()} ${author}`)}</copyright>
     <generator>Alchify Podcast Platform</generator>
     <lastBuildDate>${latestPubDate}</lastBuildDate>
     <pubDate>${latestPubDate}</pubDate>
