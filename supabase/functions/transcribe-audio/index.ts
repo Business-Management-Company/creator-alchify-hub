@@ -55,11 +55,6 @@ serve(async (req) => {
 
     await supabase.from('projects').update({ status: 'transcribing' }).eq('id', projectId);
 
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY is not configured');
-    }
-
     // Get audio as binary
     let audioBytes: Uint8Array;
     let fileName = 'audio.mp3';
@@ -72,7 +67,6 @@ serve(async (req) => {
         audioBytes[i] = binaryStr.charCodeAt(i);
       }
     } else if (project.source_file_url) {
-      // source_file_url is a storage path like "user-id/filename.webm"
       // Download from Supabase Storage
       const { data: fileData, error: downloadError } = await supabase.storage
         .from('media-uploads')
@@ -89,36 +83,113 @@ serve(async (req) => {
       });
     }
 
-    // Call OpenAI Whisper API with verbose_json for segments
-    const formData = new FormData();
-    formData.append('file', new Blob([audioBytes as BlobPart]), fileName);
-    formData.append('model', 'whisper-1');
-    formData.append('response_format', 'verbose_json');
-    formData.append('timestamp_granularities[]', 'segment');
+    // Convert audio to base64 for Gemini
+    const base64Audio = btoa(String.fromCharCode(...audioBytes));
+    
+    // Determine MIME type from file extension
+    const ext = fileName.split('.').pop()?.toLowerCase() || 'webm';
+    const mimeMap: Record<string, string> = {
+      'mp3': 'audio/mpeg',
+      'wav': 'audio/wav',
+      'webm': 'audio/webm',
+      'm4a': 'audio/mp4',
+      'mp4': 'video/mp4',
+      'mov': 'video/quicktime',
+      'ogg': 'audio/ogg',
+      'flac': 'audio/flac',
+      'aac': 'audio/aac',
+    };
+    const mimeType = mimeMap[ext] || 'audio/webm';
 
-    const whisperResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
-      body: formData,
-    });
-
-    if (!whisperResponse.ok) {
-      const errText = await whisperResponse.text();
-      console.error('OpenAI Whisper error:', errText);
-      throw new Error(`Whisper transcription failed: ${whisperResponse.status}`);
+    // Use Lovable AI gateway with Gemini for transcription
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    const whisperResult = await whisperResponse.json();
+    console.log(`Transcribing ${fileName} (${(audioBytes.length / 1024 / 1024).toFixed(1)} MB) via Gemini...`);
 
-    // Map Whisper segments to our format
-    const segments = (whisperResult.segments || []).map((seg: any) => ({
-      start: seg.start,
-      end: seg.end,
-      text: seg.text.trim(),
-      confidence: seg.avg_logprob ? Math.min(0.99, Math.max(0.5, 1 + seg.avg_logprob)) : 0.95,
+    const geminiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a precise audio/video transcription engine. Your task is to transcribe the provided media file.
+
+IMPORTANT RULES:
+- Transcribe EXACTLY what is spoken — do not paraphrase, summarize, or add commentary
+- Include all filler words (um, uh, like, you know, etc.) exactly as spoken
+- Use proper punctuation and capitalization
+- If there are multiple speakers, do NOT label them — just transcribe the continuous speech
+- If no speech is detected, respond with: {"text":"","segments":[]}
+
+RESPOND ONLY with valid JSON in this exact format (no markdown, no code blocks):
+{"text":"full transcription text here","segments":[{"start":0.0,"end":5.0,"text":"segment text"},{"start":5.0,"end":10.0,"text":"next segment"}]}
+
+Each segment should be roughly 5-15 seconds of speech. Estimate timestamps as accurately as possible based on natural pauses and sentence boundaries.`
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'input_audio',
+                input_audio: {
+                  data: base64Audio,
+                  format: ext === 'mp3' ? 'mp3' : ext === 'wav' ? 'wav' : 'mp3',
+                },
+              },
+              {
+                type: 'text',
+                text: 'Transcribe this audio/video file. Respond ONLY with the JSON object, no other text.',
+              }
+            ],
+          }
+        ],
+        temperature: 0.1,
+        max_tokens: 16000,
+      }),
+    });
+
+    if (!geminiResponse.ok) {
+      const errText = await geminiResponse.text();
+      console.error('Gemini transcription error:', errText);
+      throw new Error(`Transcription failed: ${geminiResponse.status}`);
+    }
+
+    const geminiResult = await geminiResponse.json();
+    const responseText = geminiResult.choices?.[0]?.message?.content || '';
+    
+    console.log('Gemini raw response length:', responseText.length);
+
+    // Parse the JSON response
+    let transcriptionData: { text: string; segments: Array<{ start: number; end: number; text: string }> };
+    try {
+      // Strip markdown code blocks if present
+      const cleaned = responseText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+      transcriptionData = JSON.parse(cleaned);
+    } catch (parseError) {
+      console.error('Failed to parse transcription JSON:', responseText.substring(0, 500));
+      // Fallback: treat the entire response as plain text
+      transcriptionData = {
+        text: responseText,
+        segments: [{ start: 0, end: 0, text: responseText }],
+      };
+    }
+
+    const fullText = transcriptionData.text || '';
+    const segments = (transcriptionData.segments || []).map((seg) => ({
+      start: seg.start || 0,
+      end: seg.end || 0,
+      text: (seg.text || '').trim(),
+      confidence: 0.92, // Gemini doesn't provide per-segment confidence
     }));
 
-    const fullText = whisperResult.text || '';
     const wordCount = fullText.split(/\s+/).filter(Boolean).length;
 
     // Detect filler words
@@ -126,9 +197,7 @@ serve(async (req) => {
     const fillerMatches = fullText.match(fillerPattern);
     const fillerWordsDetected = fillerMatches ? fillerMatches.length : 0;
 
-    const avgConfidence = segments.length > 0
-      ? segments.reduce((sum: number, s: any) => sum + s.confidence, 0) / segments.length
-      : 0.95;
+    const avgConfidence = 0.92;
 
     // Save transcript
     const { error: transcriptError } = await supabase.from('transcripts').insert({
@@ -137,7 +206,7 @@ serve(async (req) => {
       segments,
       word_count: wordCount,
       filler_words_detected: fillerWordsDetected,
-      avg_confidence: Math.round(avgConfidence * 1000) / 1000,
+      avg_confidence: avgConfidence,
     });
 
     if (transcriptError) {
@@ -151,7 +220,7 @@ serve(async (req) => {
       project_id: projectId,
       user_id: user.id,
       action_type: 'transcribe',
-      action_details: { wordCount, fillerWordsDetected, avgConfidence, provider: 'openai-whisper' },
+      action_details: { wordCount, fillerWordsDetected, avgConfidence, provider: 'gemini-2.5-flash' },
     });
 
     return new Response(JSON.stringify({
