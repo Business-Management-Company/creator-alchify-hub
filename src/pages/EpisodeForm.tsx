@@ -71,12 +71,18 @@ const EpisodeForm = () => {
 
     const getAudioDuration = (file: File): Promise<number> => {
         return new Promise((resolve) => {
+            const timeout = setTimeout(() => {
+                console.warn('Audio duration detection timed out');
+                resolve(0);
+            }, 5000);
             const audio = new Audio();
             audio.addEventListener('loadedmetadata', () => {
+                clearTimeout(timeout);
                 resolve(Math.round(audio.duration));
                 URL.revokeObjectURL(audio.src);
             });
             audio.addEventListener('error', () => {
+                clearTimeout(timeout);
                 resolve(0);
                 URL.revokeObjectURL(audio.src);
             });
@@ -107,8 +113,10 @@ const EpisodeForm = () => {
     const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        console.log('Audio file selected:', file.name, file.type, file.size);
         const check = isAllowedAudioFile(file);
         if (!check.valid) {
+            console.warn('Audio validation failed:', check.error);
             toast.error(check.error);
             if (fileInputRef.current) fileInputRef.current.value = "";
             return;
@@ -138,6 +146,7 @@ const EpisodeForm = () => {
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        console.log('Image file selected:', file.name, file.type, file.size);
         if (!file.type.startsWith("image/")) { toast.error("Please select an image file"); return; }
         setImageFile(file);
         setImagePreview(URL.createObjectURL(file));
