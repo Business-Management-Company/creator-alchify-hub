@@ -144,9 +144,9 @@ const ImportPodcast = () => {
                 <div className="border rounded-lg p-6">
                   <h2 className="text-xl font-bold mb-4">Podcast Details</h2>
                   <div className="flex gap-6">
-                    {parsedData.podcast.cover_image_url && (
+                    {(parsedData.podcast.image_url || parsedData.podcast.cover_image_url) && (
                       <img
-                        src={parsedData.podcast.cover_image_url}
+                        src={parsedData.podcast.image_url || parsedData.podcast.cover_image_url}
                         alt={parsedData.podcast.title}
                         className="w-32 h-32 rounded-lg object-cover"
                       />
@@ -173,18 +173,17 @@ const ImportPodcast = () => {
                   </div>
                 </div>
 
-                {/* Episodes Preview */}
-                {parsedData.episodes && parsedData.episodes.length > 0 && (
+                {/* Episodes summary (import-rss-feed returns episodeCount, not episodes array) */}
+                {(parsedData.episodeCount != null || (parsedData.episodes && parsedData.episodes.length > 0)) && (
                 <div className="border rounded-lg p-6">
                   <h2 className="text-xl font-bold mb-4">
-                    Episodes Preview (showing{" "}
-                    {Math.min(10, parsedData.episodes.length)} of{" "}
-                    {parsedData.episodes.length})
+                    {parsedData.episodes?.length
+                      ? `Episodes Preview (showing ${Math.min(10, parsedData.episodes.length)} of ${parsedData.episodes.length})`
+                      : `Episodes imported: ${parsedData.episodeCount ?? 0}${parsedData.totalInFeed != null ? ` (${parsedData.totalInFeed} in feed)` : ""}`}
                   </h2>
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
-                    {parsedData.episodes
-                      .slice(0, 10)
-                      .map((episode: any, idx: number) => (
+                  {parsedData.episodes && parsedData.episodes.length > 0 ? (
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {parsedData.episodes.slice(0, 10).map((episode: any, idx: number) => (
                         <div
                           key={idx}
                           className="p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
@@ -196,20 +195,25 @@ const ImportPodcast = () => {
                                 {episode.description}
                               </p>
                             </div>
-                            {episode.durationSeconds > 0 && (
+                            {(episode.duration_seconds ?? episode.durationSeconds) > 0 && (
                               <span className="text-sm text-muted-foreground ml-2">
-                                {Math.floor(episode.durationSeconds / 60)}m
+                                {Math.floor((episode.duration_seconds ?? episode.durationSeconds) / 60)}m
                               </span>
                             )}
                           </div>
                         </div>
                       ))}
-                    {parsedData.episodes.length > 10 && (
-                      <p className="text-center text-sm text-muted-foreground py-2">
-                        + {parsedData.episodes.length - 10} more episodes
-                      </p>
-                    )}
-                  </div>
+                      {parsedData.episodes.length > 10 && (
+                        <p className="text-center text-sm text-muted-foreground py-2">
+                          + {parsedData.episodes.length - 10} more episodes
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Manage episodes from your podcast dashboard.
+                    </p>
+                  )}
                 </div>
                 )}
                 {rssFeedUrl && (
