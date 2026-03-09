@@ -172,7 +172,7 @@ serve(async (req) => {
       if (newEpisodes.length > 0) {
         const { error: epError } = await supabase.from("episodes").insert(
           newEpisodes.map((ep: any) => ({
-            podcast_id: podcast.id,
+            podcast_id: podcast!.id,
             user_id: user.user.id,
             title: ep.title,
             description: ep.description,
